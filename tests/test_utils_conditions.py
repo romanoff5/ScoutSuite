@@ -11,7 +11,9 @@ class TestOpinelConditionClass(unittest.TestCase):
     """
 
     def test___prepare_age_test(self):
-        pass
+        now = datetime.datetime.now()
+        self.assertFalse(pass_condition(now, 'olderThan', [1, 'days']))
+        self.assertTrue(pass_condition(now - datetime.timedelta(days=2), 'olderThan', [1, 'days']))
 
     def test_pass_condition(self):
 

@@ -1,0 +1,5 @@
+# Test tooling only; production requirements and SDK pins remain unchanged in M01.
+-r ../requirements.txt
+pytest==9.2.0
+pytest-cov==7.1.0
+flake8==7.5.0

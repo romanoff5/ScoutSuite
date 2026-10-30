@@ -27,7 +27,7 @@ class TestScoutRulesRuleset(unittest.TestCase):
         test_file_key = 'iam-password-policy-no-expiration.json'
         assert (test_file_key in test001.rules)
         assert (type(test001.rules[test_file_key]) == list)
-        assert (type(test001.rules[test_file_key][0] == Rule))
+        self.assertIsInstance(test001.rules[test_file_key][0], Rule)
         assert (hasattr(test001.rules[test_file_key][0], 'path'))
         for rule in test001.rules:
             print_debug(test001.rules[rule][0].to_string())
@@ -102,6 +102,9 @@ class TestScoutRulesRuleset(unittest.TestCase):
     def test_find_file(self):
         test101 = Ruleset(cloud_provider='aws').find_file(self.test_ruleset_001)
         test102 = Ruleset(cloud_provider='aws').find_file('default')
+        self.assertTrue(os.path.samefile(test101, self.test_ruleset_001))
+        self.assertTrue(os.path.samefile(test102, './ScoutSuite/providers/aws/rules/rulesets/default.json'))
 
     def test_search_ruleset(self):
         test201 = Ruleset(cloud_provider='aws').search_ruleset('test', no_prompt=True)
+        self.assertIsNone(test201)

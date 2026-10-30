@@ -1,87 +1,46 @@
-import json
-import os
-import tempfile
-import unittest
+"""Run each declared historical AWS regression instead of silently skipping the rest."""
 
-from ScoutSuite.core.console import set_logger_configuration, print_error
+import copy
+import json
+from types import SimpleNamespace
+
+import pytest
+
+from ScoutSuite import ERRORS_LIST
 from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.ruleset import Ruleset
+from tests.fixtures import DATA, case_key, load_fixture, read_manifest, validate_manifest_catalog
 
 
-class DummyObject(object):
-    pass
+MANIFEST = read_manifest()
+CASES = [case for case in MANIFEST['cases'] if case['kind'] == 'legacy']
 
 
-class TestScoutRulesProcessingEngine(unittest.TestCase):
-
-    def setUp(self):
-        set_logger_configuration(is_debug=True)
-        self.rule_counters = {'found': 0, 'tested': 0, 'verified': 0}
-        self.test_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # TODO
-    # Check that one testcase per finding rule exists (should be within default ruleset)
-
-    def test_all_finding_rules(self):
-        ruleset_file_name = os.path.join(self.test_dir, 'data/ruleset-test.json')
-        # FIXME this is only for AWS
-        with open(os.path.join(self.test_dir, '../ScoutSuite/providers/aws/rules/rulesets/default.json'), 'rt') as f:
-            ruleset = json.load(f)
-
-        for rule_file_name in ruleset['rules']:
-            self.rule_counters['found'] += 1
-            rule = ruleset['rules'][rule_file_name][0]
-            rule['enabled'] = True
-            print(rule_file_name)
-            self._test_rule(ruleset_file_name, rule_file_name, rule)
-
-        print('Existing  rules: %d' % self.rule_counters['found'])
-        print('Processed rules: %d' % self.rule_counters['tested'])
-        print('Verified  rules: %d' % self.rule_counters['verified'])
+def test_fixture_manifest_is_complete():
+    validate_manifest_catalog(MANIFEST)
 
 
-    def _test_rule(self, ruleset_file_name, rule_file_name, rule):
-        test_config_file_name = os.path.join(self.test_dir, 'data/rule-configs/%s' % rule_file_name)
-        if not os.path.isfile(test_config_file_name):
-            return
-        self.rule_counters['tested'] += 1
-
-        ruleset = self._generate_ruleset(rule_file_name, rule)
-        pe = ProcessingEngine(ruleset)
-
-        dummy_provider = DummyObject()
-        with open(test_config_file_name, 'rt') as f:
-            test_config_dict = json.load(f)
-            for key in test_config_dict:
-                setattr(dummy_provider, key, test_config_dict[key])
-        service = rule_file_name.split('-')[0]
-        dummy_provider.service_list = [service]
-        pe.run(dummy_provider)
-        findings = dummy_provider.services[service]['findings']
-        findings = findings[list(findings.keys())[0]]['items']
-
-        test_result_file_name = os.path.join(self.test_dir, 'data/rule-results/%s' % rule_file_name)
-        if not os.path.isfile(test_result_file_name):
-            print_error('Expected findings:: ')
-            print_error(json.dumps(findings, indent=4))
-            return
-
-        self.rule_counters['verified'] += 1
-        with open(test_result_file_name, 'rt') as f:
-            items = json.load(f)
-
-        try:
-            assert (set(sorted(findings)) == set(sorted(items)))
-        except Exception:
-            print_error('Expected items:\n %s' % json.dumps(sorted(items)))
-            print_error('Reported items:\n %s' % json.dumps(sorted(findings)))
-            assert (False)
-
-    def _generate_ruleset(self, rule_file_name, rule):
-        test_ruleset = {'rules': {}, 'about': 'regression test'}
-        test_ruleset['rules'][rule_file_name] = [rule]
-
-        with tempfile.NamedTemporaryFile('wt', delete=False) as f:
-            f.write(json.dumps(test_ruleset, indent=4))
-
-        return Ruleset(cloud_provider='aws', filename=f.name)
+@pytest.mark.parametrize('case', CASES, ids=lambda case: case['rule'])
+def test_declared_aws_rule(case, tmp_path, record_property):
+    record_property('rule_case', case_key(case))
+    config = load_fixture(DATA / case['input'])
+    expected = load_fixture(DATA / case['expected'])
+    default = json.loads((DATA.parents[1] / 'ScoutSuite/providers/aws/rules/rulesets/default.json').read_text())
+    rule = copy.deepcopy(default['rules'][case['rule']][0])
+    rule['enabled'] = True
+    rules_path = tmp_path / 'rules.json'
+    rules_path.write_text(json.dumps({'about': 'offline regression', 'rules': {case['rule']: [rule]}}))
+    ruleset = Ruleset(cloud_provider='aws', filename=str(rules_path))
+    assert len(ruleset.rules[case['rule']]) == 1
+    provider = SimpleNamespace(**config)
+    service = case['rule'].split('-')[0]
+    provider.service_list = [service]
+    ERRORS_LIST.clear()
+    ProcessingEngine(ruleset).run(provider)
+    assert not ERRORS_LIST, 'A failed rule evaluation must not count as a passing fixture'
+    findings = provider.services[service]['findings']
+    assert len(findings) == 1
+    finding = next(iter(findings.values()))
+    assert set(finding['items']) == set(expected)
+    assert finding['flagged_items'] == len(expected)
+    assert finding['checked_items'] > 0, 'Fixture must actually exercise the rule'

@@ -1,27 +1,28 @@
+from pathlib import Path
 import unittest
-from ScoutSuite.output.html import *
-from ScoutSuite.output.utils import *
 
-#
-# Test methods for ScoutSuite/output
-#
+from ScoutSuite.output.html import HTMLReport
+from ScoutSuite.output.utils import get_filename
+
+
 class TestScoutOutput(unittest.TestCase):
-
-    ########################################
-    # html.py
-    ########################################
-
     def test_html_report(self):
-        test_html = HTMLReport(report_name='test')
-        assert (test_html.report_name == 'test')
-        assert ('json' in test_html.get_content_from_folder(templates_type='conditionals'))
-        assert ('json' in test_html.get_content_from_file(filename='/json_format.html'))
+        report = HTMLReport(report_name='test')
+        self.assertEqual(report.report_name, 'test')
+        self.assertIn('json', report.get_content_from_folder(templates_type='conditionals'))
+        self.assertIn('json', report.get_content_from_file(filename='/json_format.html'))
 
     def test_get_filename(self):
-        assert ('scoutsuite-report/report.html' in get_filename("REPORT"))
-        assert ('scoutsuite-report/scoutsuite-results/scoutsuite_results.js' in get_filename("RESULTS"))
-        assert ('scoutsuite-results/scoutsuite_results.js' in get_filename("RESULTS", relative_path=True))
-        assert ('scoutsuite-report/scoutsuite-results/scoutsuite_exceptions.js' in get_filename("EXCEPTIONS"))
-        assert ('scoutsuite-results/scoutsuite_exceptions.js' in get_filename("EXCEPTIONS", relative_path=True))
-        assert ('scoutsuite-report/scoutsuite-results/scoutsuite_errors.json' in get_filename("ERRORS"))
-        assert ('scoutsuite-results/scoutsuite_errors.json' in get_filename("ERRORS", relative_path=True))
+        cases = [('REPORT', False, 'report.html', None),
+                 ('RESULTS', False, 'scoutsuite-results/scoutsuite_results.js', 'scoutsuite_results ='),
+                 ('RESULTS', True, 'scoutsuite-results/scoutsuite_results.js', 'scoutsuite_results ='),
+                 ('EXCEPTIONS', False, 'scoutsuite-results/scoutsuite_exceptions.js', 'exceptions ='),
+                 ('EXCEPTIONS', True, 'scoutsuite-results/scoutsuite_exceptions.js', 'exceptions ='),
+                 ('ERRORS', False, 'scoutsuite-results/scoutsuite_errors.json', None),
+                 ('ERRORS', True, 'scoutsuite-results/scoutsuite_errors.json', None)]
+        for kind, relative, suffix, first_line in cases:
+            with self.subTest(kind=kind, relative=relative):
+                filename, header = get_filename(kind, relative_path=relative)
+                expected = Path(suffix) if relative else Path('scoutsuite-report') / suffix
+                self.assertEqual(Path(filename), expected)
+                self.assertEqual(header, first_line)

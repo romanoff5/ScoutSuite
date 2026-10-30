@@ -117,59 +117,14 @@ class TestAWSProviderClass(unittest.TestCase):
         )
         assert aws_provider.get_report_name() == "aws-12345"
 
-    @pytest.mark.skip(reason="pytest does not reproduce actual behavior")
     def test_identify_user_data_secrets(self):
-
-        SAMPLE_USER_DATA = """
-# Various AWS Access Key exercisers
-AKIASHORT # too short
-AKIA0123456789ABCDEF # just right
-AKIA0123456789ABCDEF0 # too long
-AKIA0123456789abcdef # invalid characters
-FAKIA0123456789ABCDE # wrong prefix
-in middle AKIAFEDCBA9876543210 of line
-line ends with AKIAFFFFFFFFFFFFFFFF
-
-# Various AWS Secret Access Key exercisers
-ThisIsTooShort
-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
-ThisOneIsJustALittleBitLongerThanItShouldBe
-middle="0000000000/1111111111/2222222222/3333333" + "of line"
-hats off to TRON: HereIsSomethingThatAppearsAtEndOfLineMCP
-        """
-
-        """
-        As I write this test, the assertions below fail; somehow, the "too long"
-        sequences return their initial substrings, which should not even be
-        possible. This behavior appears with pytest, but not when repeated
-        interactively. This behavior also does not appear with the actual scanner:
-
-        The following is excerpted from actual (pretty-printed) output:
-        [...]
-        "user_data": "#!/bin/bash\ncat << \"EOF\" > /root/rsb\n# Various AWS Access Key exercisers\nAKIASHORT # too short\nAKIA0123456789ABCDEF # just right\nAKIA0123456789ABCDEF0 # too long\nAKIA0123456789abcdef # invalid characters\nFAKIA0123456789ABCDE # wrong prefix\nin middle AKIAFEDCBA9876543210 of line\nline ends with AKIAFFFFFFFFFFFFFFFF\n\n# Various AWS Secret Access Key exercisers\nThisIsTooShort\n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\nThisOneIsJustALittleBitLongerThanItShouldBe\nmiddle=\"0000000000/1111111111/2222222222/3333333\" + \"of line\"\nhats off to TRON: HereIsSomethingThatAppearsAtEndOfLineMCP\nEOF",
-        "user_data_secrets": {
-            "AWS Access Key IDs": [
-                "AKIA0123456789ABCDEF",
-                "AKIAFEDCBA9876543210",
-                "AKIAFFFFFFFFFFFFFFFF"
-            ],
-            "AWS Secret Access Keys": [
-                "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",
-                "0000000000/1111111111/2222222222/3333333",
-                "HereIsSomethingThatAppearsAtEndOfLineMCP"
-            ]
-        }
-        [...]
-        """
-
-        results = EC2Instances._identify_user_data_secrets(SAMPLE_USER_DATA)
-        assert results["AWS Access Key IDs"] == [
-            "AKIA0123456789ABCDEF",
-            "AKIAFEDCBA9876543210",
-            "AKIAFFFFFFFFFFFFFFFF"
-        ]
-        assert results["AWS Secret Access Keys"] == [
-            "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",
-            "0000000000/1111111111/2222222222/3333333",
-            "HereIsSomethingThatAppearsAtEndOfLineMCP"
-        ]
+        # Construct exact lengths: the historical prose samples were not 40 characters.
+        key = 'AKIA' + '0' * 16
+        cases = [(key, {'AWS Access Key IDs': [key]}),
+                 ('AKIA' + '0' * 15, {}), ('AKIA' + '0' * 17, {}),
+                 ('AKIA' + 'a' * 16, {}), ('F' + key, {}),
+                 ('s' * 39, {}), ('s' * 40, {'AWS Secret Access Keys': ['s' * 40]}),
+                 ('s' * 41, {}), ('', {}), (None, {})]
+        for data, expected in cases:
+            with self.subTest(length=len(data) if data is not None else None):
+                self.assertEqual(EC2Instances._identify_user_data_secrets(data), expected)

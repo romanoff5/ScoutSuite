@@ -1,116 +1,89 @@
+"""Exercise the synchronous CLI and its real async lifecycle with mocked boundaries."""
 
+import asyncio
+import io
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from ScoutSuite.__main__ import run_from_cli
-from ScoutSuite.core.cli_parser import ScoutSuiteArgumentParser
+from ScoutSuite import __main__ as main
 
 
 class TestMainClass(unittest.TestCase):
-
     def setUp(self):
-        self.constructor = {}
-        self.mocked_provider = MagicMock()
+        # The current scanner owns/closes this loop. Changing that production contract is M03.
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.addCleanup(self.close_loop)
+        self.provider = MagicMock(provider_code='aws', environment='default', account_id='000000000000')
+        self.provider.get_report_name.return_value = 'aws'
+        self.provider.fetch = AsyncMock()
+        self.auth = MagicMock()
+        self.report = MagicMock()
+        self.report.save.return_value = 'synthetic-report.html'
+        self.mocks = {}
+        for name, value in [('get_authentication_strategy', self.auth), ('get_provider', self.provider),
+                            ('ScoutReport', self.report), ('Ruleset', MagicMock()),
+                            ('ProcessingEngine', MagicMock())]:
+            self.mocks[name] = self.enterContext(patch.object(main, name, return_value=value))
+        self.browser = self.enterContext(patch.object(main.webbrowser, 'open'))
 
-        self.mocked_engine = MagicMock()
-        self.mocked_report = MagicMock()
-        self.mocked_browser = MagicMock()
-        self.mocked_ruleset = MagicMock()
+    def close_loop(self):
+        if not self.loop.is_closed():
+            self.loop.close()
+        asyncio.set_event_loop(None)
 
-        self.mocked_printInfo = MagicMock()
+    def call_cli(self, args):
+        with patch('sys.argv', ['scout'] + args):
+            return main.run_from_cli()
 
-        for import_name, mocked_object in [("print_info", self.mocked_printInfo),
-                                           ("get_provider", self.mocked_provider),
-                                           ("Ruleset", self.mocked_ruleset),
-                                           ("ProcessingEngine", self.mocked_engine),
-                                           ("ScoutReport", self.mocked_report),
-                                           ("webbrowser", self.mocked_browser)]:
-            constructor_obj = patch("ScoutSuite.__main__.%s" % import_name, return_value=mocked_object).start()
-            self.constructor[mocked_object] = constructor_obj
+    def assert_successful_provider(self, provider, auth_args):
+        self.provider.provider_code = provider
+        self.provider.get_report_name.return_value = provider
+        code = self.call_cli([provider] + auth_args + ['--no-browser'])
+        self.assertEqual(code, 0)
+        self.mocks['get_authentication_strategy'].assert_called_once_with(provider)
+        self.auth.authenticate.assert_called_once()
+        regions = [] if provider == 'aws' else None
+        self.provider.fetch.assert_awaited_once_with(regions=regions, excluded_regions=regions)
+        ip_ranges, name_key = ([], 'name') if provider == 'aws' else (None, None)
+        self.provider.preprocessing.assert_called_once_with(ip_ranges, name_key)
+        self.mocks['ScoutReport'].assert_called_once_with(
+            provider, provider, None, False, result_format='json')
+        self.assertEqual(self.mocks['ProcessingEngine'].return_value.run.call_count, 2)
+        self.provider.postprocessing.assert_called_once()
+        self.report.save.assert_called_once()
+        self.browser.assert_not_called()
 
-        self.mocked_report.save = MagicMock(return_value="dummyfile")
+    def test_empty(self):
+        with patch('sys.stderr', new_callable=io.StringIO), self.assertRaises(SystemExit) as error:
+            self.call_cli([])
+        self.assertEqual(error.exception.code, 2)
+        self.auth.authenticate.assert_not_called()
+        self.provider.fetch.assert_not_awaited()
 
-    def tearDown(self):
-        patch.stopall()
+    def test_aws_provider(self):
+        self.assert_successful_provider('aws', [])
 
-    async def test_empty(self):
-        args = None
-        code = None
+    def test_gcp_provider(self):
+        self.assert_successful_provider('gcp', ['--service-account', 'synthetic-credentials.json'])
+        self.assertEqual(self.auth.authenticate.call_args.kwargs['service_account'], 'synthetic-credentials.json')
 
-        with patch("sys.stderr", return_value=MagicMock()):
-            with self.assertRaises(SystemExit):
-                args = ScoutSuiteArgumentParser().parse_args(args)
-                code = await run_from_cli(args)
+    def test_azure_provider(self):
+        self.assert_successful_provider('azure', ['--cli'])
+        self.assertTrue(self.auth.authenticate.call_args.kwargs['cli'])
 
-        assert (code is None)
+    def test_unauthenticated(self):
+        self.auth.authenticate.return_value = None
+        self.assertEqual(self.call_cli(['aws', '--no-browser']), 101)
+        self.auth.authenticate.assert_called_once()
+        self.mocks['get_provider'].assert_not_called()
+        self.provider.fetch.assert_not_awaited()
+        self.report.save.assert_not_called()
 
-    async def test_aws_provider(self):
-        args = ['aws']
-        self.mocked_provider.provider_code = "aws"
-
-        args = ScoutSuiteArgumentParser().parse_args(args)
-        code = await run_from_cli(args)
-
-        success_code = 0
-        assert (code == success_code)
-
-        report_init_args = self.constructor[self.mocked_report].call_args_list[0][0]
-        assert (report_init_args[0] == "aws")  # provider
-        assert (report_init_args[1] == "aws")  # report_file_name
-        assert (report_init_args[2] == "scoutsuite-report")  # report_dir
-
-    async def test_gcp_provider(self):
-        args = ["gcp", "--service-account", "fakecredentials"]
-        self.mocked_provider.provider_code = "gcp"
-
-        args = ScoutSuiteArgumentParser().parse_args(args)
-        code = await run_from_cli(args)
-
-        success_code = 0
-        assert (code == success_code)
-
-        report_init_args = self.constructor[self.mocked_report].call_args_list[0][0]
-        assert (report_init_args[0] == "gcp")  # provider
-        assert (report_init_args[1] == "gcp")  # report_file_name
-        assert (report_init_args[2] == "scoutsuite-report")  # report_dir
-
-    async def test_azure_provider(self):
-        args = ["azure", "--cli"]
-        self.mocked_provider.provider_code = "azure"
-
-        args = ScoutSuiteArgumentParser().parse_args(args)
-        code = await run_from_cli(args)
-
-        success_code = 0
-        assert (code == success_code)
-
-        report_init_args = self.constructor[self.mocked_report].call_args_list[0][0]
-        assert (report_init_args[0] == "azure")  # provider
-        assert (report_init_args[1] == "azure")  # report_file_name
-        assert (report_init_args[2] == "scoutsuite-report")  # report_dir
-
-    async def test_unauthenticated(self):
-        args = ["aws"]
-        self.mocked_provider.provider_code = "aws"
-        self.mocked_provider.authenticate = MagicMock(return_value=False)
-
-        args = ScoutSuiteArgumentParser().parse_args(args)
-        code = await run_from_cli(args)
-
-        unauthenticated_code = 42
-        assert (code == unauthenticated_code)
-
-    async def test_keyboardinterrupted(self):
-        args = ["aws"]
-        self.mocked_provider.provider_code = "aws"
-
-        def _raise(e):
-            raise e
-
-        self.mocked_provider.fetch = MagicMock(side_effect=_raise(KeyboardInterrupt))
-
-        args = ScoutSuiteArgumentParser().parse_args(args)
-        code = await run_from_cli(args)
-
-        keyboardinterrupted_code = 130
-        assert (code == keyboardinterrupted_code)
+    def test_keyboardinterrupted(self):
+        self.provider.fetch.side_effect = KeyboardInterrupt
+        self.assertEqual(self.call_cli(['aws', '--no-browser']), 130)
+        self.provider.fetch.assert_awaited_once()
+        self.provider.preprocessing.assert_not_called()
+        self.report.save.assert_not_called()
+        self.browser.assert_not_called()
