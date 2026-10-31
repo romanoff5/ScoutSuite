@@ -4,6 +4,33 @@ Date: 2026-10-31. Parent: M02-A `07aa46fc`; stacked PR #3 targets PR #2.
 Scope is CI, test tooling and evidence. No scanner, provider, security-rule or
 Azure/GCP SDK change is included. M02A-D01 (Docker execution) remains separate.
 
+**M02-B implementation and hosted CI acceptance are complete.** Human review
+and merging remain separate: two reviewers are required by `CONTRIBUTING.md`.
+The final closeout changes only documentation/evidence; no later phase is started.
+
+## Completed acceptance evidence
+
+Both PR and push workflows passed on implementation revision `41d98b66`.
+The [machine-readable record](evidence/M02_B_RESULTS.json) retains the complete
+resolved package versions for all six environments on each OS, smoke results,
+warning sources, historical comparison and immutable CI log links.
+
+| Hosted PR lane | Actual tests | Warnings | CI logs |
+| --- | --- | --- | --- |
+| Windows Server 2022 / CPython 3.11.9 x64 | 146 passed + 22 subtests; no failures/skips/xfails | 161 | [Windows](https://github.com/romanoff5/ScoutSuite/actions/runs/41189706831/job/124503855095) |
+| Ubuntu 24.04 / CPython 3.11.18 x64 | 146 passed + 22 subtests; no failures/skips/xfails | 161 | [Ubuntu](https://github.com/romanoff5/ScoutSuite/actions/runs/41189706831/job/124503855264) |
+
+All gates passed on both lanes: actionlint workflow validation, OS network
+isolation, clean wheel/sdist build and installation, six `pip check` environments,
+configured lint, the complete offline suite and four guarded smoke profiles.
+Execution evidence records six formerly asynchronous CLI bodies and 31/31
+verified fixtures. Each combined artifact verifies 1,379 package files and all
+49 runtime requirements. No live cloud access or customer data was used.
+
+Current-head CI for the documentation closeout is linked from
+[PR #3](https://github.com/romanoff5/ScoutSuite/pull/3); the JSON deliberately
+retains the measured implementation revision rather than rewriting earlier runs.
+
 ## Workflow contract
 
 One `Offline CI` workflow replaces both obsolete workflows. The frontend dummy
@@ -102,8 +129,11 @@ are recorded in the current PR checks. JUnit lists 146 cases; pytest separately
 reports the 22 passing subtests, so these are not conflated in the evidence.
 
 The retained warnings are 50 application string/regex escape deprecations and
-100 old GCP protobuf warnings; Linux additionally reports 11 `pkg_resources`
-warnings. They remain visible. Rule coverage still leaves 128 AWS / 80 Azure /
+100 old GCP protobuf warnings; both fresh hosted environments also report 11
+GCP/`pkg_resources` namespace warnings. The historical Windows environment used
+setuptools 65.5.0 and recorded 150 warnings; the fresh environments use M02-A's
+pinned setuptools 80.9.0 and record 161. No Azure/GCP SDK was upgraded and no
+warning was filtered to change this count. Rule coverage still leaves 128 AWS / 80 Azure /
 118 GCP rule keys untested; 31 declared cases must all verify. `flake8` enforces
 the existing limited syntax/undefined-name configuration, not a repository-wide
 style rewrite. No advisory audit, full provider coverage, browser certification,
