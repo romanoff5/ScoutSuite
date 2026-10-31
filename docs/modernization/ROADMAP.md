@@ -185,6 +185,10 @@ Acceptance criteria:
 
 After release, schedule dependency/SDK/model and metadata freshness review, test new supported Python releases, and triage provider retirement notices. Suggested cadence: monthly compatibility/advisory review and quarterly rule/profile review, adjusted to maintainer capacity. These are proposed processes, not automations created by this assessment.
 
+## Dated implementation evidence
+
+2026-10-31: [M02-A packaging evidence and rollback](M02_A_PACKAGING.md) records verified Windows/Linux Python 3.11 dependency and installed-artifact gates. Docker execution remains blocked under tracking item M02A-D01; M02-A is not fully accepted until that gate passes. M02-B and subsequent phases are not included.
+
 ## Definition of done for each change
 
 A PR is ready only when it names its backlog item, documents the behavior and permission delta, includes the relevant regression evidence, preserves unaffected-provider contracts, identifies compatibility/rollback consequences, and has the required reviewers. Unresolved failures, missing fixtures, deferred services and advisory exceptions remain visible in a dated progress record. Keep this roadmap and the historical baseline distinct.

@@ -1,45 +1,23 @@
-FROM python:3.12
+FROM python:3.11-slim-bookworm
 
-LABEL maintainer="Jason Ross <algorythm@gmail.com>"
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.source="https://github.com/romanoff5/ScoutSuite" \
+      org.opencontainers.image.revision="${VCS_REF}"
 
-ARG BUILD_DATE
-ARG NAME
-ARG DESCRIPTION
-ARG VCS_REF
-ARG VCS_URL
-ARG VENDOR
-ARG VERSION
-ARG IMAGE_NAME
-
-ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
-ENV TERM=${TERM}
-
-# Build-time metadata as defined at http://label-schema.org
-LABEL \
-    org.label-schema.schema-version="1.0" \
-    org.label-schema.build-date="${BUILD_DATE}" \
-    org.label-schema.name="${NAME}" \
-    org.label-schema.description="${DESCRIPTION}" \
-    org.label-schema.vcs-ref="${VCS_REF}" \
-    org.label-schema.vcs-url="${VCS_URL}" \
-    org.label-schema.vendor="${VENDOR}" \
-    org.label-schema.version="${VERSION}" \
-    org.label.image-name="${IMAGE_NAME}"
-
-# Copy helper scripts to container
-ADD bin /root/bin
-
-# Install required software
-RUN ["/bin/bash", "-c", "/root/bin/container-install-prereqs.sh"]
-
-# Install ScoutSuite
-RUN ["/bin/bash", "-c", "/root/bin/container-install-scoutsuite.sh"]
-
-# Set a nice message
-RUN ["/bin/bash", "-c", "/root/bin/container-set-init.sh"]
-
-# Remove scripts
-RUN ["rm", "-rf", "/root/bin"]
-
-# Command
+WORKDIR /opt/scoutsuite-source
+# Native dependency builds and the existing optional cloud-CLI wrapper scripts.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential ca-certificates curl gnupg lsb-release unzip wget \
+    && rm -rf /var/lib/apt/lists/*
+COPY pyproject.toml setup.py MANIFEST.in README.md LICENSE requirements*.txt ./
+COPY constraints ./constraints
+COPY ScoutSuite ./ScoutSuite
+RUN python -m venv /opt/scoutsuite \
+    && /opt/scoutsuite/bin/python -m pip install setuptools==80.9.0 wheel==0.45.1 \
+    && /opt/scoutsuite/bin/python -m pip install --no-build-isolation \
+       -c constraints/combined-py311.txt . \
+    && /opt/scoutsuite/bin/python -m pip check
+ENV PATH="/opt/scoutsuite/bin:${PATH}"
+WORKDIR /work
 CMD ["/bin/bash"]

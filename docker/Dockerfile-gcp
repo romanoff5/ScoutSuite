@@ -1,4 +1,5 @@
-FROM nccgroup/scoutsuite-base:5.13.0-01
+ARG SCOUT_BASE_IMAGE=scoutsuite-fork-base:local
+FROM ${SCOUT_BASE_IMAGE}
 
 LABEL maintainer="Jason Ross <algorythm@gmail.com>"
 
@@ -27,7 +28,7 @@ LABEL \
     org.label.image-name="${IMAGE_NAME}"
 
 # Copy helper scripts to container
-ADD bin /root/bin
+COPY docker/bin /root/bin
 
 # Install gCloud SDK
 RUN ["/bin/bash", "-c", "/root/bin/container-install-gcp.sh"]

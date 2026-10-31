@@ -1,162 +1,22 @@
 #!/bin/bash
-
-# vars are stored in .env and config/base.env files
-# note that the FROM used in the Dockerfile files
-# needs to be updated to match the version in the env
-# files in order for anything other than the base image
-# to build correctly.
-# TODO: fix this so that the FROM is set in the Dockerfile
-# automatically by the env vars
-
-SEP1="=============================="
-SEP2="------------------------------"
-
-echo -e "\n\n${SEP1}"
-echo -e "BEGINNING BUILD..."
-
-case $1 in
-
-  "base")
-    #####################
-    #### BASE IMAGE  ####
-    #####################
-    echo -e "\n${SEP2}\nbuilding base image...\n"
-    source ./config/base.env
-
-    BUILD_CMD="docker build \
-    -f Dockerfile-base \
-    -t ${IMAGE_NAME} \
-    --build-arg BUILD_DATE=${BUILD_DATE} \
-    --build-arg NAME=${NAME} \
-    --build-arg VCS_REF=${VCS_REF} \
-    --build-arg VCS_URL=${VCS_URL} \
-    --build-arg VENDOR=${VENDOR} \
-    --build-arg VERSION=${VERSION} \
-    --build-arg IMAGE_NAME=${IMAGE_NAME} \
-    ."
-
-    echo -e "\n\nbuilding image using:\n${BUILD_CMD}"
-    exec ${BUILD_CMD}
-    echo -e "\nbase image build complete!\n${SEP2}\n"
-  ;;
-
-  "aws")
-    #####################
-    ####  AWS IMAGE  ####
-    #####################
-
-    echo -e "\n${SEP2}\nbuilding aws image...\n"
-    source ./config/base.env
-    source ./config/aws.env
-
-    BUILD_CMD="docker build \
-    -f Dockerfile-aws \
-    -t ${IMAGE_NAME} \
-    --build-arg BUILD_DATE=${BUILD_DATE} \
-    --build-arg NAME=${NAME} \
-    --build-arg VCS_REF=${VCS_REF} \
-    --build-arg VCS_URL=${VCS_URL} \
-    --build-arg VENDOR=${VENDOR} \
-    --build-arg VERSION=${VERSION} \
-    --build-arg IMAGE_NAME=${IMAGE_NAME} \
-    ."
-
-    echo -e "\n\nbuilding image using:\n${BUILD_CMD}"
-    exec ${BUILD_CMD}
-    echo -e "\naws image build complete!\n${SEP2}\n"
-  ;;
-
-  "gcp")
-    #####################
-    ####  GCP IMAGE  ####
-    #####################
-
-    echo -e "\n${SEP2}\nbuilding gcp image...\n"
-    source ./config/base.env
-    source ./config/gcp.env
-
-    BUILD_CMD="docker build \
-    -f Dockerfile-gcp \
-    -t ${IMAGE_NAME} \
-    --build-arg BUILD_DATE=${BUILD_DATE} \
-    --build-arg NAME=${NAME} \
-    --build-arg VCS_REF=${VCS_REF} \
-    --build-arg VCS_URL=${VCS_URL} \
-    --build-arg VENDOR=${VENDOR} \
-    --build-arg VERSION=${VERSION} \
-    --build-arg IMAGE_NAME=${IMAGE_NAME} \
-    ."
-
-    echo -e "\n\nbuilding image using:\n${BUILD_CMD}"
-    exec ${BUILD_CMD}
-    echo -e "\ngcp image build complete!\n${SEP2}\n"
-  ;;
-
-  "azure")
-    #####################
-    #### AZURE IMAGE ####
-    #####################
-    echo -e "\n${SEP2}\nbuilding azure image...\n"
-    source ./config/base.env
-    source ./config/azure.env
-
-    BUILD_CMD="docker build \
-    -f Dockerfile-azure \
-    -t ${IMAGE_NAME} \
-    --build-arg BUILD_DATE=${BUILD_DATE} \
-    --build-arg NAME=${NAME} \
-    --build-arg VCS_REF=${VCS_REF} \
-    --build-arg VCS_URL=${VCS_URL} \
-    --build-arg VENDOR=${VENDOR} \
-    --build-arg VERSION=${VERSION} \
-    --build-arg IMAGE_NAME=${IMAGE_NAME} \
-    ."
-
-    echo -e "\n\nbuilding image using:\n${BUILD_CMD}"
-    exec ${BUILD_CMD}
-  ;;
-
-  "combined")
-    #####################
-    ## COMBINED IMAGE  ##
-    #####################
-    echo -e "\n${SEP2}\nbuilding combined image...\n"
-    source ./config/base.env
-    source ./config/combined.env
-
-    BUILD_CMD="docker build \
-    -f Dockerfile \
-    -t ${IMAGE_NAME} \
-    --build-arg BUILD_DATE=${BUILD_DATE} \
-    --build-arg NAME=${NAME} \
-    --build-arg VCS_REF=${VCS_REF} \
-    --build-arg VCS_URL=${VCS_URL} \
-    --build-arg VENDOR=${VENDOR} \
-    --build-arg VERSION=${VERSION} \
-    --build-arg IMAGE_NAME=${IMAGE_NAME} \
-    ."
-
-    echo -e "\n\nbuilding image using:\n${BUILD_CMD}"
-    exec ${BUILD_CMD}
-    echo -e "\nbase image build complete!\n${SEP2}\n"
-  ;;
-
-  "all")
-    $0 base
-    $0 aws
-    $0 gcp
-    $0 azure
-  ;;
-
-  *)
-    echo -e "\nBUILD TARGET NOT FOUND!"
-    echo -e "\nUSAGE:\n  $0 [base | aws | gcp | azure | all ]"
-    echo -e "${SEP1}"
-    exit 1
-    # echo -e "Using default: all\n"
-    # $0 all
-  ;;
-
+set -euo pipefail
+scout_docker_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+scout_root="$(cd -- "${scout_docker_dir}/.." && pwd)"
+scout_target="${1:-base}"
+case "${scout_target}" in
+  base|combined)
+    docker build -f "${scout_docker_dir}/Dockerfile-base" \
+      --build-arg "VCS_REF=$(git -C "${scout_root}" describe --always --dirty)" \
+      -t scoutsuite-fork-base:local "${scout_root}" ;;
+  aws|azure|gcp)
+    "$0" base
+    docker build -f "${scout_docker_dir}/Dockerfile-${scout_target}" \
+      --build-arg SCOUT_BASE_IMAGE=scoutsuite-fork-base:local \
+      -t "scoutsuite-fork-${scout_target}:local" "${scout_root}" ;;
+  all)
+    "$0" base
+    "$0" aws
+    "$0" azure
+    "$0" gcp ;;
+  *) printf '%s\n' 'Usage: build.sh [base|combined|aws|azure|gcp|all]' >&2; exit 1 ;;
 esac
-
-echo -e "\n${SEP1}\nBUILD COMPLETE!...\n"

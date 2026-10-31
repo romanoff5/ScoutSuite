@@ -1,0 +1,119 @@
+{
+  "date": "2026-10-31",
+  "base_revision": "14344de31330e72b59cdd4f2429c51e1421f6094",
+  "scope": "M02-A only; Docker execution blocked; no CI modernization",
+  "build": {
+    "build": "1.3.0",
+    "setuptools": "80.9.0",
+    "wheel": "0.45.1",
+    "packaging": "26.3",
+    "pyproject-hooks": "1.3.3",
+    "source_date_epoch": 1793404800,
+    "offline_no_isolation": true
+  },
+  "artifact_sha256": {
+    "scoutsuite-5.14.0-py3-none-any.whl": "0f8d68abc5c2daa6b5cdddf8d17223ec848d0b180f4dbbeeb2ce8bf00163b64e",
+    "scoutsuite-5.14.0.tar.gz": "57dca2509a9cb8621790319700c14382985826493898593d40f0a90b57f1014f"
+  },
+  "smokes": {
+    "core-smoke": {
+      "profile": "core",
+      "python": "3.11.9",
+      "checks": [
+        "network-denial",
+        "core-imports",
+        "minimal-dependency-profile"
+      ]
+    },
+    "aws-smoke": {
+      "profile": "aws",
+      "python": "3.11.9",
+      "checks": [
+        "network-denial",
+        "core-imports",
+        "minimal-dependency-profile",
+        "credential-denial",
+        "aws-stubber",
+        "unstubbed-api-denial"
+      ]
+    },
+    "aws-linux-smoke": {
+      "profile": "aws",
+      "python": "3.11.18",
+      "checks": [
+        "network-denial",
+        "core-imports",
+        "minimal-dependency-profile",
+        "credential-denial",
+        "aws-stubber",
+        "unstubbed-api-denial"
+      ]
+    },
+    "wheel-smoke": {
+      "profile": "combined",
+      "python": "3.11.9",
+      "checks": [
+        "network-denial",
+        "core-imports",
+        "credential-denial",
+        "aws-stubber",
+        "unstubbed-api-denial",
+        "all-source-assets-sha256",
+        "installed-cli-entry",
+        "aws-azure-gcp-rules-and-reports"
+      ],
+      "package_version": "5.14.0",
+      "packaged_files_verified": 1379,
+      "runtime_requirements_verified": 49,
+      "installed_archive_sha256": "0f8d68abc5c2daa6b5cdddf8d17223ec848d0b180f4dbbeeb2ce8bf00163b64e"
+    },
+    "sdist-smoke": {
+      "profile": "combined",
+      "python": "3.11.18",
+      "checks": [
+        "network-denial",
+        "core-imports",
+        "credential-denial",
+        "aws-stubber",
+        "unstubbed-api-denial",
+        "all-source-assets-sha256",
+        "installed-cli-entry",
+        "aws-azure-gcp-rules-and-reports"
+      ],
+      "package_version": "5.14.0",
+      "packaged_files_verified": 1379,
+      "runtime_requirements_verified": 49,
+      "installed_archive_sha256": "57dca2509a9cb8621790319700c14382985826493898593d40f0a90b57f1014f"
+    }
+  },
+  "regressions": {
+    "windows": {
+      "python": "3.11.9",
+      "passed": 134,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 150,
+      "subtests": 22
+    },
+    "linux": {
+      "python": "3.11.18",
+      "passed": 134,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 161,
+      "subtests": 22
+    }
+  },
+  "pip_check": "passed in each minimal/artifact environment",
+  "docker": {
+    "status": "blocked",
+    "engine": "unavailable",
+    "automatic_approval_review": "rejected registry-authentication/desktop-start command: blocked by policy",
+    "validation": "shell syntax/source review only; no image execution"
+  },
+  "unchanged": [
+    "ScoutSuite/",
+    "requirements.txt",
+    ".github/"
+  ]
+}
