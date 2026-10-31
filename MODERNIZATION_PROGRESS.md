@@ -30,10 +30,36 @@ reviewer roles to automated verification areas; deferred M07; retained technical
 test/license/no-credential/rollback gates. Existing fork PRs #1–#3 will be reconciled
 with the actual integrated commits; no upstream PR is created.
 
-Implementation/integration receipts are appended after local validation and
-successful remote SHA verification. This file distinguishes pushed topic work
-from default-branch integration; a future log commit may advance a recorded
-integration snapshot without changing the measured implementation.
+### Verified integration receipt — 2026-10-31
+
+- Task 00 local implementation commit: `1a91b6811332a8c5b264341c0ff9b9189d4c7997`.
+- Pushed branch: `origin/feat/task00-fork-workflow`, confirmed at that same SHA.
+- Integrated default: `origin/master`, confirmed by `git ls-remote` at
+  `1a91b6811332a8c5b264341c0ff9b9189d4c7997` after fast-forward integration.
+- M01 source `14344de3`, M02-A source `07aa46fc` and M02-B source `81ef88e3`
+  are all ancestors of that default SHA. `git log --branches --not master`
+  returned no missing local commits. No history was rewritten or force-pushed.
+- GitHub confirms fork PRs [#1](https://github.com/romanoff5/ScoutSuite/pull/1),
+  [#2](https://github.com/romanoff5/ScoutSuite/pull/2) and
+  [#3](https://github.com/romanoff5/ScoutSuite/pull/3) **merged**. PRs #2/#3 were
+  retargeted to the fork's default branch before integration. No upstream PR.
+- Task 00 checks: private Windows CPython 3.11.9 environment,
+  `python -B -m pytest -q -p no:cacheprovider --tb=short --show-capture=no`:
+  **146 passed, 161 warnings, 22 subtests**, no failures/skips/xfails; local
+  documentation links, `git diff --check` and exact `.gitignore` checks pass.
+- M02-B implementation `81ef88e3` passed both
+  [PR](https://github.com/romanoff5/ScoutSuite/actions/runs/41240227648) and
+  [push](https://github.com/romanoff5/ScoutSuite/actions/runs/41240223580)
+  workflows on Windows/Ubuntu. Default-branch CI runs automatically after push;
+  an in-progress documentation run is not represented as a completed result.
+- This receipt is a later documentation-only commit: the recorded integration
+  snapshot remains immutable, while the final handoff SHA is the current
+  `origin/master` containing this receipt. Verify it with `git ls-remote`.
+
+Current handoff state: all implementation work integrated, stable scanner untouched,
+no new modernization implementation beyond Task 00/M02-B. Docker M02A-D01 remains
+a genuine unverified optional distribution limitation. No protection/ruleset
+changes, live assessments, releases or upstream writes were performed.
 
 Next backlog item for OpenCode: Task 03 / M03 runtime and sync/async contracts.
 The owner stopped continuation in this session after integration/handoff; M03 is

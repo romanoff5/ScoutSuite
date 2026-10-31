@@ -3,6 +3,13 @@
 Owner paused new implementation after Task 00 and integration. **M03/Task 03 is
 not started.** Continue it only when the owner resumes development in OpenCode.
 
+All accumulated work is integrated into `origin/master`; fork PRs #1, #2 and #3
+are marked merged by GitHub. Task 00 implementation/integration snapshot is
+`1a91b6811332a8c5b264341c0ff9b9189d4c7997`; the later documentation receipt
+advances the final handoff head without changing implementation. Original topic
+branches remain available for provenance/rollback. Working checkout is left on
+`master`; the local GitHub CLI default is also `romanoff5/ScoutSuite`.
+
 - Repository: `romanoff5/ScoutSuite`; default branch: `master`. `upstream`
   (`nccgroup/ScoutSuite`) is read-only. No upstream PR/push.
 - Workflow: local changes, offline checks, commit/push to origin, integrate
