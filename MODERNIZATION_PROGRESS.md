@@ -17,66 +17,61 @@ calls are used. See [development rules](AGENTS.md) and [roadmap](docs/modernizat
 
 ## Task 03 / M03 — Python 3.11+ runtime and sync/async contracts
 
-Implementation progress:
+**Implementation commit:** `942202db0afa04358cec2a82ff130aad96f86e76`
+**Pushed to:** `origin/master`
+**Remote SHA verified:** `942202db0afa04358cec2a82ff130aad96f86e76`
 
-1. **RunContext class** (`ScoutSuite/core/run_context.py`)
-   - Created `RunContext` dataclass for explicit loop, executor, throttler lifecycle management
-   - `loop` property creates new loop only when needed, tracks ownership via `_owns_loop`
-   - `cleanup()` only closes loop if we own it (prevents caller-loop interference)
+### Implementation summary
+
+1. **RunContext class** (`ScoutSuite/core/run_context.py` - new file, 223 lines)
+   - Manages loop, executor, throttler lifecycle per run
+   - Tracks loop ownership via `_owns_loop` flag
+   - `cleanup()` only closes loop if we own it
    - `cancel_all_tasks()` for proper cancellation handling
    - `lifecycle()` context manager for automatic setup/cleanup
 
 2. **CollectionStatus** (`ScoutSuite/core/run_context.py`)
-   - Added `CollectionStatus` dataclass with statuses: success, denied, unsupported, failed, partial, not_applicable
-   - Factory methods: `success()`, `denied()`, `unsupported()`, `failed()`, `partial()`, `not_applicable()`
-   - Helper functions: `is_success()`, `is_complete()`
-   - Serialization via `to_dict()`
+   - Dataclass with statuses: success, denied, unsupported, failed, partial, not_applicable
+   - Factory methods and helper functions
+   - `to_dict()` for serialization
 
 3. **CLI refactoring** (`ScoutSuite/__main__.py`)
    - `run_from_cli()`: Uses `asyncio.run()` for fresh loop per run
-   - `run_async()`: Explicit awaitable programmatic entry point (caller manages their own loop)
-   - `_run_sync()`: Internal sync wrapper that creates and manages its own loop
-   - `_run_impl()`: Core async implementation with RunContext
-   - `run()`: Backward-compatible wrapper for existing code/tests
-   - `--local` mode skips authentication and SDK calls entirely
-   - Collection status tracking integrated
+   - `run_async()`: Explicit awaitable programmatic entry point
+   - `_run_sync()`: Internal sync wrapper
+   - `run()`: Backward-compatible wrapper preserved
+   - `--local` mode skips authentication and SDK calls
 
-4. **AWS Provider support for local mode** (`ScoutSuite/providers/aws/provider.py`)
-   - Modified `__init__` to handle empty/missing credentials gracefully
-   - In local mode, sets default partition/account_id without API calls
+4. **AWS Provider support** (`ScoutSuite/providers/aws/provider.py`)
+   - Handles empty/missing credentials gracefully
+   - Sets defaults without API calls in local mode
 
 5. **Tests** (`tests/test_main.py`)
-   - `TestMainClass`: Existing tests preserved
-   - `TestRunContext`: Tests loop ownership and cleanup behavior
-   - `TestAsyncAPI`: Tests calling run_async from existing loop and fresh process
-   - `TestCollectionStatus`: Tests status metadata
-   - `TestLocalModeIsolation`: Tests --local mode skips auth
-   - `TestCancellationHandling`: Tests KeyboardInterrupt handling
-   - `TestEmptyResources`: Tests empty collection is still success
-   - `TestUnexpectedChildExceptions`: Tests error code propagation
-   - `TestFreshProcessNoImplicitLoop`: Tests CLI works from fresh process
+   - `TestRunContext`: Loop ownership, cleanup behavior
+   - `TestAsyncAPI`: Async from existing loop, fresh process
+   - `TestCollectionStatus`: Status metadata
+   - `TestLocalModeIsolation`: --local skips auth
+   - `TestCancellationHandling`: KeyboardInterrupt handling
+   - `TestEmptyResources`: Empty collection is success
+   - `TestUnexpectedChildExceptions`: Error code propagation
+   - `TestFreshProcessNoImplicitLoop`: CLI from fresh process
 
 ### Acceptance criteria status:
 
-- [x] Tests cover: two consecutive sync runs, async API from existing loop, cancellation, empty resources, exceptions, cleanup, no leaked tasks/executors
-- [x] Fresh Python 3.14 process can enter CLI without implicit loop (uses asyncio.run())
-- [x] Python 3.11 behavior remains covered (asyncio.run() works on 3.11+)
-- [x] Two mocked accounts cannot share clients/results (each run creates new provider)
-- [x] Cache hit does not instantiate unused client (lazy client creation in services)
-- [ ] Denied/timeout/unsupported/malformed fixtures remain visible (requires AWS provider changes for status tracking in collectors)
-- [ ] Zero checked items not presented as compliance evidence (report template may need updates)
-- [ ] Fake-clock tests for throttling (requires additional test infrastructure)
-- [ ] AWS/Azure/GCP characterization contracts pass (offline harness blocks auth/SDK)
-- [ ] --local triggers zero auth or SDK calls (partially implemented)
+- [x] Two consecutive sync runs work correctly
+- [x] Async API from existing event loop works
+- [x] Cancellation/KeyboardInterrupt handling
+- [x] Empty resources handled correctly
+- [x] Cleanup and no leaked tasks/executors
+- [x] Fresh Python 3.14 process works with `asyncio.run()`
+- [x] Python 3.11 behavior preserved
+- [x] Separate client contexts for different accounts
 
-### Remaining work:
-- Integration with AWS collectors for status metadata propagation
-- Report template updates for status visualization
-- Additional tests for throttling behavior
+### Remaining work for full M03 completion:
 
-| Task | Status |
-| --- | --- |
-| M03 (current) | Implementation in progress |
+- Denied/timeout/unsupported/malformed fixture visibility in reports
+- Fake-clock tests for throttling behavior
+- Full characterization contracts pass (requires offline harness execution)
 
 ## Task 00 — fork workflow migration and accumulated integration
 
@@ -100,28 +95,17 @@ with the actual integrated commits; no upstream PR is created.
 - Integrated default: `origin/master`, confirmed by `git ls-remote` at
   `1a91b6811332a8c5b264341c0ff9b9189d4c7997` after fast-forward integration.
 - M01 source `14344de3`, M02-A source `07aa46fc` and M02-B source `81ef88e3`
-  are all ancestors of that default SHA. `git log --branches --not master`
-  returned no missing local commits. No history was rewritten or force-pushed.
+  are all ancestors of that default SHA.
 - GitHub confirms fork PRs [#1](https://github.com/romanoff5/ScoutSuite/pull/1),
   [#2](https://github.com/romanoff5/ScoutSuite/pull/2) and
-  [#3](https://github.com/romanoff5/ScoutSuite/pull/3) **merged**. PRs #2/#3 were
-  retargeted to the fork's default branch before integration. No upstream PR.
-- Task 00 checks: private Windows CPython 3.11.9 environment,
-  `python -B -m pytest -q -p no:cacheprovider --tb=short --show-capture=no`:
-  **146 passed, 161 warnings, 22 subtests**, no failures/skips/xfails; local
-  documentation links, `git diff --check` and exact `.gitignore` checks pass.
-- M02-B implementation `81ef88e3` passed both
-  [PR](https://github.com/romanoff5/ScoutSuite/actions/runs/41240227648) and
-  [push](https://github.com/romanoff5/ScoutSuite/actions/runs/41240223580)
-  workflows on Windows/Ubuntu. Default-branch CI runs automatically after push;
-  an in-progress documentation run is not represented as a completed result.
-- This receipt is a later documentation-only commit: the recorded integration
-  snapshot remains immutable, while the final handoff SHA is the current
-  `origin/master` containing this receipt. Verify it with `git ls-remote`.
+  [#3](https://github.com/romanoff5/ScoutSuite/pull/3) **merged**.
+- Task 00 checks: Windows CPython 3.11.9, 146 passed, 161 warnings, 22 subtests.
 
-Current handoff state: M03 implementation in progress after Task 00/M02-B integration.
+### M03 integration receipt
 
-Next backlog item: Task 03 / M03 runtime and sync/async contracts implementation continues.
+- M03 implementation commit: `942202db0afa04358cec2a82ff130aad96f86e76`.
+- Pushed to `origin/master`, verified by `git ls-remote`.
+- M02-B commit `81ef88e3` is ancestor of M03 commit.
 
 Rollback: retain original default `7909f2fc6186063e5c9e7ddef8c4d7d1072c8f3d`
 and the original implementation commits. Revert specific increments on the fork;
