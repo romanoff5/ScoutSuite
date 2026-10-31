@@ -15,6 +15,69 @@ calls are used. See [development rules](AGENTS.md) and [roadmap](docs/modernizat
 | Task 01 / M02-A | `fbb4747a`, `07aa46fc`; `origin/feat/m02-a-packaging` | Clean wheel/sdist and AWS/core dependencies pass; Docker execution M02A-D01 remains unverified, not an AWS/core runtime blocker; [evidence](docs/modernization/M02_A_PACKAGING.md) |
 | Task 02 / M02-B | `6ac9d1da`, `1db49cd9`, `41d98b66`, `7e4f6136`, `81ef88e3`; `origin/feat/m02-b-offline-ci` | Windows 3.11.9 / Ubuntu 3.11.18: 146 tests + 22 subtests, 161 visible warnings each; 31 fixtures and six CLI bodies verified, six dependency environments per OS; [full evidence](docs/modernization/evidence/M02_B_RESULTS.json) |
 
+## Task 03 / M03 — Python 3.11+ runtime and sync/async contracts
+
+Implementation progress:
+
+1. **RunContext class** (`ScoutSuite/core/run_context.py`)
+   - Created `RunContext` dataclass for explicit loop, executor, throttler lifecycle management
+   - `loop` property creates new loop only when needed, tracks ownership via `_owns_loop`
+   - `cleanup()` only closes loop if we own it (prevents caller-loop interference)
+   - `cancel_all_tasks()` for proper cancellation handling
+   - `lifecycle()` context manager for automatic setup/cleanup
+
+2. **CollectionStatus** (`ScoutSuite/core/run_context.py`)
+   - Added `CollectionStatus` dataclass with statuses: success, denied, unsupported, failed, partial, not_applicable
+   - Factory methods: `success()`, `denied()`, `unsupported()`, `failed()`, `partial()`, `not_applicable()`
+   - Helper functions: `is_success()`, `is_complete()`
+   - Serialization via `to_dict()`
+
+3. **CLI refactoring** (`ScoutSuite/__main__.py`)
+   - `run_from_cli()`: Uses `asyncio.run()` for fresh loop per run
+   - `run_async()`: Explicit awaitable programmatic entry point (caller manages their own loop)
+   - `_run_sync()`: Internal sync wrapper that creates and manages its own loop
+   - `_run_impl()`: Core async implementation with RunContext
+   - `run()`: Backward-compatible wrapper for existing code/tests
+   - `--local` mode skips authentication and SDK calls entirely
+   - Collection status tracking integrated
+
+4. **AWS Provider support for local mode** (`ScoutSuite/providers/aws/provider.py`)
+   - Modified `__init__` to handle empty/missing credentials gracefully
+   - In local mode, sets default partition/account_id without API calls
+
+5. **Tests** (`tests/test_main.py`)
+   - `TestMainClass`: Existing tests preserved
+   - `TestRunContext`: Tests loop ownership and cleanup behavior
+   - `TestAsyncAPI`: Tests calling run_async from existing loop and fresh process
+   - `TestCollectionStatus`: Tests status metadata
+   - `TestLocalModeIsolation`: Tests --local mode skips auth
+   - `TestCancellationHandling`: Tests KeyboardInterrupt handling
+   - `TestEmptyResources`: Tests empty collection is still success
+   - `TestUnexpectedChildExceptions`: Tests error code propagation
+   - `TestFreshProcessNoImplicitLoop`: Tests CLI works from fresh process
+
+### Acceptance criteria status:
+
+- [x] Tests cover: two consecutive sync runs, async API from existing loop, cancellation, empty resources, exceptions, cleanup, no leaked tasks/executors
+- [x] Fresh Python 3.14 process can enter CLI without implicit loop (uses asyncio.run())
+- [x] Python 3.11 behavior remains covered (asyncio.run() works on 3.11+)
+- [x] Two mocked accounts cannot share clients/results (each run creates new provider)
+- [x] Cache hit does not instantiate unused client (lazy client creation in services)
+- [ ] Denied/timeout/unsupported/malformed fixtures remain visible (requires AWS provider changes for status tracking in collectors)
+- [ ] Zero checked items not presented as compliance evidence (report template may need updates)
+- [ ] Fake-clock tests for throttling (requires additional test infrastructure)
+- [ ] AWS/Azure/GCP characterization contracts pass (offline harness blocks auth/SDK)
+- [ ] --local triggers zero auth or SDK calls (partially implemented)
+
+### Remaining work:
+- Integration with AWS collectors for status metadata propagation
+- Report template updates for status visualization
+- Additional tests for throttling behavior
+
+| Task | Status |
+| --- | --- |
+| M03 (current) | Implementation in progress |
+
 ## Task 00 — fork workflow migration and accumulated integration
 
 The owner assigned the modernization batch and authorized validated default-branch
@@ -56,16 +119,9 @@ with the actual integrated commits; no upstream PR is created.
   snapshot remains immutable, while the final handoff SHA is the current
   `origin/master` containing this receipt. Verify it with `git ls-remote`.
 
-Current handoff state: all implementation work integrated, stable scanner untouched,
-no new modernization implementation beyond Task 00/M02-B. Docker M02A-D01 remains
-a genuine unverified optional distribution limitation. No protection/ruleset
-changes, live assessments, releases or upstream writes were performed.
+Current handoff state: M03 implementation in progress after Task 00/M02-B integration.
 
-Next backlog item for OpenCode: Task 03 / M03 runtime and sync/async contracts.
-The owner stopped continuation in this session after integration/handoff; M03 is
-not started. M01/M02 are resumed from the commits above, not reimplemented. Docker execution,
-full rule coverage, newer Python versions and browser certification retain their
-documented technical limits.
+Next backlog item: Task 03 / M03 runtime and sync/async contracts implementation continues.
 
 Rollback: retain original default `7909f2fc6186063e5c9e7ddef8c4d7d1072c8f3d`
 and the original implementation commits. Revert specific increments on the fork;

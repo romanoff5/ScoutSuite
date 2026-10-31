@@ -33,11 +33,16 @@ class AWSProvider(BaseProvider):
         self.environment = self.profile
         self.result_format = result_format
 
-        self.credentials = kwargs['credentials']
+        self.credentials = kwargs.get('credentials')
 
-        self.partition = get_partition_name(self.credentials.session)
-
-        self.account_id = get_aws_account_id(self.credentials.session)
+        # M03: Support local mode with empty/missing credentials
+        if self.credentials and hasattr(self.credentials, 'session'):
+            self.partition = get_partition_name(self.credentials.session)
+            self.account_id = get_aws_account_id(self.credentials.session)
+        else:
+            # Local mode or missing credentials - set defaults
+            self.partition = getattr(self.credentials, 'partition', 'aws') if self.credentials else 'aws'
+            self.account_id = getattr(self.credentials, 'account_id', 'local-account-id') if self.credentials else 'local-account-id'
 
         super().__init__(report_dir, timestamp,
                                           services, skipped_services, result_format)
