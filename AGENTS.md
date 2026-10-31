@@ -4,6 +4,13 @@
 
 This repository is a multi-cloud security assessment tool. The initial modernization deliverable is documentation only: see [baseline](docs/modernization/BASELINE.md), [roadmap](docs/modernization/ROADMAP.md), and [offline validation](docs/modernization/OFFLINE_VALIDATION.md). These documents describe proposed work, not permission to implement every phase. Do not begin modernization implementation until the user requests it. Follow explicit user instructions when they narrow or change this scope.
 
+## Fork development workflow
+
+- This is independently maintained in `romanoff5/ScoutSuite`. Implement changes locally, run the applicable checks, then commit and push to that fork. The owner's standing instruction authorizes this workflow for current and subsequent requested tasks.
+- Do not create pull requests or push changes to `nccgroup/ScoutSuite`. Upstream is a read-only reference.
+- Pull requests within `romanoff5/ScoutSuite` are optional unless requested. Human review is optional; two human reviews are not a completion or merge requirement for this fork. This owner policy supersedes older review requirements in historical modernization notes.
+- Keep the security, offline testing and incremental change requirements below. Commit/push authorization does not authorize live assessments, release publication, unrequested merges or automatic progression to later roadmap phases.
+
 ## Security and data boundaries
 
 - Never use production cloud credentials or customer assessment data for development, examples, fixtures, benchmarks, or CI.
@@ -53,4 +60,4 @@ This repository is a multi-cloud security assessment tool. The initial moderniza
 - Follow dependency order and phase acceptance criteria in [ROADMAP.md](docs/modernization/ROADMAP.md). A phase is complete only when its observable exit criteria pass; partial coverage must be reported explicitly.
 - Prefer reversible adapters and additive schemas over parallel rewrites. Use opt-in capability flags for new services or changed semantics until their offline gates pass. Delete legacy paths only after their replacements and old-report compatibility are verified.
 - Keep the baseline revision and historical results intact. Add dated progress notes/evidence rather than rewriting the historical baseline as though the old behavior never existed.
-- Preserve the two-reviewer policy in `CONTRIBUTING.md`; include Azure/GCP expertise when shared/provider compatibility is affected. Do not push, publish, land, or perform live assessments merely because the roadmap proposes them.
+- Follow the fork workflow in `CONTRIBUTING.md`. Shared changes still require AWS/Azure/GCP offline regression evidence; human expertise may be requested when useful, without a mandatory reviewer count. Do not publish releases, merge branches or perform live assessments merely because the roadmap proposes them.

@@ -9,27 +9,22 @@
 
 ## Introduction
 
-First off, thank you for considering contributing to Scout Suite, you're awesome! 🎉
-
-Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
+These guidelines apply to independent development of this fork. The owner's task instructions define the scope; upstream contribution and reviewer requirements are not prerequisites for work here.
 
 ## Getting started
 
-So you want to contribute some code, that's great! This project follows the [GitHub Workflow](https://guides.github.com/introduction/flow/). 
+This fork is developed independently in `romanoff5/ScoutSuite`. Implement changes locally, validate them, then commit and push to the fork. Pull requests within the fork are optional unless requested. Do not create pull requests or push changes to `nccgroup/ScoutSuite`; upstream is a read-only reference.
 
-1. If it's a complex issue, please describe how you plan on going about addressing it on the issue thread.
-2. Assign yourself to the issue
-3. Create a branch using the following naming convention:
-    * If it's a feature: `feature/issuenumber-descriptive-name` 
-    * If it's a bug fix: `bugfix/issuenumber-descriptive-name` 
-    * If it's a hot fix: `hotfix/issuenumber-descriptive-name` 
+1. Read `AGENTS.md` and the task's relevant modernization documents.
+2. Inspect the existing code/tests and define the intended change before editing.
+3. Create a focused branch:
+    * Use `feat/descriptive-name` by default, or the branch requested for the task.
 4. Implement your solution and the associated tests
 5. Make sure your code follows the [PEP8 guidelines](https://www.python.org/dev/peps/pep-0008/)
-6. [Create a pull request](https://help.github.com/articles/creating-a-pull-request/) against `develop`
-7. Wait for people to review it
-8. Address the comments people left on your pull request
-9. Go back to 7. and repeat until your PR is 💯 
-10. Wait for someone from the team to merge your PR
+6. Record test results, limitations and rollback instructions. Preserve unrelated workspace changes.
+7. Commit and push the intended changes to `romanoff5/ScoutSuite`.
+8. If a pull request is requested, create it only within the fork against the appropriate fork branch.
+9. Address applicable validation failures and requested feedback. Do not start the next roadmap phase automatically.
 
 ## How to report a bug
 
@@ -47,4 +42,4 @@ If you find yourself wishing for a feature that doesn't exist in Scout Suite, yo
 
 ## Code review process
 
-Pull requests are regularly reviewed by the core team. We require a minimum of two reviewers before allowing to merge. 
+Human review is optional for this independently maintained fork. There is no mandatory two-reviewer requirement for completion or merging. Passing the applicable offline tests and documenting compatibility, limitations and rollback remain required. Merging branches, publishing releases and live cloud assessments require their own task authorization.

@@ -6,6 +6,15 @@
     "skipped": 1,
     "warnings": 63
   },
+  "owner_workflow_policy": {
+    "date": "2026-10-31",
+    "fork_pull_request_required": false,
+    "live_cloud_boundaries_unchanged": true,
+    "local_implementation_then_commit_push": true,
+    "mandatory_human_review_count": 0,
+    "repository": "romanoff5/ScoutSuite",
+    "upstream_pull_requests_allowed": false
+  },
   "profiles": {
     "ubuntu": {
       "execution": {
@@ -1279,11 +1288,10 @@
   "push_run": "https://github.com/romanoff5/ScoutSuite/actions/runs/41189702666",
   "recorded": "2026-10-31",
   "remaining": [
-    "two human reviews before merge",
     "M02A-D01 Docker gate is separate",
     "128 AWS, 80 Azure, 118 GCP rules remain untested",
     "Python 3.12+ and later modernization phases are not included"
   ],
-  "status": "M02-B implementation and hosted CI acceptance passed; human review/merge separate",
+  "status": "M02-B implementation and hosted CI acceptance passed; fork commit/push workflow; human review optional",
   "tested_implementation_revision": "41d98b66fae9080ceeb51c7a02118b3316c3898c"
 }

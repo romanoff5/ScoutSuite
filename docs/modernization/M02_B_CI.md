@@ -4,8 +4,10 @@ Date: 2026-10-31. Parent: M02-A `07aa46fc`; stacked PR #3 targets PR #2.
 Scope is CI, test tooling and evidence. No scanner, provider, security-rule or
 Azure/GCP SDK change is included. M02A-D01 (Docker execution) remains separate.
 
-**M02-B implementation and hosted CI acceptance are complete.** Human review
-and merging remain separate: two reviewers are required by `CONTRIBUTING.md`.
+**M02-B implementation and hosted CI acceptance are complete.** The owner's
+fork policy is local development followed by commit/push to `romanoff5/ScoutSuite`.
+Human review and fork PRs are optional; no two-reviewer gate applies. No PR is
+created in `nccgroup/ScoutSuite`. Merging remains a separate requested action.
 The final closeout changes only documentation/evidence; no later phase is started.
 
 ## Completed acceptance evidence
@@ -172,5 +174,5 @@ Rollback by reverting only M02-B commits in reverse order, retaining M01/M02-A.
 No scanner, dependency SDK, schema, permission or assessment migration is needed.
 Old workflows are retired and cannot count as successful validation after a
 revert; keep using the documented guarded local suite. Cache keys can be bumped
-to discard dependency caches without deleting data. Two human reviewers remain
-required; no branch protection settings or merges were performed.
+to discard dependency caches without deleting data. No mandatory human-review
+gate applies to this fork; no branch protection settings or merges were changed.
