@@ -1,0 +1,10 @@
+# Test-only measurement. The historical root config omits nested resources/tests.
+[run]
+source =
+    ScoutSuite
+    tests
+branch = True
+
+[report]
+include_namespace_packages = True
+show_missing = True

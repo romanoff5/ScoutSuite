@@ -1,0 +1,91 @@
+{
+    "about": "Synthetic offline characterization; identifiers, settings and timestamps are invented.",
+    "cases": {
+        "unsafe": {
+            "response": [
+                {
+                    "id": "fixture-gcp-bucket",
+                    "name": "fixture-gcp-bucket",
+                    "project_number": "000000000000",
+                    "time_created": "2020-01-01T00:00:00+00:00",
+                    "location": "US",
+                    "storage_class": "STANDARD",
+                    "versioning_enabled": false,
+                    "iam_configuration": {
+                        "publicAccessPrevention": "enforced",
+                        "uniformBucketLevelAccess": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ],
+            "expected": {
+                "resources": {
+                    "scoutid-de54e961e0eb3f3b255dfccd99a4716ff89ac9b4": {
+                        "id": "scoutid-de54e961e0eb3f3b255dfccd99a4716ff89ac9b4",
+                        "name": "fixture-gcp-bucket",
+                        "project_id": "offline-project",
+                        "project_number": "000000000000",
+                        "creation_date": "2020-01-01 00:00:00+00:00",
+                        "location": "US",
+                        "storage_class": "standard",
+                        "versioning_enabled": false,
+                        "logging_enabled": false,
+                        "public_access_prevention": "enforced",
+                        "uniform_bucket_level_access": true,
+                        "acls": [],
+                        "default_object_acl": [],
+                        "member_bindings": {}
+                    }
+                },
+                "items": [
+                    "cloudstorage.projects.offline-project.buckets.scoutid-de54e961e0eb3f3b255dfccd99a4716ff89ac9b4.versioning_enabled"
+                ],
+                "checked_items": 1,
+                "level": "warning"
+            }
+        },
+        "safe": {
+            "response": [
+                {
+                    "id": "fixture-gcp-bucket",
+                    "name": "fixture-gcp-bucket",
+                    "project_number": "000000000000",
+                    "time_created": "2020-01-01T00:00:00+00:00",
+                    "location": "US",
+                    "storage_class": "STANDARD",
+                    "versioning_enabled": true,
+                    "iam_configuration": {
+                        "publicAccessPrevention": "enforced",
+                        "uniformBucketLevelAccess": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ],
+            "expected": {
+                "resources": {
+                    "scoutid-de54e961e0eb3f3b255dfccd99a4716ff89ac9b4": {
+                        "id": "scoutid-de54e961e0eb3f3b255dfccd99a4716ff89ac9b4",
+                        "name": "fixture-gcp-bucket",
+                        "project_id": "offline-project",
+                        "project_number": "000000000000",
+                        "creation_date": "2020-01-01 00:00:00+00:00",
+                        "location": "US",
+                        "storage_class": "standard",
+                        "versioning_enabled": true,
+                        "logging_enabled": false,
+                        "public_access_prevention": "enforced",
+                        "uniform_bucket_level_access": true,
+                        "acls": [],
+                        "default_object_acl": [],
+                        "member_bindings": {}
+                    }
+                },
+                "items": [],
+                "checked_items": 1,
+                "level": "warning"
+            }
+        }
+    }
+}

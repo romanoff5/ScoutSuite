@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-31",
+  "production_revision": "7909f2fc6186063e5c9e7ddef8c4d7d1072c8f3d",
+  "scope": "M01 trusted offline tests; production scanner, rules, requirements and workflows unchanged",
+  "historical_baseline": {
+    "selected": 49,
+    "passed": 46,
+    "failed": 2,
+    "skipped": 1,
+    "warnings": 63,
+    "unawaited_test_bodies": 6
+  },
+  "command": "python -B -m pytest -q -p no:cacheprovider --tb=short --show-capture=no",
+  "environments": {
+    "windows": {
+      "python": "3.11.9",
+      "passed": 132,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "subtests_passed": 22,
+      "warnings": 150,
+      "warnings_by_source": {
+        "ScoutSuite/providers/utils.py:DeprecationWarning": 50,
+        "google/cloud/kms_v1/proto/resources_pb2.py:DeprecationWarning": 100
+      },
+      "fixture_cases": 31,
+      "verified_cases": 31,
+      "fixture_states": [
+        "valid"
+      ],
+      "untested_rule_counts": {
+        "aws": 128,
+        "azure": 80,
+        "gcp": 118
+      },
+      "pip_check": "passed",
+      "configured_flake8": "passed",
+      "coverage": {
+        "ScoutSuite": {
+          "files": 504,
+          "covered_lines": 4322,
+          "statements": 13929,
+          "covered_branches": 566,
+          "branches": 3398,
+          "line_percent": 31.03,
+          "branch_percent": 16.66
+        },
+        "tests": {
+          "files": 21,
+          "covered_lines": 1249,
+          "statements": 1288,
+          "covered_branches": 96,
+          "branches": 124,
+          "line_percent": 96.97,
+          "branch_percent": 77.42
+        }
+      },
+      "coverage_run_passed": 130,
+      "coverage_note": "Coverage measured in the preceding 130-test run; final two pytest skip/xfail hook self-checks leave application code unchanged."
+    },
+    "linux": {
+      "python": "3.11.18",
+      "passed": 132,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "subtests_passed": 22,
+      "warnings": 161,
+      "warnings_by_source": {
+        "ScoutSuite/providers/utils.py:DeprecationWarning": 50,
+        "google/cloud/kms_v1/proto/resources_pb2.py:DeprecationWarning": 100,
+        "google/cloud/kms_v1/gapic/key_management_service_client.py:DeprecationWarning": 1,
+        "pkg_resources/__init__.py:DeprecationWarning": 10
+      },
+      "fixture_cases": 31,
+      "verified_cases": 31,
+      "fixture_states": [
+        "valid"
+      ],
+      "untested_rule_counts": {
+        "aws": 128,
+        "azure": 80,
+        "gcp": 118
+      },
+      "pip_check": "passed",
+      "configured_flake8": "passed",
+      "coverage": {
+        "ScoutSuite": {
+          "files": 504,
+          "covered_lines": 4323,
+          "statements": 13929,
+          "covered_branches": 567,
+          "branches": 3398,
+          "line_percent": 31.04,
+          "branch_percent": 16.69
+        },
+        "tests": {
+          "files": 21,
+          "covered_lines": 1251,
+          "statements": 1288,
+          "covered_branches": 95,
+          "branches": 124,
+          "line_percent": 97.13,
+          "branch_percent": 76.61
+        }
+      },
+      "coverage_run_passed": 130,
+      "coverage_note": "Coverage measured in the preceding 130-test run; final two pytest skip/xfail hook self-checks leave application code unchanged."
+    }
+  },
+  "coverage_command": "python -B -m pytest -q -p no:cacheprovider -p pytest_cov --cov --cov-config=tests/offline.coveragerc --cov-report=json:<output> --offline-manifest-report=<output>"
+}

@@ -14,12 +14,14 @@ import unittest
 
 import boto3
 import botocore.session
+from botocore.utils import ContainerMetadataFetcher, InstanceMetadataFetcher
 from botocore.stub import Stubber
 import google.auth
 import grpc
 import grpc.aio
 import pytest
 import requests
+from _pytest.runner import CallInfo
 from azure.identity import AzureCliCredential, DefaultAzureCredential, ManagedIdentityCredential
 
 from tests.offline import OfflineViolation, validate_test_item
@@ -42,6 +44,11 @@ def test_udp_and_dns_are_denied(offline):
         client.sendto(b'synthetic', ('198.51.100.1', 53))
     with offline.expect_violation('network'):
         socket.getaddrinfo('offline.invalid', 443)
+
+
+def test_implicit_server_listen_is_denied(offline):
+    with socket.socket() as server, offline.expect_violation('network'):
+        server.listen()
 
 
 def test_http_cannot_use_environment_proxy_to_escape(offline):
@@ -84,6 +91,13 @@ def test_credential_files_cannot_be_opened(offline):
 def test_default_aws_credential_discovery_is_denied(offline):
     with offline.expect_violation('credentials'):
         botocore.session.get_session().get_credentials()
+
+
+def test_metadata_credential_discovery_is_denied(offline):
+    with offline.expect_violation('credentials'):
+        InstanceMetadataFetcher().retrieve_iam_role_credentials()
+    with offline.expect_violation('credentials'):
+        ContainerMetadataFetcher().retrieve_uri('/synthetic')
 
 
 def test_default_google_credentials_are_denied(offline):
@@ -142,3 +156,12 @@ def test_unawaited_test_methods_are_rejected():
     item = SimpleNamespace(obj=BrokenTest.test_body, cls=BrokenTest, get_closest_marker=lambda name: None)
     with pytest.raises(ValueError, match='IsolatedAsyncioTestCase'):
         validate_test_item(item)
+
+
+@pytest.mark.parametrize('terminate', [pytest.skip, pytest.xfail], ids=['runtime-skip', 'runtime-xfail'])
+def test_runtime_short_circuit_is_reported_as_failure(request, terminate):
+    # Exercise the actual registered report-hook stack, including pytest's own xfail hook.
+    call = CallInfo.from_call(lambda: terminate('synthetic boundary probe'), when='call')
+    report = request.config.hook.pytest_runtest_makereport(item=request.node, call=call)
+    assert report.failed
+    assert not report.skipped

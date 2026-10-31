@@ -111,6 +111,15 @@ class OfflineGuard:
                 self._socketpair.reset(token)
 
         socket.socketpair = socketpair
+        for name in ('listen', 'accept'):
+            original = getattr(socket.socket, name)
+
+            def local_ipc_only(sock, *args, _original=original, **kwargs):
+                if not self._socketpair.get():
+                    self.deny('network')
+                return _original(sock, *args, **kwargs)
+
+            setattr(socket.socket, name, local_ipc_only)
         original_popen = subprocess.Popen
 
         # Preserve the class: asyncio.windows_utils subclasses Popen while importing.

@@ -11,6 +11,7 @@ from tests.offline import OfflineGuard, validate_test_item
 
 offline_guard = OfflineGuard().install()
 verified_cases = {}
+warning_counts = {}
 
 
 def pytest_addoption(parser):
@@ -40,6 +41,26 @@ def pytest_collection_modifyitems(items):
         raise pytest.UsageError(str(error)) from error
 
 
+def pytest_sessionfinish(session, exitstatus):
+    try:
+        offline_guard.assert_no_violations()
+    except AssertionError:
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
+        raise
+
+
+def pytest_warning_recorded(warning_message, when, nodeid, location):
+    filename = Path(warning_message.filename).as_posix()
+    if 'ScoutSuite/' in filename:
+        source = 'ScoutSuite/' + filename.split('ScoutSuite/', 1)[1]
+    elif 'site-packages/' in filename:
+        source = filename.split('site-packages/', 1)[1]
+    else:
+        source = Path(filename).name
+    key = source + ':' + warning_message.category.__name__
+    warning_counts[key] = warning_counts.get(key, 0) + 1
+
+
 @pytest.fixture
 def offline():
     return offline_guard
@@ -54,7 +75,7 @@ def check_offline_boundary():
     offline_guard.assert_no_violations()
 
 
-@pytest.hookimpl(hookwrapper=True)
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_makereport(item, call):
     result = yield
     report = result.get_result()
@@ -65,7 +86,7 @@ def pytest_runtest_makereport(item, call):
         if name == 'rule_case':
             if report.failed:
                 verified_cases[key] = 'failed'
-            elif report.when == 'call' and report.passed:
+            elif report.when == 'call' and report.passed and verified_cases.get(key) != 'failed':
                 verified_cases[key] = 'verified'
 
 
@@ -86,5 +107,5 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             f'{len(untested)} untested rules')
     report = config.getoption('--offline-manifest-report')
     if report:
-        Path(report).write_text(json.dumps({'exitstatus': int(exitstatus), 'cases': rows,
+        Path(report).write_text(json.dumps({'exitstatus': int(exitstatus), 'cases': rows, 'warnings': warning_counts,
                                           'untested': manifest['untested']}, indent=2) + '\n', encoding='utf-8')

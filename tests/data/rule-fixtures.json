@@ -153,6 +153,126 @@
             "kind": "legacy",
             "input": "rule-configs/iam-password-policy-reuse-enabled.json",
             "expected": "rule-results/iam-password-policy-reuse-enabled.json"
+        },
+        {
+            "provider": "aws",
+            "rule": "ec2-ebs-default-encryption-disabled.json",
+            "id": "unsafe-json",
+            "source_case": "unsafe",
+            "format": "json",
+            "kind": "characterization",
+            "input": "characterization/aws.json",
+            "expected": "characterization/aws.json"
+        },
+        {
+            "provider": "aws",
+            "rule": "ec2-ebs-default-encryption-disabled.json",
+            "id": "unsafe-sqlite",
+            "source_case": "unsafe",
+            "format": "sqlite",
+            "kind": "characterization",
+            "input": "characterization/aws.json",
+            "expected": "characterization/aws.json"
+        },
+        {
+            "provider": "aws",
+            "rule": "ec2-ebs-default-encryption-disabled.json",
+            "id": "safe-json",
+            "source_case": "safe",
+            "format": "json",
+            "kind": "characterization",
+            "input": "characterization/aws.json",
+            "expected": "characterization/aws.json"
+        },
+        {
+            "provider": "aws",
+            "rule": "ec2-ebs-default-encryption-disabled.json",
+            "id": "safe-sqlite",
+            "source_case": "safe",
+            "format": "sqlite",
+            "kind": "characterization",
+            "input": "characterization/aws.json",
+            "expected": "characterization/aws.json"
+        },
+        {
+            "provider": "azure",
+            "rule": "storageaccount-account-allowing-clear-text.json",
+            "id": "unsafe-json",
+            "source_case": "unsafe",
+            "format": "json",
+            "kind": "characterization",
+            "input": "characterization/azure.json",
+            "expected": "characterization/azure.json"
+        },
+        {
+            "provider": "azure",
+            "rule": "storageaccount-account-allowing-clear-text.json",
+            "id": "unsafe-sqlite",
+            "source_case": "unsafe",
+            "format": "sqlite",
+            "kind": "characterization",
+            "input": "characterization/azure.json",
+            "expected": "characterization/azure.json"
+        },
+        {
+            "provider": "azure",
+            "rule": "storageaccount-account-allowing-clear-text.json",
+            "id": "safe-json",
+            "source_case": "safe",
+            "format": "json",
+            "kind": "characterization",
+            "input": "characterization/azure.json",
+            "expected": "characterization/azure.json"
+        },
+        {
+            "provider": "azure",
+            "rule": "storageaccount-account-allowing-clear-text.json",
+            "id": "safe-sqlite",
+            "source_case": "safe",
+            "format": "sqlite",
+            "kind": "characterization",
+            "input": "characterization/azure.json",
+            "expected": "characterization/azure.json"
+        },
+        {
+            "provider": "gcp",
+            "rule": "cloudstorage-bucket-no-versioning.json",
+            "id": "unsafe-json",
+            "source_case": "unsafe",
+            "format": "json",
+            "kind": "characterization",
+            "input": "characterization/gcp.json",
+            "expected": "characterization/gcp.json"
+        },
+        {
+            "provider": "gcp",
+            "rule": "cloudstorage-bucket-no-versioning.json",
+            "id": "unsafe-sqlite",
+            "source_case": "unsafe",
+            "format": "sqlite",
+            "kind": "characterization",
+            "input": "characterization/gcp.json",
+            "expected": "characterization/gcp.json"
+        },
+        {
+            "provider": "gcp",
+            "rule": "cloudstorage-bucket-no-versioning.json",
+            "id": "safe-json",
+            "source_case": "safe",
+            "format": "json",
+            "kind": "characterization",
+            "input": "characterization/gcp.json",
+            "expected": "characterization/gcp.json"
+        },
+        {
+            "provider": "gcp",
+            "rule": "cloudstorage-bucket-no-versioning.json",
+            "id": "safe-sqlite",
+            "source_case": "safe",
+            "format": "sqlite",
+            "kind": "characterization",
+            "input": "characterization/gcp.json",
+            "expected": "characterization/gcp.json"
         }
     ],
     "untested": {
@@ -357,7 +477,6 @@
             "sqldatabase-servers-vulnerability-recurring-scans-disabled.json",
             "sqldatabase-servers-vulnerability-send-scan-reports-to-not-configured.json",
             "storageaccount-access-keys-not-rotated.json",
-            "storageaccount-account-allowing-clear-text.json",
             "storageaccount-encrypted-not-customer-managed.json",
             "storageaccount-public-blob-container.json",
             "storageaccount-public-traffic-allowed.json",
@@ -393,7 +512,6 @@
             "cloudstorage-bucket-member.json",
             "cloudstorage-bucket-no-logging.json",
             "cloudstorage-bucket-no-public-access-prevention.json",
-            "cloudstorage-bucket-no-versioning.json",
             "cloudstorage-uniform-bucket-level-access-disabled.json",
             "computeengine-firewall-default-rule-in-use.json",
             "computeengine-firewall-rule-allows-all-ports.json",

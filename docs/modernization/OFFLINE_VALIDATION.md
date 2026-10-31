@@ -158,4 +158,3 @@ zc.lockfile==4.0
 Not run: the full unguarded test suite; credential/live-cloud tests; actual AWS/Azure/GCP collection; full dependency resolution; installed-wheel/sdist/container validation; hosted CI; Python 3.12-3.15 execution suites; browser rendering/interaction or large-report benchmarks; advisory/reachability analysis. The default Python on this host is 3.14.4, but the measured suite explicitly used 3.11.9. Compiler success must not be reported as runtime success on any other interpreter.
 
 Use [Phase 1](ROADMAP.md) to turn this limited evidence into a trustworthy baseline. Preserve these dated results as history when failures are fixed.
-

@@ -47,4 +47,3 @@ This is a reproducible scope summary, not a complete call graph. Dynamic `getatt
 - Build request and paginator-model checks from a reviewed explicit operation manifest in M05. Capture dynamic IAM calls, default filters, permissions, optional fields and result schemas. Additions require strict offline stub cases, not just a successful model lookup.
 
 See [baseline](BASELINE.md) for service coverage gaps and [M05/M06 in the roadmap](ROADMAP.md) for acceptance criteria.
-

@@ -1,0 +1,45 @@
+{
+    "about": "Synthetic offline characterization; identifiers, settings and timestamps are invented.",
+    "cases": {
+        "unsafe": {
+            "response": [
+                {
+                    "EbsEncryptionByDefault": false,
+                    "KmsKeyId": "alias/aws/ebs"
+                }
+            ],
+            "expected": {
+                "resources": {
+                    "0": {
+                        "ebs_encryption_default": false,
+                        "ebs_default_encryption_key_id": "alias/aws/ebs"
+                    }
+                },
+                "items": [
+                    "ec2.regions.us-east-1.regional_settings.0.NoDefaultEBSEncryption"
+                ],
+                "checked_items": 1,
+                "level": "warning"
+            }
+        },
+        "safe": {
+            "response": [
+                {
+                    "EbsEncryptionByDefault": true,
+                    "KmsKeyId": "alias/aws/ebs"
+                }
+            ],
+            "expected": {
+                "resources": {
+                    "0": {
+                        "ebs_encryption_default": true,
+                        "ebs_default_encryption_key_id": "alias/aws/ebs"
+                    }
+                },
+                "items": [],
+                "checked_items": 1,
+                "level": "warning"
+            }
+        }
+    }
+}

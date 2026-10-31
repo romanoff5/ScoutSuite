@@ -1,0 +1,93 @@
+{
+    "about": "Synthetic offline characterization; identifiers, settings and timestamps are invented.",
+    "cases": {
+        "unsafe": {
+            "response": [
+                {
+                    "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/fixture-rg/providers/Microsoft.Storage/storageAccounts/fixture-storage",
+                    "name": "fixture-storage",
+                    "enable_https_traffic_only": false,
+                    "allow_shared_key_access": null,
+                    "encryption": {
+                        "key_source": "Microsoft.Storage"
+                    },
+                    "network_rule_set": {
+                        "default_action": "Allow",
+                        "bypass": null
+                    },
+                    "tags": null
+                }
+            ],
+            "expected": {
+                "resources": {
+                    "scoutid-a19408781ba72cacf62766bc3449c79e29621a31": {
+                        "id": "scoutid-a19408781ba72cacf62766bc3449c79e29621a31",
+                        "name": "fixture-storage",
+                        "resource_group_name": "fixture-rg",
+                        "https_traffic_enabled": false,
+                        "public_traffic_allowed": true,
+                        "trusted_microsoft_services_enabled": false,
+                        "bypass": null,
+                        "shared_key_access_allowed": true,
+                        "access_keys_last_rotation_date": null,
+                        "encryption_key_source": "Microsoft.Storage",
+                        "encryption_key_customer_managed": false,
+                        "tags": [],
+                        "blob_containers": {},
+                        "blob_containers_count": 0,
+                        "blob_services": {},
+                        "blob_services_count": 0
+                    }
+                },
+                "items": [
+                    "storageaccounts.subscriptions.00000000-0000-0000-0000-000000000000.storage_accounts.scoutid-a19408781ba72cacf62766bc3449c79e29621a31.https_traffic_enabled"
+                ],
+                "checked_items": 1,
+                "level": "warning"
+            }
+        },
+        "safe": {
+            "response": [
+                {
+                    "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/fixture-rg/providers/Microsoft.Storage/storageAccounts/fixture-storage",
+                    "name": "fixture-storage",
+                    "enable_https_traffic_only": true,
+                    "allow_shared_key_access": null,
+                    "encryption": {
+                        "key_source": "Microsoft.Storage"
+                    },
+                    "network_rule_set": {
+                        "default_action": "Allow",
+                        "bypass": null
+                    },
+                    "tags": null
+                }
+            ],
+            "expected": {
+                "resources": {
+                    "scoutid-a19408781ba72cacf62766bc3449c79e29621a31": {
+                        "id": "scoutid-a19408781ba72cacf62766bc3449c79e29621a31",
+                        "name": "fixture-storage",
+                        "resource_group_name": "fixture-rg",
+                        "https_traffic_enabled": true,
+                        "public_traffic_allowed": true,
+                        "trusted_microsoft_services_enabled": false,
+                        "bypass": null,
+                        "shared_key_access_allowed": true,
+                        "access_keys_last_rotation_date": null,
+                        "encryption_key_source": "Microsoft.Storage",
+                        "encryption_key_customer_managed": false,
+                        "tags": [],
+                        "blob_containers": {},
+                        "blob_containers_count": 0,
+                        "blob_services": {},
+                        "blob_services_count": 0
+                    }
+                },
+                "items": [],
+                "checked_items": 1,
+                "level": "warning"
+            }
+        }
+    }
+}

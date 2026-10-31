@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures import FixtureError, fixture_inventory, load_fixture, read_manifest, validate_manifest_catalog
+from tests.fixtures import DATA, ROOT, FixtureError, fixture_inventory, load_fixture, read_manifest, validate_manifest_catalog
 
 
 def test_text_aliases_load_on_windows_and_linux(tmp_path):
@@ -47,9 +47,15 @@ def test_catalog_drift_and_ambiguous_coverage_fail(tmp_path):
     path.mkdir(parents=True)
     (path / 'default.json').write_text('{"rules": {"new-rule.json": []}}')
     with pytest.raises(FixtureError, match='catalog drift'):
-        validate_manifest_catalog({'cases': [], 'untested': {'aws': []}}, root=tmp_path)
+        validate_manifest_catalog({'cases': [], 'untested': {'aws': [], 'azure': [], 'gcp': []}}, root=tmp_path)
     with pytest.raises(FixtureError, match='Ambiguous'):
-        validate_manifest_catalog({'cases': [], 'untested': {'aws': ['new-rule.json', 'new-rule.json']}}, root=tmp_path)
+        validate_manifest_catalog({'cases': [], 'untested': {'aws': ['new-rule.json', 'new-rule.json'],
+                                                          'azure': [], 'gcp': []}}, root=tmp_path)
+
+
+def test_manifest_cannot_omit_a_provider():
+    with pytest.raises(FixtureError, match='AWS, Azure and GCP'):
+        validate_manifest_catalog({'cases': [], 'untested': {'aws': []}})
 
 
 def test_duplicate_declared_cases_fail(tmp_path):
@@ -58,3 +64,12 @@ def test_duplicate_declared_cases_fail(tmp_path):
     manifest.write_text(json.dumps({'version': 1, 'cases': [case, case]}))
     with pytest.raises(FixtureError, match='Duplicate'):
         read_manifest(manifest)
+
+
+def test_all_historical_pairs_remain_declared():
+    catalog = json.loads((ROOT / 'ScoutSuite/providers/aws/rules/rulesets/default.json').read_text())['rules']
+    paired = {rule for rule in catalog if (DATA / 'rule-configs' / rule).exists()
+              and (DATA / 'rule-results' / rule).exists()}
+    declared = {case['rule'] for case in read_manifest()['cases'] if case['kind'] == 'legacy'}
+    assert len(paired) == 19, 'Historical fixture changes require a reviewed coverage update'
+    assert declared == paired
