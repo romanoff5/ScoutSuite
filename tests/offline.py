@@ -23,7 +23,10 @@ class OfflineViolation(RuntimeError):
 
 
 class OfflineGuard:
-    def __init__(self):
+    def __init__(self, required_providers=('aws', 'azure', 'gcp')):
+        self.required_providers = set(required_providers)
+        if not self.required_providers <= {'aws', 'azure', 'gcp'}:
+            raise ValueError('Unknown required provider')
         self.events = []
         self.last_origin = []
         self.active = True
@@ -99,7 +102,8 @@ class OfflineGuard:
         })
         # urllib3 probes IPv6 with a local bind at import. Warm only that dependency;
         # provider imports and every test still run under the network audit hook.
-        importlib.import_module('urllib3.util.connection')
+        if importlib.util.find_spec('urllib3') is not None:
+            importlib.import_module('urllib3.util.connection')
         sys.addaudithook(self._audit)
         original_pair = socket.socketpair
 
@@ -143,37 +147,50 @@ class OfflineGuard:
             self.deny(category)
         setattr(module, name, blocked)
 
-    def _install_sdk_guards(self):
-        # Import the actual SDKs. A missing dependency is an error, never a skipped provider.
-        import botocore.credentials
-        import botocore.endpoint
-        import botocore.utils
-        import google.auth
-        import google.auth._default
-        import google.auth.credentials
-        import google.oauth2.service_account
-        import azure.identity
-        import grpc
-        import grpc.aio
+    def _available(self, module, provider):
+        try:
+            available = importlib.util.find_spec(module) is not None
+        except ModuleNotFoundError:
+            available = False
+        if not available and provider in self.required_providers:
+            raise ModuleNotFoundError('Required offline SDK is missing: ' + module)
+        return available
 
-        self._block(botocore.credentials.CredentialResolver, 'load_credentials', 'credentials')
-        self._block(botocore.endpoint.Endpoint, 'make_request', 'cloud-api')
-        self._block(botocore.utils.InstanceMetadataFetcher, 'retrieve_iam_role_credentials', 'credentials')
-        self._block(botocore.utils.ContainerMetadataFetcher, 'retrieve_uri', 'credentials')
-        self._block(botocore.utils.ContainerMetadataFetcher, 'retrieve_full_uri', 'credentials')
-        for module in (google.auth, google.auth._default):
-            for name in ('default', 'load_credentials_from_file'):
-                self._block(module, name, 'credentials')
-        self._block(google.auth.credentials.Credentials, 'before_request', 'credentials')
-        self._block(google.oauth2.service_account.Credentials, 'from_service_account_file', 'credentials')
-        for name in dir(azure.identity):
-            cls = getattr(azure.identity, name)
-            if isinstance(cls, type) and name.endswith('Credential') and hasattr(cls, 'get_token'):
-                self._block(cls, '__init__', 'credentials')
-                self._block(cls, 'get_token', 'credentials')
-        for module in (grpc, grpc.aio):
-            for name in ('secure_channel', 'insecure_channel'):
-                self._block(module, name, 'network')
+    def _install_sdk_guards(self):
+        # Default pytest still requires all three SDKs. Minimal dependency smoke
+        # explicitly chooses its profile; no provider test is deselected or faked.
+        if self._available('botocore', 'aws'):
+            import botocore.credentials
+            import botocore.endpoint
+            import botocore.utils
+            self._block(botocore.credentials.CredentialResolver, 'load_credentials', 'credentials')
+            self._block(botocore.endpoint.Endpoint, 'make_request', 'cloud-api')
+            self._block(botocore.utils.InstanceMetadataFetcher, 'retrieve_iam_role_credentials', 'credentials')
+            self._block(botocore.utils.ContainerMetadataFetcher, 'retrieve_uri', 'credentials')
+            self._block(botocore.utils.ContainerMetadataFetcher, 'retrieve_full_uri', 'credentials')
+        if self._available('google.auth', 'gcp'):
+            import google.auth
+            import google.auth._default
+            import google.auth.credentials
+            import google.oauth2.service_account
+            for module in (google.auth, google.auth._default):
+                for name in ('default', 'load_credentials_from_file'):
+                    self._block(module, name, 'credentials')
+            self._block(google.auth.credentials.Credentials, 'before_request', 'credentials')
+            self._block(google.oauth2.service_account.Credentials, 'from_service_account_file', 'credentials')
+        if self._available('azure.identity', 'azure'):
+            import azure.identity
+            for name in dir(azure.identity):
+                cls = getattr(azure.identity, name)
+                if isinstance(cls, type) and name.endswith('Credential') and hasattr(cls, 'get_token'):
+                    self._block(cls, '__init__', 'credentials')
+                    self._block(cls, 'get_token', 'credentials')
+        if self._available('grpc', 'gcp'):
+            import grpc
+            import grpc.aio
+            for module in (grpc, grpc.aio):
+                for name in ('secure_channel', 'insecure_channel'):
+                    self._block(module, name, 'network')
 
     def _cleanup(self):
         # Remain guarded until process exit, including pytest's own cleanup hooks.

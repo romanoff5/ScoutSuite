@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools==80.9.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ScoutSuite"
+dynamic = ["version", "dependencies"]
+description = "Scout Suite, a multi-cloud security auditing tool"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-2.0-only"
+license-files = ["LICENSE"]
+authors = [{name = "NCC Group"}]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+]
+
+[project.urls]
+Upstream = "https://github.com/nccgroup/ScoutSuite"
+Repository = "https://github.com/romanoff5/ScoutSuite"
+
+[project.scripts]
+scout = "ScoutSuite.__main__:run_from_cli"
+
+[tool.setuptools.dynamic]
+version = {attr = "ScoutSuite.__version__"}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["ScoutSuite*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.html", "*.js", "*.css", "*.zip", "*.ico", ".keep", ".gitkeep"]

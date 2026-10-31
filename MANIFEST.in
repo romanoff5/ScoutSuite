@@ -1,17 +1,10 @@
-include LICENSE
-include README.md
-include requirements.txt
-recursive-include ScoutSuite/data *
-recursive-include ScoutSuite/output/data *
-recursive-include ScoutSuite/providers/aws *
-recursive-include ScoutSuite/providers/aws/rules *
-recursive-include ScoutSuite/providers/azure *
-recursive-include ScoutSuite/providers/azure/rules *
-recursive-include ScoutSuite/providers/gcp *
-recursive-include ScoutSuite/providers/gcp/rules *
-recursive-include ScoutSuite/providers/aliyun *
-recursive-include ScoutSuite/providers/aliyun/rules *
-recursive-include ScoutSuite/providers/oci *
-recursive-include ScoutSuite/providers/oci/rules *
-recursive-include ScoutSuite/providers/kubernetes *
-recursive-include ScoutSuite/providers/kubernetes/rules *
+include LICENSE README.md pyproject.toml setup.py
+include requirements*.txt dev-requirements.txt pytest.ini conftest.py .flake8
+recursive-include constraints *.txt *.lock
+recursive-include ScoutSuite *.py *.json *.html *.js *.css *.zip *.ico .keep .gitkeep
+recursive-include tests *.py *.json *.txt *.md *.coveragerc
+include tools/verify_distribution.py
+include .dockerignore .gitattributes
+recursive-include docker Dockerfile* *.sh *.md
+prune ScoutSuite.egg-info
+global-exclude __pycache__ *.py[cod]
