@@ -1,6 +1,10 @@
 # Prioritized modernization roadmap
 
-Status: **proposal, no modernization implementation authorized or applied**. Date: 2026-10-30. Based on revision `7909f2fc6186063e5c9e7ddef8c4d7d1072c8f3d`; see [baseline](BASELINE.md) and [offline evidence](OFFLINE_VALIDATION.md). Scope is Python 3.11+ and current AWS behavior while preserving Azure and GCP.
+Status: **active solo-maintainer AWS modernization batch**, authorized 2026-10-31. The original 2026-10-30 proposal was based on revision `7909f2fc6186063e5c9e7ddef8c4d7d1072c8f3d`; [baseline](BASELINE.md) and [offline evidence](OFFLINE_VALIDATION.md) remain unchanged historical records. Resume completed M01/M02 work rather than restarting. Scope is Python 3.11+, AWS and shared core; Azure/GCP modernization is deferred, with preservation tests at shared boundaries. Current publication/integration receipts are in [MODERNIZATION_PROGRESS.md](../../MODERNIZATION_PROGRESS.md).
+
+## Solo-maintainer execution contract
+
+Implement and validate locally, commit and push only to `origin` (`romanoff5/ScoutSuite`), then integrate passing slices into the fork's actual default branch and verify the remote SHA. PRs and human sign-offs are not required. Never create upstream PRs or push to `nccgroup/ScoutSuite`; respect actual GitHub protection/rulesets without bypass. Assigned batches proceed in dependency order, but the latest owner instruction stops this session after Task 00, integration and OpenCode handoff; M03 is not started. If a changed-feature correctness/security gate fails, keep that feature on a pushed blocked branch. Optional external CI services, absent reviewers and unrelated legacy-provider failures are recorded limitations, never fabricated passes. Do not change the stable scanner installation or use cloud credentials/customer data.
 
 ## Strategy and target architecture
 
@@ -8,25 +12,25 @@ Retain the existing facade/resource/rules/report seams. Introduce explicit contr
 
 Target flow: a CLI or async entry point supplies explicit run context (provider credentials, service/region selection, concurrency/rate policy, errors and cancellation). Provider adapters collect typed or validated raw responses; resource normalizers produce a versioned, provider-specific result contract. Rules operate on normalized offline data and report evaluated/not-applicable/incomplete states. Encoders and the viewer consume immutable versioned results. Add contracts incrementally; do not require a new ORM, framework or common cross-cloud resource schema.
 
-Priorities: **P0** makes subsequent work safe and measurable; **P1** prevents incorrect or incomplete assessment and protects compatibility; **P2** expands coverage or improves maintainability after those gates. Relative size is S (one focused PR), M (several bounded PRs), or L (a migration lane requiring subdivision), not a delivery estimate. Owners are required roles, not assigned people.
+Priorities: **P0** makes subsequent work safe and measurable; **P1** prevents incorrect or incomplete assessment and protects compatibility; **P2** expands coverage or improves maintainability after those gates. Relative size is S (one independently verifiable slice), M (several bounded slices), or L (a migration lane requiring subdivision), not a delivery estimate. Verification areas below are automated/compatibility concerns, not assigned people or approval gates.
 
 ## Ordered backlog
 
-| ID | Priority / size | Deliverable | Dependencies | Required review roles |
+| ID | Priority / size | Deliverable | Dependencies | Suggested automated verification / compatibility areas |
 | --- | --- | --- | --- | --- |
-| M01 | P0 / M | Enforced offline harness, honest test execution, portable fixture loading and baseline manifests | None | Test maintainer, multi-cloud maintainer |
-| M02 | P0 / M | Valid dependency metadata, reproducible environments, supported CI and installed-wheel checks | M01 safety guard | Packaging/CI maintainer, Azure/GCP maintainers |
-| M03 | P1 / M | Python lifecycle and synchronous/async API contracts, real offline local replay | M01, M02 bootstrap | Shared runtime maintainer, all three provider reviewers |
-| M04 | P1 / L | Assessment completeness states, bounded collection, per-run caches, retries and cancellation | M01; runtime lifecycle from M03 | Runtime and provider maintainers |
-| M05 | P1 / M | AWS API/pagination/response corrections for existing services | M01, tested AWS SDK constraints from M02; M04 error contract | AWS maintainer |
-| M06 | P1 / M | Legacy/deprecated AWS surface adapters and dated metadata | M05 | AWS maintainer, report compatibility reviewer |
-| M07 | P1 / L | Azure/GCP SDK migration and optional provider dependencies | M01 characterization, M02 packaging, shared M03/M04 contracts | Azure and GCP maintainers, packaging maintainer |
-| M08 | P1 / L | Current rule semantics and versioned policy profiles | M04, relevant M05/M06 data contracts | AWS security-rule reviewer, standards owner |
-| M09 | P1 / L | Versioned reports, safe deterministic serialization, reproducible local viewer assets | M01 report fixtures, M02 build inputs; M04 completeness contract | Report/UI maintainer, security reviewer, all three providers |
-| M10 | P2 / L | Public current-service AWS coverage in small vertical slices | M04, M05, relevant M08/M09 interfaces | AWS maintainer, permissions/security reviewer |
-| M11 | P1 / M | Release gates, compatibility/scale evidence and staged rollout | M03-M09; only completed M10 services included | Release owner, provider/report maintainers |
+| M01 | P0 / M | Enforced offline harness, honest test execution, portable fixture loading and baseline manifests | None | Network/credential/process negatives, fixture accounting, provider characterization |
+| M02 | P0 / M | Valid dependency metadata, reproducible environments, supported CI and installed-wheel checks | M01 safety guard | Wheel/sdist assets, dependency checks, Windows/Linux offline CI |
+| M03 | P1 / M | Python lifecycle and synchronous/async API contracts, real offline local replay | M01, M02 bootstrap | Loop ownership, repeated runs, cancellation, cleanup, shared-provider preservation |
+| M04 | P1 / L | Assessment completeness states, bounded collection, per-run caches, retries and cancellation | M01; runtime lifecycle from M03 | Full/empty/denied/partial/error states, finite work, isolated client contexts |
+| M05 | P1 / M | AWS API/pagination/response corrections for existing services | M01, tested AWS SDK constraints from M02; M04 error contract | Strict AWS request/response fixtures, pagination/error boundaries |
+| M06 | P1 / M | Legacy/deprecated AWS surface adapters and dated metadata | M05 | Legacy snapshots, explicit unsupported states, report compatibility |
+| M07 | Deferred / L | Azure/GCP modernization is out of scope; preserve existing SDKs, collectors and rules | Not a dependency of the assigned AWS batch | Lightweight existing-interface/assets preservation only |
+| M08 | P1 / L | Current rule semantics and versioned policy profiles | M04, relevant M05/M06 data contracts | Secure/insecure/unknown/NA cases, stable findings, licensed reference catalogs |
+| M09 | P1 / L | Versioned reports, safe deterministic serialization, reproducible local viewer assets | M01 report fixtures, M02 build inputs; M04 completeness contract | Deterministic round trips, exceptions, escaping, offline viewer, preserved templates |
+| M10 | P2 / L | Public current-service AWS coverage in small vertical slices | M04, M05, relevant M08/M09 interfaces | API/region/partition/permission manifests, bounded synthetic service tests |
+| M11 | P1 / M | Fork release gates, compatibility/scale evidence and staged rollout | M03-M06, M08-M09; only completed M10 services included | Installed artifacts, hashes/SBOM, supported AWS matrix, stable-install rollback |
 
-M07 and M09 preparation can proceed alongside bounded AWS work once their prerequisites pass. Do not change the same shared dependency or schema independently in competing migrations. A release may ship a completed subset of M10; it must not advertise planned services as supported.
+M07 is deferred and is not an approval/dependency gate for AWS-only slices. M09 preparation can proceed alongside bounded AWS work once its prerequisites pass. Do not change the same shared dependency or schema independently in competing migrations. A release may ship a completed subset of M10; it must not advertise planned services as supported.
 
 ## Phase 0 — baseline and development boundaries (this deliverable)
 
@@ -58,7 +62,7 @@ Acceptance criteria:
 - AWS/Azure/GCP characterization tests and provider imports run on Python 3.11 in a documented isolated environment. Missing SDK compatibility is reported as a blocking item for the affected migration, not replaced by a permissive mock of the entire provider.
 - New test policy prevents credential/cloudwatch/profiles tests from running accidentally. An xfail/skip is never used as the safety boundary.
 
-Regression/rollback: record exact commands, dependency snapshot, test counts and warnings. Retain baseline expected behavior, including documented deficiencies, until the corresponding behavior change is separately reviewed. Harness changes can be reverted without altering production scanner behavior.
+Regression/rollback: record exact commands, dependency snapshot, test counts and warnings. Retain baseline expected behavior, including documented deficiencies, until the corresponding behavior change is separately validated. Harness changes can be reverted without altering production scanner behavior.
 
 ## Phase 2 — reproducible packaging and CI (M02)
 
@@ -95,7 +99,7 @@ Acceptance criteria:
 - Fake-clock tests verify maximum attempts/backoff and cancellation during throttling. Measured in-flight and queued work stay within configured bounds.
 - AWS/Azure/GCP characterization contracts pass; `--local` from synthetic fixtures triggers zero auth or SDK calls, including provider constructors.
 
-Regression/rollback: additive status fields and an explicit result-format version retain old readers or fail with a clear version message. Runtime and status changes ship in separate PRs. Revert behavior independently without deleting saved evidence.
+Regression/rollback: additive status fields and an explicit result-format version retain old readers or fail with a clear version message. Runtime and status changes ship in separate increments. Revert behavior independently without deleting saved evidence.
 
 ## Phase 4 — correct existing AWS collection (M05, M06)
 
@@ -115,7 +119,9 @@ Acceptance criteria:
 
 Regression/rollback: each service correction is a separate change with old/new normalized snapshots and a permissions diff. Keep stable rule/resource IDs. Avoid simultaneously changing collection and severity so differences are attributable.
 
-## Phase 5 — migrate Azure/GCP safely (M07)
+## Phase 5 — Azure/GCP migration (M07, deferred)
+
+This phase is not assigned and must not run in the AWS batch. Its original future design below is retained for context, not authorization. Freeze Azure/GCP SDKs, collectors and security rules; run preservation checks only where shared changes affect their existing contracts. Legacy foreign-provider limitations do not block an independently passing AWS-only slice.
 
 Characterize each SDK family before upgrading it. Keep SDK-specific request/model differences in adapters so rule paths and templates remain stable. Stage Azure Identity/Graph, then management SDKs in groups (resource/RBAC, network/compute, storage/Key Vault, database/security). Handle deprecated password authentication with a documented replacement using supported interactive/workload flows; preserve CLI, service-principal and managed-identity selection semantics.
 
@@ -195,4 +201,4 @@ After release, schedule dependency/SDK/model and metadata freshness review, test
 
 ## Definition of done for each change
 
-A change is complete when it names its backlog item, documents the behavior and permission delta, passes the applicable checks, includes regression evidence, preserves unaffected-provider contracts, identifies compatibility/rollback consequences, and is committed/pushed to `romanoff5/ScoutSuite`. Fork PRs and human review are optional unless requested; there is no mandatory reviewer count. No upstream PR is created. Unresolved failures, missing fixtures, deferred services and advisory exceptions remain visible in a dated progress record. Keep this roadmap and the historical baseline distinct.
+A task is complete when its changed-feature gates pass, evidence/limitations and rollback are documented, and its local implementation commit is pushed and integrated into the fork's actual default branch with verified remote SHAs. Record each task in `MODERNIZATION_PROGRESS.md`. A failing changed feature stays on a clearly marked pushed branch and is not called integrated or verified. PRs, upstream maintainers and human approvals are not gates. No upstream PR/push is permitted. Preserve historical baselines and report remaining technical limits honestly; continue the assigned batch automatically when dependency gates allow it.

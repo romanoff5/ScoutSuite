@@ -7,7 +7,8 @@ Azure/GCP SDK change is included. M02A-D01 (Docker execution) remains separate.
 **M02-B implementation and hosted CI acceptance are complete.** The owner's
 fork policy is local development followed by commit/push to `romanoff5/ScoutSuite`.
 Human review and fork PRs are optional; no two-reviewer gate applies. No PR is
-created in `nccgroup/ScoutSuite`. Merging remains a separate requested action.
+created in `nccgroup/ScoutSuite`. The owner authorizes validated integration into
+the fork's default branch. This session stops afterward for OpenCode handoff.
 The final closeout changes only documentation/evidence; no later phase is started.
 
 ## Completed acceptance evidence

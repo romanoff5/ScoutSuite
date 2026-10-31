@@ -2,14 +2,16 @@
 
 ## Scope and current stage
 
-This repository is a multi-cloud security assessment tool. The initial modernization deliverable is documentation only: see [baseline](docs/modernization/BASELINE.md), [roadmap](docs/modernization/ROADMAP.md), and [offline validation](docs/modernization/OFFLINE_VALIDATION.md). These documents describe proposed work, not permission to implement every phase. Do not begin modernization implementation until the user requests it. Follow explicit user instructions when they narrow or change this scope.
+This repository is a solo-maintainer fork of a multi-cloud security assessment tool. The original documentation-only baseline remains historical: see [baseline](docs/modernization/BASELINE.md), [roadmap](docs/modernization/ROADMAP.md), and [offline validation](docs/modernization/OFFLINE_VALIDATION.md). Resume completed work and follow dependencies in the local `ScoutSuite_AWS_Codex_Tasks_Fork.md`. Current owner scope: finish Task 00 and integrate existing M01/M02 work, then hand off to OpenCode; do not start Task 03/M03 or later work in this session. Assigned future batches need no per-task sign-offs. Azure/GCP SDK, collector and security-rule modernization is deferred; preserve existing interfaces/assets. Record work in [MODERNIZATION_PROGRESS.md](MODERNIZATION_PROGRESS.md).
 
 ## Fork development workflow
 
-- This is independently maintained in `romanoff5/ScoutSuite`. Implement changes locally, run the applicable checks, then commit and push to that fork. The owner's standing instruction authorizes this workflow for current and subsequent requested tasks.
+- Implement and test locally in this checkout, then commit and push to `origin` only after confirming it resolves to `romanoff5/ScoutSuite`. Keep the stable scanner installation and unrelated workspaces unchanged.
 - Do not create pull requests or push changes to `nccgroup/ScoutSuite`. Upstream is a read-only reference.
-- Pull requests within `romanoff5/ScoutSuite` are optional unless requested. Human review is optional; two human reviews are not a completion or merge requirement for this fork. This owner policy supersedes older review requirements in historical modernization notes.
-- Keep the security, offline testing and incremental change requirements below. Commit/push authorization does not authorize live assessments, release publication, unrequested merges or automatic progression to later roadmap phases.
+- Do not create fork PRs per task unless an existing fork rule requires one or the owner asks. Human review is optional; two human reviews are not a completion or merge requirement for this fork. This owner policy supersedes older review requirements in historical modernization notes.
+- After change-specific gates pass, integrate validated work into the fork's actual default branch and push it; verify the remote SHA. Reconcile existing branches/commits rather than restarting or dropping work. Respect GitHub protection/rulesets; never force-push or bypass controls. No per-task approval is needed for the assigned batch.
+- Continue assigned backlog tasks in dependency order. Changed-feature correctness/security failures prevent that feature's default-branch integration: fix them, or push a clearly identified blocked branch and proceed to independent work. Pre-existing unrelated failures, optional external services and untested legacy-provider configurations are recorded limitations, not human-approval gates or passing results.
+- Keep offline isolation, license compliance and rollback. No live/cloud/customer assessment or stable-install replacement is authorized. A fork-only release candidate is permitted after its task's release gates pass; no upstream/PyPI publication is authorized.
 
 ## Security and data boundaries
 
@@ -56,8 +58,8 @@ This repository is a multi-cloud security assessment tool. The initial moderniza
 
 ## Incremental change management
 
-- Each implementation PR must name its roadmap item, describe the before/after behavior, list affected providers and permissions, include tests and evidence, and state compatibility and rollback implications.
+- Each implementation slice must name its roadmap item, describe before/after behavior, list affected providers/permissions and tests, and document compatibility/rollback. PR creation is not a completion requirement.
 - Follow dependency order and phase acceptance criteria in [ROADMAP.md](docs/modernization/ROADMAP.md). A phase is complete only when its observable exit criteria pass; partial coverage must be reported explicitly.
 - Prefer reversible adapters and additive schemas over parallel rewrites. Use opt-in capability flags for new services or changed semantics until their offline gates pass. Delete legacy paths only after their replacements and old-report compatibility are verified.
 - Keep the baseline revision and historical results intact. Add dated progress notes/evidence rather than rewriting the historical baseline as though the old behavior never existed.
-- Follow the fork workflow in `CONTRIBUTING.md`. Shared changes still require AWS/Azure/GCP offline regression evidence; human expertise may be requested when useful, without a mandatory reviewer count. Do not publish releases, merge branches or perform live assessments merely because the roadmap proposes them.
+- Follow the fork workflow in `CONTRIBUTING.md`. Shared changes still require AWS/Azure/GCP preservation evidence without modernizing foreign providers. For every task record the implementation commit, pushed branch SHA, default-branch integration SHA (or technical reason not integrated), checks and limitations in `MODERNIZATION_PROGRESS.md`. Human approvals and upstream maintainers are not blockers; changed-feature technical failures remain integration blockers.

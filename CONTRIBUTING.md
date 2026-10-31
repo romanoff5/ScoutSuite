@@ -24,7 +24,7 @@ This fork is developed independently in `romanoff5/ScoutSuite`. Implement change
 6. Record test results, limitations and rollback instructions. Preserve unrelated workspace changes.
 7. Commit and push the intended changes to `romanoff5/ScoutSuite`.
 8. If a pull request is requested, create it only within the fork against the appropriate fork branch.
-9. Address applicable validation failures and requested feedback. Do not start the next roadmap phase automatically.
+9. Integrate validated work into the fork's actual default branch, push and verify its remote SHA. Continue assigned batch tasks in dependency order without per-task sign-offs. Record genuine technical failures and keep defective features on a separate pushed branch.
 
 ## How to report a bug
 
@@ -42,4 +42,4 @@ If you find yourself wishing for a feature that doesn't exist in Scout Suite, yo
 
 ## Code review process
 
-Human review is optional for this independently maintained fork. There is no mandatory two-reviewer requirement for completion or merging. Passing the applicable offline tests and documenting compatibility, limitations and rollback remain required. Merging branches, publishing releases and live cloud assessments require their own task authorization.
+Human review is optional for this solo-maintainer fork. No reviewer or upstream-approval gate applies. The owner authorizes local implementation, commit/push and integration of validated tasks into the fork's default branch; respect actual GitHub protection/rulesets without bypass. Offline tests, compatibility, limitations and rollback remain required. Assigned tasks may produce a fork-only release candidate after release gates pass; no upstream/PyPI release, live cloud assessment or stable-scanner replacement is authorized.
