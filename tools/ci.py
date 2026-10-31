@@ -58,7 +58,7 @@ def verify_execution(junit, manifest):
     assert manifest['exitstatus'] == 0
     assert manifest['cases'] and all(row['test_status'] == 'verified' and row['fixture_status'] == 'valid'
                                      for row in manifest['cases']), 'Incomplete fixture verification'
-    return {'junit_cases_including_subtests': len(cases), 'cli_bodies': len(cli),
+    return {'junit_cases': len(cases), 'cli_bodies': len(cli),
             'verified_fixture_cases': len(manifest['cases']), 'warnings': manifest['warnings'],
             'untested_rules': {name: len(keys) for name, keys in manifest['untested'].items()}}
 
@@ -167,7 +167,8 @@ class Pipeline:
 
     def tests(self):
         self.run([python_at(self.root, 'test'), '-B', '-m', 'pytest', '-q', '-p', 'no:cacheprovider',
-                  '--tb=short', '--show-capture=no', '--junitxml=' + str(self.root / 'junit.xml'),
+                  '--tb=short', '--show-capture=no', '-o', 'junit_family=xunit1',
+                  '--junitxml=' + str(self.root / 'junit.xml'),
                   '--offline-manifest-report=' + str(self.root / 'fixtures.json')], cwd=SOURCE)
         data = verify_execution((self.root / 'junit.xml').read_text(encoding='utf-8'),
                                 json.loads((self.root / 'fixtures.json').read_text(encoding='utf-8')))
@@ -178,7 +179,8 @@ class Pipeline:
         for name in ('core', 'aws', 'wheel', 'sdist'):
             profile = name if name in ('core', 'aws') else 'combined'
             self.run([python_at(self.root, name), '-I', '-B', SOURCE / 'tools/verify_distribution.py',
-                      '--source', SOURCE, '--profile', profile, '--output', self.root / (name + '-smoke.json')])
+                      '--source', self.root / 'source', '--profile', profile,
+                      '--output', self.root / (name + '-smoke.json')])
 
     def write(self, name, value):
         (self.root / (name + '.json')).write_text(json.dumps(value, indent=2) + '\n', encoding='utf-8')

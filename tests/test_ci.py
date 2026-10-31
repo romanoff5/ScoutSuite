@@ -23,7 +23,7 @@ def test_ci_accepts_executed_bodies_and_retains_warning_debt():
     suite, manifest = execution()
     result = verify_execution(ET.tostring(suite), manifest)
     assert result['cli_bodies'] == 6
-    assert result['junit_cases_including_subtests'] == 9
+    assert result['junit_cases'] == 9
     assert result['warnings'] == manifest['warnings']
     assert result['untested_rules'] == {'aws': 1}
 
