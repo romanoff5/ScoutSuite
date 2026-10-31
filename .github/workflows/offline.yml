@@ -1,0 +1,88 @@
+name: Offline CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: Offline / ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python: '3.11.18'
+          - os: windows-2022
+            python: '3.11.9'
+    env:
+      SCOUT_CI_ENFORCE_OS_ISOLATION: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      SOURCE_DATE_EPOCH: '1793404800'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select verified interpreter
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+          check-latest: false
+      - name: Set private environment root
+        shell: pwsh
+        run: '"SCOUT_CI_ROOT=$env:RUNNER_TEMP/scoutsuite-ci" >> $env:GITHUB_ENV'
+      - name: Cache dependency downloads and compiled dependency wheels
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/scoutsuite-ci/pip-cache
+          key: offline-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-${{ hashFiles('requirements*.txt', 'dev-requirements.txt', 'tests/requirements*.txt', 'constraints/**', 'pyproject.toml', 'tools/ci.py') }}
+      - name: Acquire pinned dependencies and workflow validator (online setup only)
+        id: acquire
+        run: python -B tools/ci.py acquire
+      - name: Enforce Windows interpreter network isolation
+        id: firewall
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/ci_windows_firewall.ps1 -Mode Install
+      - name: Validate workflows
+        if: "!cancelled() && steps.acquire.outcome == 'success' && (runner.os != 'Windows' || steps.firewall.outcome == 'success')"
+        run: python -B tools/ci.py workflows
+      - name: Build and install wheel and sdist without dependency acquisition
+        id: build
+        if: "!cancelled() && steps.acquire.outcome == 'success' && (runner.os != 'Windows' || steps.firewall.outcome == 'success')"
+        run: python -B tools/ci.py build
+      - name: Check installed dependencies
+        if: "!cancelled() && steps.build.outcome == 'success'"
+        run: python -B tools/ci.py dependencies
+      - name: Lint (enforced repository configuration)
+        if: "!cancelled() && steps.build.outcome == 'success'"
+        run: python -B tools/ci.py lint
+      - name: Full guarded offline suite including M01 negative and CLI cases
+        if: "!cancelled() && steps.build.outcome == 'success'"
+        run: python -B tools/ci.py tests
+      - name: Guarded installed package and minimal dependency smoke
+        if: "!cancelled() && steps.build.outcome == 'success'"
+        run: python -B tools/ci.py packaging
+      - name: Summarize exact versions and gate outcomes
+        if: always()
+        run: python -B tools/ci.py summary
+      - name: Remove only this job's firewall rules
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/ci_windows_firewall.ps1 -Mode Remove

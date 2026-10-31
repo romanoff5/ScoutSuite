@@ -1,0 +1,12 @@
+# M02-B test/tool closure, preserving M01 test versions. Runtime SDKs stay in combined-py311.txt.
+pip==24.0
+pytest==9.2.0
+pytest-cov==7.1.0
+flake8==7.5.0
+coverage==7.17.0
+iniconfig==2.3.1
+pluggy==1.7.0
+pycodestyle==2.15.0
+pyflakes==4.1.0
+mccabe==0.7.0
+pygments==2.21.0

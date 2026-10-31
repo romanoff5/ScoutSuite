@@ -4,6 +4,7 @@ recursive-include constraints *.txt *.lock
 recursive-include ScoutSuite *.py *.json *.html *.js *.css *.zip *.ico .keep .gitkeep
 recursive-include tests *.py *.json *.txt *.md *.coveragerc
 include tools/verify_distribution.py
+include tools/ci.py tools/ci_windows_firewall.ps1
 include .dockerignore .gitattributes
 recursive-include docker Dockerfile* *.sh *.md
 prune ScoutSuite.egg-info
