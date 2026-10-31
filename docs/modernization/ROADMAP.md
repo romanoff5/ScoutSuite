@@ -189,6 +189,8 @@ After release, schedule dependency/SDK/model and metadata freshness review, test
 
 2026-10-31: [M02-A packaging evidence and rollback](M02_A_PACKAGING.md) records verified Windows/Linux Python 3.11 dependency and installed-artifact gates. Docker execution remains blocked under tracking item M02A-D01; M02-A is not fully accepted until that gate passes. M02-B and subsequent phases are not included.
 
+2026-10-31: [M02-B CI contract, evidence and rollback](M02_B_CI.md) describes pinned Windows/Ubuntu workflows, separate acquisition and offline execution, OS and M01 isolation, fixture/body verification and current PR log links. Local source tests increase to 146 plus 22 subtests; historical warning debt stays visible. Hosted acceptance is determined by PR #3's current-head checks. M02A-D01 remains a separate Docker blocker; no later modernization phase is included.
+
 ## Definition of done for each change
 
 A PR is ready only when it names its backlog item, documents the behavior and permission delta, includes the relevant regression evidence, preserves unaffected-provider contracts, identifies compatibility/rollback consequences, and has the required reviewers. Unresolved failures, missing fixtures, deferred services and advisory exceptions remain visible in a dated progress record. Keep this roadmap and the historical baseline distinct.

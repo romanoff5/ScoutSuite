@@ -64,6 +64,11 @@ This is a default test boundary for trusted test code, not an OS sandbox against
 
 ## Coverage boundaries
 
+M02-B's [CI instructions and evidence](../docs/modernization/M02_B_CI.md) add
+pinned wheelhouse acquisition, clean installed-artifact gates and OS network
+isolation on hosted Windows/Ubuntu. Local default pytest continues to use M01;
+the CI driver does not alter a developer's firewall.
+
 - Nineteen historical AWS rule cases retain their original expected rule results. Text and native aliases resolve through the same bounded fixture loader.
 - New safe/unsafe cases exercise real AWS EC2, Azure Storage and GCP Cloud Storage facade/resource logic, unchanged rules, stable IDs, exceptions and JSON/SQLite report round trips. Raw SDK responses are synthetic; authentication and SDK calls are stubbed or strictly mocked.
 - Structural snapshots cover core/optional service declarations, metadata service keys, all AWS/Azure/GCP default rule keys and provider templates. Optional/private declarations are not advertised as implemented services.
