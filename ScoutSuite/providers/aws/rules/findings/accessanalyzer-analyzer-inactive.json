@@ -1,0 +1,19 @@
+{
+    "description": "IAM Access Analyzer is disabled or failed",
+    "rationale": "An Access Analyzer with DISABLED or FAILED status cannot monitor its scope. Only account-visible analyzers in selected regions are assessed; this check does not establish organization-wide IAM policy coverage.",
+    "remediation": "Investigate the status reason and restore the analyzer to ACTIVE. Separately verify organization and delegated administrator scope.",
+    "references": [
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ListAnalyzers.html"
+    ],
+    "dashboard_name": "Analyzers",
+    "path": "accessanalyzer.regions.id.analyzers.id",
+    "conditions": [
+        "and",
+        [
+            "inactive",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Inactive"
+}
