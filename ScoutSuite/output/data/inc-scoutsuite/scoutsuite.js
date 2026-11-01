@@ -9,6 +9,17 @@ var runResults
  * Event handlers
  */
 $(document).ready(function () {
+    // Delegate object navigation without embedding resource IDs into JS source.
+    // A user-controlled IAM name is only ever a DOM attribute value.
+    document.addEventListener('click', function (event) {
+        var link = event.target.closest('[data-scout-object-path]')
+        if (!link) return
+        event.preventDefault()
+        var path = link.getAttribute('data-scout-object-path')
+        if (typeof path === 'string' && path.startsWith('services.iam.') && path.length < 2048) {
+            showObject(path)
+        }
+    })
     onPageLoad()
 })
 
