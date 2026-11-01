@@ -16,7 +16,7 @@
 
         <div id="{{id_prefix}}"{{#if hide}} class="collapse"{{/if}}>
             <div class="k8s-code-copy">
-                <a href="{{location_hash id_prefix}}" class="k8s-code-copy-text"
+                <a href="{{safe_report_href (location_hash id_prefix)}}" class="k8s-code-copy-text"
                     id="{{id_prefix}}.copy"
                     data-scout-copy-code="{{id_prefix}}"
                 >
