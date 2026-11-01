@@ -1383,6 +1383,11 @@ function addTemplate(group, service, section, resourceType, path, suffix) {
         } else {
             console.log('Invalid suffix (' + suffix + ') for resources template.')
         }
+        if (![group, service, resourceType, path].every(function (value) {
+            return typeof value === 'string' && /^[a-zA-Z0-9_.-]*$/.test(value)
+        })) {
+            throw new Error('Invalid report template identifier')
+        }
         template.innerHTML = '{{> ' + partialName + " service_group = '" + group + "' service_name = '" + service + "' resource_type = '" + resourceType + "' partial_name = '" + path + "'}}"
         $('body').append(template)
     }
