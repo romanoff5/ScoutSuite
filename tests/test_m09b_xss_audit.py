@@ -154,6 +154,8 @@ def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_pat
     malicious = (
         '<img src="x" onerror="document.body.dataset.pwned=1">'
         '<svg onload="document.body.dataset.pwned=1"></svg>'
+        '<div id="badcss" style="background-image:image-set(url(https://example.invalid/x) 1x)">bad CSS</div>'
+        '<div id="goodcss" style="text-align: center; display: none">safe CSS</div>'
         '<a id="bad" href="javascript:alert(1)">bad</a>'
         '<a id="attack" href="javascript:showObject('
         '\'evil&#39;);alert(1);//\')">injected</a>'
@@ -178,6 +180,8 @@ def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_pat
         "   badHref:root.querySelector('#bad').getAttribute('href'),"
         "   attackAction:root.querySelector('#attack').getAttribute('data-scout-action'),"
         "   dataHref:root.querySelector('#data').getAttribute('href'),"
+        "   badStyle:root.querySelector('#badcss').getAttribute('style'),"
+        "   goodStyle:root.querySelector('#goodcss').getAttribute('style'),"
         "   scripts:root.querySelectorAll('script,svg,iframe').length,"
         "   errorHandler:root.querySelector('img').hasAttribute('onerror')"
         " });"
@@ -198,6 +202,7 @@ def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_pat
     assert result == {
         'called': 'services.iam.users.safe', 'fired': None,
         'badHref': None, 'attackAction': None, 'dataHref': None,
+        'badStyle': None, 'goodStyle': 'text-align: center; display: none',
         'scripts': 0, 'errorHandler': False,
     }
     return True
