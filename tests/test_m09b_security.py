@@ -22,8 +22,15 @@ def archive_with(name, payload=b'ok', symlink=False):
             info.create_system = 3
             info.external_attr = (stat.S_IFLNK | 0o777) << 16
         z.writestr(info, payload)
-    stream.seek(0)
-    return zipfile.ZipFile(stream)
+    # Windows zipfile normalizes separators again when writing headers.
+    # Patch both local/central directory filename bytes (same byte length)
+    # so the opened archive contains the intended hostile raw backslash.
+    raw = stream.getvalue()
+    if '\\\\' in name:
+        normalized = name.replace('\\\\', '/').encode('ascii')
+        hostile = name.encode('ascii')
+        raw = raw.replace(normalized, hostile)
+    return zipfile.ZipFile(io.BytesIO(raw))
 
 
 def test_bundled_third_party_assets_extract_offline(tmp_path):
