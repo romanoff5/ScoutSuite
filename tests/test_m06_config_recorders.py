@@ -82,6 +82,21 @@ class TestConfigRecorders(TestCase):
                 await context.aclose()
         asyncio.run(scenario())
 
+    def test_legacy_status_name_matches_without_arn_field(self):
+        async def scenario():
+            facade = ConfigFacade(Mock())
+            client = Mock()
+            client.describe_configuration_recorder_status.return_value = {
+                'ConfigurationRecordersStatus': [{
+                    'name': 'default', 'recording': True
+                }]
+            }
+            rows = await facade._attach_statuses(client, [
+                {'name': 'default', 'arn': 'arn:aws:config:us-east-1:1:default'}
+            ])
+            self.assertTrue(rows[0]['ConfigurationRecordersStatus']['recording'])
+        asyncio.run(scenario())
+
     def test_missing_status_is_unknown(self):
         async def scenario():
             context = RunContext('aws').setup()
