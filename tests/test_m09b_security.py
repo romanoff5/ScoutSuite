@@ -1,6 +1,6 @@
 """M09-B offline asset and local report API hardening regression tests."""
 import io
-import re
+from html.parser import HTMLParser
 import stat
 import zipfile
 from pathlib import Path
@@ -88,7 +88,20 @@ def test_report_has_no_remote_assets_or_unsafe_eval():
     html = (root / 'html/report.html').read_text(encoding='utf-8')
     helper = (root / 'inc-scoutsuite/helpers.js').read_text(encoding='utf-8')
     script = (root / 'inc-scoutsuite/scoutsuite.js').read_text(encoding='utf-8')
-    assert not re.search(r'<(?:script|link)\\b[^>]+\\b(?:src|href)\\s*=\\s*[\\\"\\\']https?://', html, re.I)
+    class RemoteResources(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.external = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag in ('script', 'link'):
+                self.external.extend(value for key, value in attrs
+                                     if key in ('src', 'href') and value and
+                                     value.startswith(('http://', 'https://')))
+
+    parser = RemoteResources()
+    parser.feed(html)
+    assert parser.external == []
     assert 'eval(JSON.stringify(entities))' not in helper + script
     assert 'element.innerHTML = value' not in script
     assert "delete body['description']" not in helper
