@@ -6,6 +6,8 @@ from tests.fixtures import ROOT
 
 
 NODE = shutil.which('node')
+
+
 def evaluate(script, *paths):
     assert NODE is not None, 'M09-B JavaScript security tests require Node.js'
     command = [NODE, '-e', script, *[str(ROOT / p) for p in paths]]
