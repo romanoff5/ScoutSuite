@@ -81,7 +81,11 @@ class Keys(AWSCompositeResources):
                     key['next_rotation_date'] = result.get('NextRotationDate')
                 else:
                     key['rotation_status'] = 'unavailable'
-            elif key['key_manager'] == 'CUSTOMER' and not eligible:
+            elif (key['key_manager'] == 'CUSTOMER'
+                  and key['origin'] is not None
+                  and key['key_usage'] is not None
+                  and key['key_spec'] is not None
+                  and not eligible):
                 key['rotation_status'] = 'not_supported'
             elif key['key_manager'] == 'AWS':
                 key['rotation_status'] = 'not_supported'
