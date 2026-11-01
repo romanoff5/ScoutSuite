@@ -1,8 +1,8 @@
 {
     "description": "Bucket Allowing Clear Text (HTTP) Communication",
-    "rationale": "If HTTPS is not enforced on the bucket policy, communication between clients and S3 buckets can use unencrypted HTTP. As a result, sensitive information could be transmitted in clear text over the network|Internet.",
+    "rationale": "A bucket policy should deny HTTP (aws:SecureTransport=false) across bucket and object resources. An Allow with aws:SecureTransport=true does not prove that other HTTP requests are denied. Denied/unavailable policy reads are incomplete evidence, not verified enforcement.",
     "references": [
-        "https://docs.aws.amazon.com/AmazonS3/latest/dev/security-best-practices.html"
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/amazon-s3-policy-keys.html"
     ],
     "dashboard_name": "Buckets",
     "path": "s3.buckets.id",
@@ -14,5 +14,6 @@
             ""
         ]
     ],
-    "id_suffix": "secure_transport_enabled"
+    "id_suffix": "secure_transport_enabled",
+    "evidence_policy": "s3-secure-transport-v1"
 }
