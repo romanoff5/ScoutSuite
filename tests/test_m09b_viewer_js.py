@@ -116,3 +116,34 @@ csvBlob.text().then(csv => {
 }).catch(err => {console.error(err);process.exitCode=1});
 """
     evaluate(script, 'ScoutSuite/output/data/inc-scoutsuite/scoutsuite.js')
+
+
+def test_iam_link_uses_data_attribute_and_safe_delegated_navigation():
+    partial = (ROOT / 'ScoutSuite/output/data/html/partials/aws/services.iam.managed_policies.html'
+               ).read_text(encoding='utf8')
+    assert 'javascript:showObject(' not in partial
+    assert 'data-scout-object-path=' in partial
+    script = r"""
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+let onReady, click, navigated, prevented = false;
+const doc = {addEventListener: (type, handler) => {
+  if(type === 'click') click = handler;
+}};
+const jq = () => ({ready: handler => {onReady = handler}});
+const ctx = vm.createContext({
+  window:{$:jq, location:{hash:''}}, document:doc, console:console
+});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), ctx, {timeout:3000});
+ctx.onPageLoad = () => {};
+ctx.showObject = path => {navigated = path};
+onReady();
+assert(click);
+const malicious = "services.iam.roles.fake');alert(1);//";
+click({target:{closest: () => ({
+   getAttribute: () => malicious
+})}, preventDefault: () => {prevented = true}});
+assert.strictEqual(navigated, malicious);
+assert.strictEqual(prevented, true);
+assert.strictEqual(typeof ctx.alert, 'undefined');
+"""
+    evaluate(script, 'ScoutSuite/output/data/inc-scoutsuite/scoutsuite.js')
