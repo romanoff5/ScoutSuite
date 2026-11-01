@@ -17,7 +17,8 @@ class RDSInstances(AWSResources):
 
     def _parse_instance(self, raw_instance):
         instance = {}
-        instance['name'] = raw_instance.pop('DBInstanceIdentifier')
+        # Do not mutate the facade's cached AWS response.
+        instance['name'] = raw_instance.get('DBInstanceIdentifier')
         for key in ['InstanceCreateTime', 'Engine', 'DBInstanceStatus', 'AutoMinorVersionUpgrade',
                     'DBInstanceClass', 'MultiAZ', 'Endpoint', 'BackupRetentionPeriod', 'PubliclyAccessible',
                     'StorageEncrypted', 'VpcSecurityGroups', 'DBSecurityGroups', 'DBParameterGroups',
