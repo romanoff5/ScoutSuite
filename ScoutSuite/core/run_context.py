@@ -6,11 +6,20 @@ per run, avoiding shared state and caller-loop interference.
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from asyncio_throttle import Throttler
+
+
+_active_context: ContextVar[Optional['RunContext']] = ContextVar('scoutsuite_context', default=None)
+
+
+def get_current_run_context() -> Optional['RunContext']:
+    """Execution-scoped resources; never stored on the event loop."""
+    return _active_context.get()
 
 
 @dataclass
@@ -37,6 +46,7 @@ class RunContext:
     _executor: Optional[ThreadPoolExecutor] = field(default=None, init=False, repr=False)
     _throttler: Optional[Throttler] = field(default=None, init=False, repr=False)
     _owns_loop: bool = field(default=False, init=False, repr=False)
+    _token: Optional[Token] = field(default=None, init=False, repr=False)
     
     def __post_init__(self):
         """Initialize the run context components."""
@@ -48,13 +58,17 @@ class RunContext:
     
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
-        """Get or create the event loop for this run."""
-        if self._loop is None or self._loop.is_closed():
+        """Borrow a running loop; otherwise allocate a private one (never install it)."""
+        if self._loop is not None and not self._loop.is_closed():
+            return self._loop
+        try:
+            self._loop = asyncio.get_running_loop()
+            self._owns_loop = False
+        except RuntimeError:
             self._loop = asyncio.new_event_loop()
             self._owns_loop = True
-            asyncio.set_event_loop(self._loop)
         return self._loop
-    
+
     @property
     def executor(self) -> ThreadPoolExecutor:
         """Get or create the thread pool executor for this run."""
@@ -68,37 +82,49 @@ class RunContext:
         return self._throttler
     
     def setup(self) -> 'RunContext':
-        """Set up the loop with executor and throttler.
-        
-        Called before running async code to ensure proper configuration.
-        """
-        loop = self.loop
-        # Attach throttler to loop for legacy compatibility
-        loop.throttler = self._throttler
-        loop.set_default_executor(self.executor)
+        """Bind resources to the current task without replacing any event loop."""
+        if self._token is not None:
+            raise RuntimeError('RunContext is already set up')
+        try:
+            running = asyncio.get_running_loop()
+        except RuntimeError:
+            running = None
+        if running is not None:
+            if self._loop is not None and self._loop is not running:
+                raise RuntimeError('RunContext already bound to another event loop')
+            self._loop = running
+            self._owns_loop = False
+        else:
+            self.loop  # create a private loop for sync RunContext clients
+        self._token = _active_context.set(self)
         return self
-    
+
     def cleanup(self) -> None:
-        """Clean up all resources owned by this context.
-        
-        Closes the executor and event loop if we own them.
-        """
+        """Shut down this run's executor; never close or replace a caller loop."""
+        if self._token is not None:
+            _active_context.reset(self._token)
+            self._token = None
         if self._executor is not None:
             self._executor.shutdown(wait=True)
             self._executor = None
-        
-        if self._owns_loop and self._loop is not None:
-            if not self._loop.is_closed():
-                self._loop.close()
-            self._loop = None
-            self._owns_loop = False
-    
+        if self._owns_loop and self._loop is not None and not self._loop.is_closed():
+            if self._loop.is_running():
+                raise RuntimeError('Cannot close a running event loop')
+            self._loop.close()
+        self._loop = None
+        self._owns_loop = False
+
     def cancel_all_tasks(self) -> None:
-        """Cancel all tasks in the loop."""
-        if self._loop is not None and not self._loop.is_closed():
+        """Never cancel unrelated tasks belonging to a borrowed caller loop."""
+        if self._owns_loop and self._loop is not None and not self._loop.is_closed():
+            try:
+                current = asyncio.current_task(loop=self._loop)
+            except RuntimeError:
+                current = None
             for task in asyncio.all_tasks(self._loop):
-                task.cancel()
-    
+                if task is not current:
+                    task.cancel()
+
     def run_until_complete(self, coro) -> Any:
         """Run a coroutine to completion in this context's loop.
         
@@ -220,4 +246,4 @@ def is_success(status: CollectionStatus) -> bool:
 
 def is_complete(status: CollectionStatus) -> bool:
     """Check if a collection status represents a complete assessment."""
-    return status.status in ('success', 'unsupported', 'not_applicable')
+    return status.status in ('success', 'not_applicable')

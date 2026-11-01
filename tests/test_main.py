@@ -53,9 +53,9 @@ class TestMainClass(unittest.TestCase):
         self.assertEqual(code, 0)
         self.mocks['get_authentication_strategy'].assert_called_once_with(provider)
         self.auth.authenticate.assert_called_once()
-        regions = [] if provider == 'aws' else None
+        regions = []
         self.provider.fetch.assert_awaited_once_with(regions=regions, excluded_regions=regions)
-        ip_ranges, name_key = ([], 'name') if provider == 'aws' else (None, None)
+        ip_ranges, name_key = [], 'name' if provider == 'aws' else None
         self.provider.preprocessing.assert_called_once_with(ip_ranges, name_key)
         self.mocks['ScoutReport'].assert_called_once_with(
             provider, provider, None, False, result_format='json')
@@ -80,6 +80,18 @@ class TestMainClass(unittest.TestCase):
         """Test successful GCP provider execution."""
         self.assert_successful_provider('gcp', ['--service-account', 'synthetic-credentials.json'])
         self.assertEqual(self.auth.authenticate.call_args.kwargs['service_account'], 'synthetic-credentials.json')
+
+    def test_gcp_project_id_is_forwarded_to_provider(self):
+        """Ensure the CLI does not lose the existing GCP --project-id option."""
+        code = self.call_cli([
+            'gcp', '--service-account', 'synthetic-credentials.json',
+            '--project-id', 'synthetic-project', '--no-browser'
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            self.mocks['get_provider'].call_args.kwargs['project_id'],
+            'synthetic-project'
+        )
 
     def test_azure_provider(self):
         """Test successful Azure provider execution."""
@@ -141,41 +153,53 @@ class TestRunContext(unittest.TestCase):
         self.assertTrue(loop.is_closed())
 
     def test_context_does_not_close_caller_loop(self):
-        """M03: Context does not close a caller-provided loop.
-        
-        If we're called from within an existing event loop, we should not
-        close it.
-        """
-        caller_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(caller_loop)
-        try:
-            context = RunContext(provider='aws')
-            # Use the existing loop - we don't own it
-            context._loop = caller_loop
-            context._owns_loop = False
-            
-            context.cleanup()
-            
-            # Caller's loop should still be open
-            self.assertFalse(caller_loop.is_closed())
-        finally:
-            if not caller_loop.is_closed():
-                caller_loop.close()
-            asyncio.set_event_loop(None)
+        """Real active-loop ownership and no injected throttler/executor state."""
+        async def inside():
+            caller = asyncio.get_running_loop()
+            ctx = RunContext(provider='aws').setup()
+            self.assertIs(ctx.loop, caller)
+            self.assertFalse(ctx._owns_loop)
+            self.assertFalse(hasattr(caller, 'throttler'))
+            ctx.cleanup()
+            self.assertIs(asyncio.get_running_loop(), caller)
+            self.assertFalse(caller.is_closed())
+        asyncio.run(inside())
 
     def test_no_leaked_tasks_or_executors(self):
-        """M03: Verify no leaked tasks or executors after cleanup."""
-        context = RunContext(provider='aws')
-        with context.lifecycle():
-            loop = context.loop
-            # Ensure there are no pending tasks before
-            tasks_before = len(asyncio.all_tasks(loop))
-            loop.run_until_complete(asyncio.sleep(0))
-        
-        # After cleanup, loop should be closed
-        self.assertTrue(loop.is_closed())
-        # Executor should be cleaned up
-        self.assertIsNone(context._executor)
+        """Do real executor work and confirm shutdown without closing caller loop."""
+        from ScoutSuite.providers.utils import run_function_concurrently
+
+        async def inside():
+            loop = asyncio.get_running_loop()
+            ctx = RunContext(provider='aws', max_workers=1).setup()
+            executor = ctx.executor
+            self.assertEqual(await run_function_concurrently(lambda: 42), 42)
+            self.assertIsNotNone(ctx._executor)
+            ctx.cleanup()
+            self.assertTrue(executor._shutdown)
+            self.assertIsNone(ctx._executor)
+            self.assertFalse(loop.is_closed())
+        asyncio.run(inside())
+
+    def test_isolated_contexts_on_shared_loop(self):
+        """Two concurrent logical runs never share executor or throttler."""
+        from ScoutSuite.core.run_context import get_current_run_context
+
+        async def child(name):
+            ctx = RunContext(provider=name).setup()
+            await asyncio.sleep(0)
+            self.assertIs(get_current_run_context(), ctx)
+            resources = (ctx.executor, ctx.throttler)
+            ctx.cleanup()
+            return resources
+
+        async def inside():
+            a, b = await asyncio.gather(child('aws'), child('aws'))
+            self.assertIsNot(a[0], b[0])
+            self.assertIsNot(a[1], b[1])
+            self.assertTrue(a[0]._shutdown)
+            self.assertTrue(b[0]._shutdown)
+        asyncio.run(inside())
 
 
 class TestAsyncAPI(unittest.TestCase):
@@ -192,7 +216,9 @@ class TestAsyncAPI(unittest.TestCase):
                 with patch.object(main, 'get_authentication_strategy') as mock_auth:
                     with patch.object(main, 'get_provider') as mock_get_provider:
                         with patch.object(main, 'ScoutReport') as mock_report_class:
-                            with patch.object(main.webbrowser, 'open'):
+                            with (patch.object(main.webbrowser, 'open'),
+                                  patch.object(main, 'Ruleset'),
+                                  patch.object(main, 'ProcessingEngine') as mock_engine):
                                 mock_auth.return_value.authenticate.return_value = MagicMock()
                                 mock_provider = MagicMock()
                                 mock_provider.provider_code = 'aws'
@@ -206,7 +232,11 @@ class TestAsyncAPI(unittest.TestCase):
                                 mock_report_class.return_value = mock_report_instance
                                 with patch.object(mock_report_instance.encoder, 'load_from_file',
                                                  return_value={}):
-                                    return await main.run_async(provider='aws')
+                                    caller_loop = asyncio.get_running_loop()
+                                    code = await main.run_async(provider='aws')
+                                    self.assertIs(asyncio.get_running_loop(), caller_loop)
+                                    self.assertEqual(mock_engine.return_value.run.call_count, 2)
+                                    return code
         
         existing_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(existing_loop)
@@ -225,7 +255,9 @@ class TestAsyncAPI(unittest.TestCase):
                 with patch.object(main, 'get_authentication_strategy') as mock_auth:
                     with patch.object(main, 'get_provider') as mock_get_provider:
                         with patch.object(main, 'ScoutReport') as mock_report_class:
-                            with patch.object(main.webbrowser, 'open'):
+                            with (patch.object(main.webbrowser, 'open'),
+                                  patch.object(main, 'Ruleset'),
+                                  patch.object(main, 'ProcessingEngine') as mock_engine):
                                 mock_auth.return_value.authenticate.return_value = MagicMock()
                                 mock_provider = MagicMock()
                                 mock_provider.provider_code = 'aws'
@@ -239,7 +271,11 @@ class TestAsyncAPI(unittest.TestCase):
                                 mock_report_class.return_value = mock_report_instance
                                 with patch.object(mock_report_instance.encoder, 'load_from_file',
                                                  return_value={}):
-                                    return await main.run_async(provider='aws')
+                                    caller_loop = asyncio.get_running_loop()
+                                    code = await main.run_async(provider='aws')
+                                    self.assertIs(asyncio.get_running_loop(), caller_loop)
+                                    self.assertEqual(mock_engine.return_value.run.call_count, 2)
+                                    return code
         
         result = asyncio.run(call_run_async())
         self.assertEqual(result, 0)
@@ -300,12 +336,36 @@ class TestLocalModeIsolation(unittest.TestCase):
     """
 
     def test_local_mode_skips_authentication(self):
-        """M03: --local mode should skip authentication entirely."""
-        # This test verifies that when fetch_local is True, authentication is skipped
-        # The actual testing of zero SDK calls requires the offline harness which is
-        # enforced at the pytest level via conftest.py
-        context = RunContext(provider='aws', fetch_local=True)
-        self.assertTrue(isinstance(context, RunContext))
+        """Exercise --local behavior instead of an invalid RunContext keyword."""
+        provider = MagicMock(provider_code='aws', environment='local', account_id='synthetic')
+        provider.get_report_name.return_value = 'aws-local'
+        report = MagicMock()
+        report.save.return_value = 'synthetic-report.html'
+        report.encoder.load_from_file.return_value = {
+            'services': {}, 'service_list': [], 'account_id': 'synthetic', 'partition': 'aws'
+        }
+        with patch.object(main, 'get_authentication_strategy', side_effect=AssertionError('auth')) as auth, \
+             patch.object(main, 'get_provider', return_value=provider) as factory, \
+             patch.object(main, 'ScoutReport', return_value=report), \
+             patch.object(main, 'Ruleset'), patch.object(main, 'ProcessingEngine'):
+            result = asyncio.run(main.run_async(provider='aws', fetch_local=True, no_browser=True))
+        self.assertEqual(result, 0)
+        auth.assert_not_called()
+        factory.assert_called_once()
+        self.assertTrue(factory.call_args.kwargs['fetch_local'])
+        provider.fetch.assert_not_called()
+
+    def test_real_aws_local_constructor_does_not_build_sdk_facade(self):
+        from ScoutSuite.providers.aws.provider import AWSProvider
+        with patch('ScoutSuite.providers.aws.provider.AWSServicesConfig',
+                   side_effect=AssertionError('facade constructor')) as facade, \
+             patch('ScoutSuite.providers.aws.provider.get_aws_account_id',
+                   side_effect=AssertionError('AWS account lookup')) as account:
+            provider = AWSProvider(fetch_local=True, credentials=None)
+        facade.assert_not_called()
+        account.assert_not_called()
+        self.assertEqual(provider.account_id, 'local-account-id')
+        self.assertEqual(provider.service_list, [])
 
 
 class TestCancellationHandling(unittest.TestCase):
@@ -409,15 +469,13 @@ class TestIsSuccess(unittest.TestCase):
         self.assertFalse(is_success(status))
 
     def test_is_complete_for_success(self):
-        """Test is_complete returns True for success."""
-        from ScoutSuite.core.run_context import CollectionStatus
-        status = CollectionStatus.success()
-        # Note: is_complete needs to be added to run_context.py
-        
+        from ScoutSuite.core.run_context import is_complete
+        self.assertTrue(is_complete(CollectionStatus.success()))
+
     def test_is_complete_for_unsupported(self):
-        """Test is_complete returns True for unsupported."""
-        status = CollectionStatus.unsupported("not supported")
-        # Unsupported is considered complete (no data to collect)
+        from ScoutSuite.core.run_context import is_complete
+        # Status/report integration is a separate M04/M09 deliverable.
+        self.assertFalse(is_complete(CollectionStatus.unsupported('not supported')))
 
 
 class TestFreshProcessNoImplicitLoop(unittest.TestCase):

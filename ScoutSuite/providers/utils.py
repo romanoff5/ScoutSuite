@@ -1,9 +1,13 @@
 import asyncio
 import inspect
 import re
+from weakref import WeakKeyDictionary
+
+from asyncio_throttle import Throttler
 from hashlib import sha1
 
 from ScoutSuite.core.console import print_info, print_warning
+from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.utils import is_throttled as aws_is_throttled
 from ScoutSuite.providers.gcp.utils import is_throttled as gcp_is_throttled
 
@@ -21,9 +25,21 @@ def get_non_provider_id(name):
     return f'scoutid-{name_hash.hexdigest()}'
 
 
+# Fallback for standalone consumers outside a managed run, without loop attributes.
+_fallback_throttlers = WeakKeyDictionary()
+
+
 async def run_concurrently(function, backoff_seconds=15):
     try:
-        async with asyncio.get_event_loop().throttler:
+        ctx = get_current_run_context()
+        if ctx is not None:
+            throttler = ctx.throttler
+        else:
+            loop = asyncio.get_running_loop()
+            throttler = _fallback_throttlers.get(loop)
+            if throttler is None:
+                throttler = _fallback_throttlers[loop] = Throttler(rate_limit=999999, period=1)
+        async with throttler:
             return await run_function_concurrently(function)
     except Exception as e:
         raise
@@ -50,7 +66,9 @@ def run_function_concurrently(function):
     :return: an asyncio.Future to be awaited.
     """
 
-    return asyncio.get_event_loop().run_in_executor(executor=None, func=function)
+    ctx = get_current_run_context()
+    executor = ctx.executor if ctx is not None else None
+    return asyncio.get_running_loop().run_in_executor(executor, function)
 
 
 async def get_and_set_concurrently(get_and_set_funcs: [], entities: [], **kwargs):

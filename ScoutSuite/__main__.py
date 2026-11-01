@@ -13,10 +13,7 @@ M03: Python lifecycle and synchronous/async API contracts.
 import asyncio
 import os
 import webbrowser
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional, Dict, List
-
-from asyncio_throttle import Throttler
 
 from ScoutSuite import ERRORS_LIST
 from ScoutSuite.core.cli_parser import ScoutSuiteArgumentParser
@@ -24,7 +21,7 @@ from ScoutSuite.core.console import set_logger_configuration, print_info, print_
 from ScoutSuite.core.exceptions import RuleExceptions
 from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.ruleset import Ruleset
-from ScoutSuite.core.run_context import RunContext, CollectionStatus
+from ScoutSuite.core.run_context import RunContext
 from ScoutSuite.core.server import Server
 from ScoutSuite.output.html import ScoutReport
 from ScoutSuite.output.utils import get_filename
@@ -82,6 +79,7 @@ async def run_async(provider: str,
                     subscription_ids: Optional[List[str]] = None,
                     all_subscriptions: bool = False,
                     # GCP
+                    project_id: Optional[str] = None,
                     folder_id: Optional[str] = None,
                     organization_id: Optional[str] = None,
                     all_projects: bool = False,
@@ -165,6 +163,7 @@ async def run_async(provider: str,
             username=username,
             password=password,
             service_account=service_account,
+            project_id=project_id,
             folder_id=folder_id,
             organization_id=organization_id,
             all_projects=all_projects,
@@ -226,6 +225,7 @@ async def _run_sync(provider: str,
                     subscription_ids: Optional[List[str]] = None,
                     all_subscriptions: bool = False,
                     service_account: Optional[str] = None,
+                    project_id: Optional[str] = None,
                     folder_id: Optional[str] = None,
                     organization_id: Optional[str] = None,
                     all_projects: bool = False,
@@ -295,7 +295,8 @@ async def _run_sync(provider: str,
                 client_id=client_id, client_secret=client_secret,
                 username=username, password=password,
                 service_account=service_account,
-                folder_id=folder_id,
+                project_id=project_id,
+            folder_id=folder_id,
                 organization_id=organization_id,
                 all_projects=all_projects,
                 access_key_id=access_key_id,
@@ -358,6 +359,7 @@ async def _run_impl(context: RunContext,
                     subscription_ids: Optional[List[str]] = None,
                     all_subscriptions: bool = False,
                     service_account: Optional[str] = None,
+                    project_id: Optional[str] = None,
                     folder_id: Optional[str] = None,
                     organization_id: Optional[str] = None,
                     all_projects: bool = False,
@@ -455,7 +457,7 @@ async def _run_impl(context: RunContext,
             profile=profile,
             subscription_ids=subscription_ids,
             all_subscriptions=all_subscriptions,
-            project_id=None,
+            project_id=project_id,
             folder_id=folder_id,
             organization_id=organization_id,
             all_projects=all_projects,
@@ -467,7 +469,8 @@ async def _run_impl(context: RunContext,
             services=services,
             skipped_services=skipped_services,
             programmatic_execution=programmatic_execution,
-            credentials=credentials if credentials else {}
+            credentials=credentials if credentials else {},
+            **({'fetch_local': True} if provider == 'aws' and fetch_local else {})
         )
     except Exception as e:
         print_exception(f'Initialization failure: {e}')
@@ -480,9 +483,7 @@ async def _run_impl(context: RunContext,
         if not hasattr(cloud_provider, 'partition') or not cloud_provider.partition:
             cloud_provider.partition = 'aws'
 
-    # Track collection status
-    collection_status = CollectionStatus.success()
-    
+    # M04/M09: status propagation to findings and reports remains out of scope.
     # Create a new report
     try:
         report_name = report_name if report_name else cloud_provider.get_report_name()
@@ -517,11 +518,9 @@ async def _run_impl(context: RunContext,
         except KeyboardInterrupt:
             print_info('Cancelled by user')
             context.cancel_all_tasks()
-            collection_status = CollectionStatus.partial('Cancelled by user')
             return 130
         except Exception as e:
             print_exception('Unhandled exception thrown while gathering data: {}'.format(e))
-            collection_status = CollectionStatus.failed(str(e))
             return 104
 
         if update:
@@ -541,10 +540,9 @@ async def _run_impl(context: RunContext,
             last_run_dict = report.encoder.load_from_file('RESULTS')
             for key in last_run_dict:
                 setattr(cloud_provider, key, last_run_dict[key])
-            collection_status = CollectionStatus.success(checked=len(last_run_dict.get('services', {})))
         except Exception as e:
             print_exception('Failure while loading local data: {}'.format(e))
-            collection_status = CollectionStatus.failed(str(e))
+            return 104
 
     # Pre processing
     try:
@@ -629,10 +627,6 @@ async def _run_impl(context: RunContext,
         except Exception as e:
             print_exception('Failed to open browser: {}'.format(e))
 
-    # Attachment for backward compatibility with tests that check loop attributes
-    loop = context.loop
-    loop.throttler = context.throttler
-
     if ERRORS_LIST:
         return 200
     else:
@@ -696,74 +690,16 @@ def run(provider,
     M03: This function creates and manages its own event loop
     rather than modifying a caller's loop or relying on implicit loop creation.
     """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # run() is a synchronous API. Async consumers must await run_async().
     try:
-        throttler = Throttler(rate_limit=max_rate if max_rate else 999999, period=1)
-        loop.throttler = throttler
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-        loop.set_default_executor(executor)
-        context = RunContext(
-            provider=provider,
-            max_workers=max_workers,
-            max_rate=max_rate
-        )
-        loop.set_default_executor(executor)
-        result = loop.run_until_complete(_run_impl(
-            context=context,
-            provider=provider,
-            profile=profile,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            aws_session_token=aws_session_token,
-            cli=cli, user_account=user_account,
-            user_account_browser=user_account_browser,
-            msi=msi, service_principal=service_principal,
-            file_auth=file_auth,
-            tenant_id=tenant_id,
-            subscription_ids=subscription_ids,
-            all_subscriptions=all_subscriptions,
-            client_id=client_id, client_secret=client_secret,
-            username=username, password=password,
-            service_account=service_account,
-            folder_id=folder_id,
-            organization_id=organization_id,
-            all_projects=all_projects,
-            access_key_id=access_key_id,
-            access_key_secret=access_key_secret,
-            kubernetes_cluster_provider=kubernetes_cluster_provider,
-            kubernetes_config_file=kubernetes_config_file,
-            kubernetes_context=kubernetes_context,
-            kubernetes_persist_config=kubernetes_persist_config,
-            kubernetes_azure_subscription_id=kubernetes_azure_subscription_id,
-            token=token,
-            access_key=access_key,
-            access_secret=access_secret,
-            report_name=report_name,
-            report_dir=report_dir,
-            timestamp=timestamp,
-            services=services or [],
-            skipped_services=skipped_services or [],
-            regions=regions or [],
-            excluded_regions=excluded_regions or [],
-            fetch_local=fetch_local,
-            update=update,
-            ip_ranges=ip_ranges or [],
-            ip_ranges_name_key=ip_ranges_name_key,
-            ruleset=ruleset,
-            exceptions=exceptions,
-            force_write=force_write,
-            debug=debug,
-            quiet=quiet,
-            log_file=log_file,
-            no_browser=no_browser,
-            programmatic_execution=programmatic_execution
-        ))
-    finally:
-        executor.shutdown(wait=True)
-        loop.close()
-        asyncio.set_event_loop(None)
-    return result
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        raise RuntimeError('run() cannot execute inside a running event loop; await run_async()')
+    parameters = locals().copy()
+    return asyncio.run(run_async(**parameters))
+
 
 
 def _extract_run_args(args: dict) -> dict:

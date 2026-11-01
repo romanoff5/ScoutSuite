@@ -1,5 +1,6 @@
 import copy
 import os
+from types import SimpleNamespace
 
 from ScoutSuite.core.console import print_error, print_exception, print_warning, print_debug
 from ScoutSuite.providers.aws.services import AWSServicesConfig
@@ -35,12 +36,17 @@ class AWSProvider(BaseProvider):
 
         self.credentials = kwargs.get('credentials')
 
-        # M03: Support local mode with empty/missing credentials
-        if self.credentials and hasattr(self.credentials, 'session'):
+        # AWS local replay must never instantiate a live AWS facade/SDK client.
+        if kwargs.get('fetch_local', False):
+            self.partition = 'aws'
+            self.account_id = 'local-account-id'
+            # BaseProvider respects a pre-populated `services` attribute.
+            self.services = SimpleNamespace(credentials=None)
+        elif self.credentials and hasattr(self.credentials, 'session'):
             self.partition = get_partition_name(self.credentials.session)
             self.account_id = get_aws_account_id(self.credentials.session)
         else:
-            # Local mode or missing credentials - set defaults
+            # Preserve legacy constructor defaults for non-local use.
             self.partition = getattr(self.credentials, 'partition', 'aws') if self.credentials else 'aws'
             self.account_id = getattr(self.credentials, 'account_id', 'local-account-id') if self.credentials else 'local-account-id'
 
