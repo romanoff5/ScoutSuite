@@ -2,6 +2,8 @@ import datetime
 import os
 import shutil
 import zipfile
+import stat
+from pathlib import Path, PurePosixPath
 
 import dateutil.tz
 
@@ -12,6 +14,52 @@ from ScoutSuite.core.console import print_info, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.output.result_encoder import JavaScriptEncoder, SqlLiteEncoder
 from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
+
+
+
+MAX_REPORT_ARCHIVE_FILES = 2000
+MAX_REPORT_ARCHIVE_BYTES = 128 * 1024 * 1024
+
+
+def safe_extract_report_assets(archive, destination):
+    """Extract trusted packaged assets only, rejecting links, traversal and zip bombs."""
+    root = Path(destination).resolve()
+    approved = ('inc-bootstrap/', 'inc-fontawesome/', 'inc-handlebars/',
+                'inc-jquery/', 'inc-scoutsuite/')
+    total = 0
+    infos = archive.infolist()
+    if len(infos) > MAX_REPORT_ARCHIVE_FILES:
+        raise ValueError('Report asset archive exceeds file count limit')
+    for info in infos:
+        name = info.filename
+        path = PurePosixPath(name)
+        mode = (info.external_attr >> 16) & 0xFFFF
+        if (not name or '\\' in name or path.is_absolute() or
+                any(part in ('', '.', '..') for part in name.rstrip('/').split('/')) or
+                not name.startswith(approved) or
+                (mode and stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR))):
+            raise ValueError('Invalid report archive member')
+        target = root.joinpath(*path.parts)
+        if not target.resolve().is_relative_to(root):
+            raise ValueError('Report archive member escapes destination')
+        total += info.file_size
+        if total > MAX_REPORT_ARCHIVE_BYTES:
+            raise ValueError('Report asset archive exceeds uncompressed size limit')
+        for parent in target.parents:
+            if parent == root:
+                break
+            if parent.is_symlink():
+                raise ValueError('Report archive parent is a symlink')
+        if target.is_symlink():
+            raise ValueError('Report archive destination is a symlink')
+    for info in infos:
+        target = root.joinpath(*PurePosixPath(info.filename).parts)
+        if info.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(info) as source, open(target, 'wb') as output:
+                shutil.copyfileobj(source, output)
 
 
 class HTMLReport:
@@ -70,9 +118,8 @@ class HTMLReport:
             os.makedirs(run_results_dir)
         # Copy static 3rd-party files
         archive = os.path.join(self.scout_report_data_path, 'includes.zip')
-        zip_ref = zipfile.ZipFile(archive)
-        zip_ref.extractall(self.report_dir)
-        zip_ref.close()
+        with zipfile.ZipFile(archive) as zip_ref:
+            safe_extract_report_assets(zip_ref, self.report_dir)
         # Copy static files
         inc_scout_dir = os.path.join(self.report_dir, DEFAULT_INCLUDES_DIRECTORY)
         src_inc_scout_dir = os.path.join(self.scout_report_data_path, DEFAULT_INCLUDES_DIRECTORY)

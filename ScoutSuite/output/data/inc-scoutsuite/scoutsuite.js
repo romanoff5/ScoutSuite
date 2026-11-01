@@ -129,12 +129,15 @@ function getPathArray() {
  */
 var loadAccountId = function () {
     var element = document.getElementById('account_id')
-    var value = '<i class="fa fa-cloud"></i> ' + runResults['provider_name'] +
-        ' <i class="fa fa-chevron-right"></i> ' + runResults['account_id']
-    if (('organization' in runResults) && (value in runResults['organization'])) {
-        value += ' (' + runResults['organization'][value]['Name'] + ')'
+    if (!element) return
+    var label = String(runResults['provider_name'] || '') + ' › ' +
+        String(runResults['account_id'] || '')
+    var organization = runResults['organization']
+    if (organization && Object.prototype.hasOwnProperty.call(organization, label)) {
+        label += ' (' + String(organization[label]['Name'] || '') + ')'
     }
-    element.innerHTML = value
+    element.textContent = label
+
 }
 
 /**
@@ -511,7 +514,7 @@ function iterateEC2ObjectsAndCall(data, entities, callback, callbackArgs) {
         var recurse = entities.length
         for (let i in data[entity]) {
             if (recurse) {
-                iterateEC2ObjectsAndCall(data[entity][i], eval(JSON.stringify(entities)), callback, callbackArgs)
+                iterateEC2ObjectsAndCall(data[entity][i], entities.slice(), callback, callbackArgs)
             } else {
                 callback(data[entity][i], callbackArgs)
             }
@@ -532,7 +535,7 @@ function findEC2Object(ec2Data, entities, id) {
         var recurse = entities.length
         for (let i in ec2Data[entity]) {
             if (recurse) {
-                var object = findEC2Object(ec2Data[entity][i], eval(JSON.stringify(entities)), id)
+                var object = findEC2Object(ec2Data[entity][i], entities.slice(), id)
                 if (object) {
                     return object
                 }
@@ -557,7 +560,7 @@ function findEC2ObjectByAttr(ec2Data, entities, attributes) {
         var recurse = entities.length
         for (let i in ec2Data[entity]) {
             if (recurse) {
-                var object = findEC2ObjectByAttr(ec2Data[entity][i], eval(JSON.stringify(entities)), attributes)
+                var object = findEC2ObjectByAttr(ec2Data[entity][i], entities.slice(), attributes)
                 if (object) {
                     return object
                 }

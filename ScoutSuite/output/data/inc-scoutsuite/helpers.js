@@ -27,8 +27,7 @@ Handlebars.registerHelper('add_policy_path', function () {
     for (var i = 2; i < arguments.length - 1; i++) {
         path = path + '\\.' + arguments[i]
     }
-    policy['policy_path'] = path
-    policy['policy_spath'] = path.replace(/\\/g, '')
+    return Object.assign({}, policy, {policy_path: path, policy_spath: path.replace(/\\/g, '')})
 })
 
 Handlebars.registerHelper('jsonToString', function (obj) {
@@ -172,7 +171,7 @@ var recursiveCount = function (input, entities) {
     if (entities.length > 0) {
         var entity = entities.shift()
         for (let i in input[entity]) {
-            counter = counter + recursiveCount(input[entity][i], eval(JSON.stringify(entities)))
+            counter = counter + recursiveCount(input[entity][i], entities.slice())
         }
     } else {
         counter = counter + 1
@@ -202,7 +201,7 @@ Handlebars.registerHelper('makeTitle', function (title) {
 })
 
 Handlebars.registerHelper('addMember', function (memberName, value) {
-    this[memberName] = value
+    return Object.assign({}, this, {[memberName]: value})
 })
 
 Handlebars.registerHelper('ifShow', function (v1, v2, options) {
@@ -333,9 +332,9 @@ Handlebars.registerHelper('concatWith', function (str1, str2, sep) {
 
 Handlebars.registerHelper('jsonStringify', function () {
     let body = arguments[0]
-    delete body['description']
-    delete body['args']
-    return JSON.stringify(body, null, 4)
+    return JSON.stringify(Object.fromEntries(Object.entries(body).filter(function (entry) {
+        return entry[0] !== 'description' && entry[0] !== 'args'
+    })), null, 4)
 })
 
 Handlebars.registerHelper('get_key', function () {
@@ -410,8 +409,7 @@ Handlebars.registerHelper('each_dict_as_sorted_list', function (context, options
     })
 
     sortedFindingsKeys.forEach(function (key) {
-        var obj = context[key]
-        obj['key'] = key
+        var obj = Object.assign({}, context[key], {key: key})
         // sorted_findings.push(obj)
         ret += options.fn(obj)
     })
@@ -466,7 +464,7 @@ Handlebars.registerHelper('get_rule', function (ruleFilename, attribute) {
     if (attribute === 'service') {
         return ruleFilename.split('-')[0]
     } else {
-        let rule = runResults['rule_definitions'][ruleFilename]
+        let rule = Object.assign({}, runResults['rule_definitions'][ruleFilename])
         // Clean up some ruleset generator artifacts
         let attributeCleanup = ['file_name', 'file_path', 'rule_dirs', 'rule_types', 'rules_data_path', 'string_definition']
         for (let ac in attributeCleanup) {
