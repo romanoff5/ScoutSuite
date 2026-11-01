@@ -129,3 +129,17 @@ denied home-region access must not be represented as no data events.
 This changes selector aggregation behavior by design, but leaves
 resource IDs and serialized source AWS fields intact. Other CloudTrail
 rule logic is not modernized as part of M05.
+
+## M05-E ACM default-filter completeness (2026-11-01)
+
+`ListCertificates` uses an explicit `Includes.keyTypes` list including
+EC certificates and RSA 3072/4096, and explicit `CertificateStatuses`
+covering every status enumerated in the pinned botocore service model.
+The AWS SDK default request can omit these certificates; the collector
+still uses the existing paginated helper and preserves the same
+`CertificateSummaryList` / `DescribeCertificate` resource output.
+
+**IAM:** `acm:ListCertificates` and `acm:DescribeCertificate` unchanged.
+Listing non-issued statuses can intentionally increase the number of
+resources compared with older saved reports. No findings or severities
+are modified in this M05 change.

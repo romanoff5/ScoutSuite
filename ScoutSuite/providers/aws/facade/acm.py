@@ -7,7 +7,17 @@ from ScoutSuite.providers.utils import map_concurrently, run_concurrently
 class AcmFacade(AWSBaseFacade):
     async def get_certificates(self, region):
         try:
-            cert_list = await AWSFacadeUtils.get_all_pages('acm', region, self.session, 'list_certificates', 'CertificateSummaryList')
+            cert_list = await AWSFacadeUtils.get_all_pages(
+                'acm', region, self.session, 'list_certificates', 'CertificateSummaryList',
+                CertificateStatuses=[
+                    'PENDING_VALIDATION', 'ISSUED', 'INACTIVE', 'EXPIRED',
+                    'VALIDATION_TIMED_OUT', 'REVOKED', 'FAILED'
+                ],
+                Includes={'keyTypes': [
+                    'RSA_1024', 'RSA_2048', 'RSA_3072', 'RSA_4096',
+                    'EC_prime256v1', 'EC_secp384r1', 'EC_secp521r1'
+                ]}
+            )
             cert_arns = [cert['CertificateArn'] for cert in cert_list]
         except Exception as e:
             print_exception(f'Failed to get acm certificates: {e}')
