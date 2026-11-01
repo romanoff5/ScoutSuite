@@ -62,7 +62,9 @@ def classify_bucket_exposure(bucket):
     policy_public = bucket.get('policy_is_public')
     restricted = pab.get('RestrictPublicBuckets')
     ignore_acls = pab.get('IgnorePublicAcls')
-    owner_enforced = bucket.get('object_ownership') == 'BucketOwnerEnforced'
+    ownership = bucket.get('object_ownership')
+    owner_enforced = ownership == 'BucketOwnerEnforced'
+    acl_enabled = ownership in ('BucketOwnerPreferred', 'ObjectWriter')
     reasons = []
     unknown = False
 
@@ -77,9 +79,13 @@ def classify_bucket_exposure(bucket):
     public_acl = _has_public_acl(bucket)
     if not owner_enforced:
         if public_acl is True:
-            if ignore_acls is False:
+            if ignore_acls is True:
+                pass  # Public ACLs do not take effect.
+            elif not acl_enabled:
+                unknown = True  # OwnershipControls could not be verified.
+            elif ignore_acls is False:
                 reasons.append('EffectivePublicBucketACL')
-            elif ignore_acls is not True:
+            else:
                 unknown = True
         elif public_acl is None:
             unknown = True
