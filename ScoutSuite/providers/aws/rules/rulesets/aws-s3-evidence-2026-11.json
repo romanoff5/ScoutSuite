@@ -1,0 +1,39 @@
+{
+    "schema_version": 1,
+    "profile_id": "aws-s3-evidence",
+    "profile_version": "2026.11.0",
+    "about": "Opt-in S3 new-write encryption, transport enforcement and bucket-level public exposure evidence. Not a benchmark certification; object-level and access point authorization excluded.",
+    "source_default_ruleset": "default.json",
+    "sources": [
+        {
+            "title": "S3 default encryption",
+            "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/default-encryption-faq.html",
+            "reviewed_on": "2026-11-01"
+        },
+        {
+            "title": "S3 blocking public access",
+            "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html",
+            "reviewed_on": "2026-11-01"
+        }
+    ],
+    "rules": {
+        "s3-bucket-no-default-encryption.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-bucket-allowing-cleartext.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-bucket-effective-public-exposure.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ]
+    }
+}
