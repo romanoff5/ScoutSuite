@@ -2,6 +2,7 @@
 import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from pathlib import Path
 
 import pytest
 from sqlitedict import SqliteDict
@@ -74,7 +75,7 @@ def test_javascript_results_round_trip_deterministic_and_private(tmp_path):
                                 timestamp='test')
     encoder.save_to_file(provider, 'RESULTS', True, False)
     filename, first_line = get_filename('RESULTS', 'synthetic', str(tmp_path))
-    text = (ROOT / 'tests' / 'data').exists() and open(filename, encoding='utf-8').read()
+    text = Path(filename).read_text(encoding='utf-8')
     assert text.startswith(first_line + '\n')
     assert 'SYNTHETIC_SECRET' not in text
     result = encoder.load_from_file('RESULTS')
