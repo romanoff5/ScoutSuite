@@ -1,0 +1,39 @@
+{
+    "schema_version": 1,
+    "profile_id": "aws-security-focused",
+    "profile_version": "2026.11.0",
+    "about": "Versioned experimental AWS security evaluation profile. Three controls only; not a CIS/NIST benchmark certification or replacement for default rules. Requires explicit --ruleset selection.",
+    "source_default_ruleset": "default.json",
+    "sources": [
+        {
+            "title": "AWS KMS GetKeyRotationStatus API",
+            "url": "https://docs.aws.amazon.com/kms/latest/APIReference/API_GetKeyRotationStatus.html",
+            "reviewed_on": "2026-11-01"
+        },
+        {
+            "title": "AWS CloudTrail GetEventSelectors API",
+            "url": "https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_GetEventSelectors.html",
+            "reviewed_on": "2026-11-01"
+        }
+    ],
+    "rules": {
+        "kms-cmk-rotation-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "cloudtrail-no-data-logging.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "cloudtrail-partial-data-logging.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ]
+    }
+}
