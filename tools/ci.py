@@ -172,6 +172,12 @@ class Pipeline:
                   '--offline-manifest-report=' + str(self.root / 'fixtures.json')], cwd=SOURCE)
         data = verify_execution((self.root / 'junit.xml').read_text(encoding='utf-8'),
                                 json.loads((self.root / 'fixtures.json').read_text(encoding='utf-8')))
+        # Node-based browser-helper checks require subprocess. Run them from
+        # the CI orchestrator, NOT from guarded pytest, preserving the
+        # pytest network/subprocess audit boundary. Pipeline.run still applies
+        # Linux network namespaces / Windows firewall isolation.
+        self.run([python_at(self.root, 'test'), '-I', '-B',
+                  SOURCE / 'tools/m09b_viewer_js_check.py'], cwd=SOURCE)
         self.write('test-execution', data)
         print(json.dumps(data, sort_keys=True), flush=True)
 
