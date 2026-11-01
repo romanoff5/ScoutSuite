@@ -186,10 +186,11 @@ class TestM08DS3Exposure(TestCase):
                         's3-bucket-effective-public-exposure']['items'],
                     ['s3.buckets.exposed.public_exposure_status']
                 )
-                self.assertEqual(
-                    [x['reason_code'] for x in ctx.collection_issues],
-                    ['RuleEvidenceUnknown', 'RuleEvidenceUnknown', 'RuleEvidenceUnknown']
-                )
+                # RunContext deduplicates identical issue tuples per scope.
+                self.assertEqual(ctx.collection_issues, [{
+                    'status': 'partial', 'scope': 's3',
+                    'reason_code': 'RuleEvidenceUnknown'
+                }])
             finally:
                 await ctx.aclose()
         asyncio.run(scenario())
