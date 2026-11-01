@@ -83,3 +83,21 @@ contract tests.
 
 Both facades retain already retrieved pages on later-page errors while emitting
 incomplete evidence. No security rules, resource identifiers or severities change.
+
+## M05-C EFS tag migration and permissions (2026-11-01)
+
+`DescribeTags(FileSystemId=...)` is deprecated and has been replaced by
+`ListTagsForResource(ResourceId=..., MaxResults=100)` with `NextToken`
+continuation. The collector preserves the existing list-valued `Tags`
+resource field, including key/value pairs and all pages. Partial responses
+remain visible but are flagged incomplete.
+
+**IAM permission delta:** the AWS Service Authorization Reference maps
+`DescribeTags` to `elasticfilesystem:DescribeTags` and the replacement
+API to `elasticfilesystem:ListTagsForResource` on file-system resources.
+Add the latter when using a custom read-only assessment role; do not assume
+its presence because `DescribeTags` is allowed. The AWS API Reference
+currently contains a conflicting permission note referring to
+`elasticfilesystem:DescribeAccessPoints`; verify the exact role
+permission with the account owner and record any AccessDenied response
+rather than silently falling back to a different API.

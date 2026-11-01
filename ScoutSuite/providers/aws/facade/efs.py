@@ -1,6 +1,7 @@
 from ScoutSuite.core.console import print_exception
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
+from ScoutSuite.providers.aws.facade.pagination import collect_token_pages, PaginationError
 from ScoutSuite.providers.utils import run_concurrently, get_and_set_concurrently
 
 
@@ -21,11 +22,25 @@ class EFSFacade(AWSBaseFacade):
 
     async def _get_and_set_tags(self, file_system: {}, region: str):
         client = AWSFacadeUtils.get_client('efs', self.session, region)
+        if client is None:
+            return
         try:
-            file_system['Tags'] = await run_concurrently(
-                lambda: client.describe_tags(FileSystemId=file_system['FileSystemId'])['Tags'])
-        except Exception as e:
-            print_exception(f'Failed to describe EFS tags: {e}')
+            file_system['Tags'] = await collect_token_pages(
+                client.list_tags_for_resource,
+                items_path=('Tags',),
+                input_token='NextToken',
+                output_token=('NextToken',),
+                first_kwargs={
+                    'ResourceId': file_system['FileSystemId'],
+                    'MaxResults': 100
+                },
+                scope='efs'
+            )
+        except PaginationError as error:
+            # Preserve any successfully fetched tags and an incomplete status.
+            file_system['Tags'] = error.items
+            print_exception('Unable to list complete EFS tags '
+                            f'({error.reason_code})')
 
     async def _get_and_set_mount_targets(self, file_system: {}, region: str):
 
