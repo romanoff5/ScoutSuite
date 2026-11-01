@@ -67,7 +67,7 @@ def test_zip_symlink_and_existing_symlink_destinations_are_rejected(tmp_path):
 
 
 @pytest.mark.parametrize('key', [
-    '../secret', 'a¤..¤b', 'foo¤__class__', 'services¤constructor',
+    'a¤..¤b', 'foo¤__class__', 'services¤constructor',
     'a¤prototype', 'a¤¤b', 'x' * 2049,
 ])
 def test_api_rejects_malformed_or_prototype_paths(key):
@@ -79,8 +79,10 @@ def test_api_rejects_malformed_or_prototype_paths(key):
 
 def test_api_preserves_literal_aws_identifiers_containing_path_separators():
     resources = {'roles': {'team/devops': {'name': 'safe'},
+                           '../secret': {'name': 'literal'},
                            'windows\\\\path': {'name': 'legacy'}}}
     assert Server.get_item(resources, 'roles¤team/devops¤name') == 'safe'
+    assert Server.get_item(resources, 'roles¤../secret¤name') == 'literal'
     assert Server.get_item(resources, 'roles¤windows\\\\path¤name') == 'legacy'
 
 
