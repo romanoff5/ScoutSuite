@@ -1,6 +1,5 @@
 """M08 evidence semantics and opt-in versioned AWS ruleset (offline)."""
 import asyncio
-from pathlib import Path
 from types import SimpleNamespace
 
 from ScoutSuite.core.processingengine import ProcessingEngine
