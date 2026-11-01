@@ -15,7 +15,12 @@ def bundle(files):
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, 'w') as archive:
         for path, content in files.items():
-            archive.writestr(path, content)
+            # ZipInfo normalizes backslashes on Windows during construction.
+            # Force the wire name back to the hostile raw member spelling.
+            item = zipfile.ZipInfo(path.replace('\\', '/'))
+            item.filename = path
+            item.orig_filename = path
+            archive.writestr(item, content)
     stream.seek(0)
     return zipfile.ZipFile(stream)
 
