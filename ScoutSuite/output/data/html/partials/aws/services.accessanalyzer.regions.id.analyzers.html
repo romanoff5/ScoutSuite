@@ -21,3 +21,12 @@
     $("#services\\.accessanalyzer\\.regions\\.id\\.analyzers\\.partial").html()
   );
 </script>
+
+<script id="single_accessanalyzer_analyzer-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.accessanalyzer.regions.id.analyzers' }}
+</script>
+<script>
+  var single_accessanalyzer_analyzer_template = Handlebars.compile(
+    $("#single_accessanalyzer_analyzer-template").html()
+  );
+</script>
