@@ -1,5 +1,6 @@
 import boto3
 from botocore.exceptions import ClientError, ReadTimeoutError, ConnectTimeoutError, EndpointConnectionError
+from botocore.config import Config
 
 from ScoutSuite.core.conditions import print_exception
 from ScoutSuite.providers.utils import run_concurrently
@@ -108,7 +109,14 @@ class AWSFacadeUtils:
 
         try:
             def create():
-                return session.client(service, region_name=region) if region else session.client(service)
+                # Explicit finite SDK timeouts and a bounded, single retry layer.
+                config = Config(
+                    connect_timeout=5, read_timeout=30,
+                    retries={'mode': 'standard', 'total_max_attempts': 3}
+                )
+                if region:
+                    return session.client(service, region_name=region, config=config)
+                return session.client(service, config=config)
 
             context = get_current_run_context()
             if context is None:

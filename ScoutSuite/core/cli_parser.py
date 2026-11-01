@@ -369,6 +369,11 @@ class ScoutSuiteArgumentParser:
                             default=False,
                             action='store_true',
                             help='Do not automatically open the report in the browser.')
+        parser.add_argument('--strict-completeness',
+                            dest='strict_completeness',
+                            default=False,
+                            action='store_true',
+                            help='Return 201 for incomplete or unevaluated security evidence.')
         parser.add_argument('--max-workers',
                             dest='max_workers',
                             type=int,

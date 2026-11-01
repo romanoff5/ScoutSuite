@@ -122,7 +122,8 @@ async def run_async(provider: str,
                     quiet: bool = False,
                     log_file: Optional[str] = None,
                     no_browser: bool = False,
-                    programmatic_execution: bool = False) -> int:
+                    programmatic_execution: bool = False,
+                    strict_completeness: bool = False) -> int:
     """Run ScoutSuite as an async coroutine.
     
     This is the explicit awaitable programmatic entry point.
@@ -200,7 +201,8 @@ async def run_async(provider: str,
             quiet=quiet,
             log_file=log_file,
             no_browser=no_browser,
-            programmatic_execution=programmatic_execution
+            programmatic_execution=programmatic_execution,
+            strict_completeness=strict_completeness
         )
     finally:
         await context.aclose()
@@ -264,7 +266,8 @@ async def _run_sync(provider: str,
                     quiet: bool = False,
                     log_file: Optional[str] = None,
                     no_browser: bool = False,
-                    programmatic_execution: bool = False) -> int:
+                    programmatic_execution: bool = False,
+                    strict_completeness: bool = False) -> int:
     """Internal synchronous entry point that creates and manages its own loop.
     
     This is called by run_from_cli() after parsing arguments.
@@ -333,7 +336,8 @@ async def _run_sync(provider: str,
                 quiet=quiet,
                 log_file=log_file,
                 no_browser=no_browser,
-                programmatic_execution=programmatic_execution
+                programmatic_execution=programmatic_execution,
+                strict_completeness=strict_completeness
             )
         except (KeyboardInterrupt, SystemExit):
             print_info('Exiting')
@@ -399,7 +403,8 @@ async def _run_impl(context: RunContext,
                     quiet: bool = False,
                     log_file: Optional[str] = None,
                     no_browser: bool = False,
-                    programmatic_execution: bool = False) -> int:
+                    programmatic_execution: bool = False,
+                    strict_completeness: bool = False) -> int:
     """Core implementation of the ScoutSuite run.
     
     M03: --local from synthetic fixtures triggers zero auth or SDK calls.
@@ -600,12 +605,21 @@ async def _run_impl(context: RunContext,
     else:
         exceptions = {}
 
+    # Count evaluated findings separately from collection success or failure.
+    checked_items = sum(
+        finding.get('checked_items', 0) or 0
+        for service_data in cloud_provider.services.values()
+        if isinstance(service_data, dict)
+        for finding in service_data.get('findings', {}).values()
+        if isinstance(finding, dict)
+    ) if isinstance(cloud_provider.services, dict) else 0
+
     # Expose collection integrity in saved RESULTS, including successful empty runs.
     if not fetch_local or not isinstance(getattr(cloud_provider, 'collection_status', None), dict):
-        cloud_provider.collection_status = context.collection_summary()
+        cloud_provider.collection_status = context.collection_summary(checked_items)
     elif context.collection_issues or context.errors:
         previous = cloud_provider.collection_status.get('issues', [])
-        current = context.collection_summary()
+        current = context.collection_summary(checked_items)
         current['issues'] = previous + [
             issue for issue in current['issues'] if issue not in previous
         ]
@@ -629,7 +643,7 @@ async def _run_impl(context: RunContext,
 
     # Post-processing can also emit errors; reflect those before serialization.
     if context.collection_issues or context.errors:
-        cloud_provider.collection_status = context.collection_summary()
+        cloud_provider.collection_status = context.collection_summary(checked_items)
 
     # Save config and create HTML report
     try:
@@ -647,6 +661,13 @@ async def _run_impl(context: RunContext,
         except Exception as e:
             print_exception('Failed to open browser: {}'.format(e))
 
+    collection_status = getattr(cloud_provider, 'collection_status', None)
+    if strict_completeness and (
+        not isinstance(collection_status, dict)
+        or not collection_status.get('complete', False)
+        or not collection_status.get('evidence_evaluated', False)
+    ):
+        return 201
     errors = context.errors if context._token is not None else ERRORS_LIST
     if errors:
         return 200
@@ -704,7 +725,8 @@ def run(provider,
         quiet=False,
         log_file=None,
         no_browser=False,
-        programmatic_execution=True):
+        programmatic_execution=True,
+        strict_completeness=False):
     """
     Run a scout job - backward compatible wrapper.
     
@@ -785,4 +807,5 @@ def _extract_run_args(args: dict) -> dict:
         'log_file': args.get('log_file'),
         'no_browser': args.get('no_browser'),
         'programmatic_execution': False,
+        'strict_completeness': args.get('strict_completeness', False),
     }
