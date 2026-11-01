@@ -5,6 +5,8 @@ import os
 import dateutil
 from sqlitedict import SqliteDict
 
+from ScoutSuite.output.safe_pickle import decode_report_pickle
+
 from ScoutSuite import DEFAULT_REPORT_DIRECTORY
 from ScoutSuite.core.console import print_exception, print_info
 from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
@@ -85,7 +87,7 @@ class SqlLiteEncoder(ScoutResultEncoder):
                                           file_extension='db')
         if not os.path.isfile(config_path):
             raise FileNotFoundError(config_path)
-        with SqliteDict(config_path) as database:
+        with SqliteDict(config_path, flag='r', decode=decode_report_pickle) as database:
             payload = dict(database)
         return validate_results(payload) if config_type == 'RESULTS' else payload
 
