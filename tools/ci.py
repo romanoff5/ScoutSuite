@@ -16,7 +16,7 @@ import zipfile
 
 
 SOURCE = Path(__file__).resolve().parents[1]
-PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'packaging')
+PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'xss_browser', 'packaging')
 CLI_CASES = {'test_empty', 'test_aws_provider', 'test_gcp_provider', 'test_azure_provider',
              'test_unauthenticated', 'test_keyboardinterrupted'}
 ACTIONLINT = {
@@ -174,6 +174,15 @@ class Pipeline:
                                 json.loads((self.root / 'fixtures.json').read_text(encoding='utf-8')))
         self.write('test-execution', data)
         print(json.dumps(data, sort_keys=True), flush=True)
+
+    def xss_browser(self):
+        """Run real browser/parser XSS checks with OS network isolation.
+
+        Kept outside pytest because the M01 guard correctly denies all
+        subprocess attempts, including local Node and Chromium.
+        """
+        self.run([python_at(self.root, 'test'), '-I', '-B',
+                  SOURCE / 'tools/verify_report_xss.py'], cwd=SOURCE)
 
     def packaging(self):
         for name in ('core', 'aws', 'wheel', 'sdist'):
