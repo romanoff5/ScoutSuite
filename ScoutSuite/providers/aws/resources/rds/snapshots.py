@@ -15,30 +15,31 @@ class Snapshots(AWSResources):
             self[name] = resource
 
     def _parse_snapshot(self, raw_snapshot):
-        is_cluster = 'DBClusterIdentifier' in raw_snapshot
+        # Cached AWS responses may be normalized more than once.
+        is_cluster = 'DBClusterSnapshotIdentifier' in raw_snapshot
+        snapshot_id = raw_snapshot.get(
+            'DBClusterSnapshotIdentifier' if is_cluster else 'DBSnapshotIdentifier'
+        )
+        if not snapshot_id:
+            raise ValueError('RDS snapshot is missing its identifier')
 
-        snapshot_id = raw_snapshot.pop('DBClusterSnapshotIdentifier') if is_cluster \
-            else raw_snapshot.pop('DBSnapshotIdentifier')
+        snapshot = {
+            'arn': raw_snapshot.get(
+                'DBClusterSnapshotArn' if is_cluster else 'DBSnapshotArn'
+            ),
+            'id': snapshot_id,
+            'name': snapshot_id,
+            'vpc_id': raw_snapshot.get('VpcId', 'EC2-Classic'),
+            'attributes': raw_snapshot.get('Attributes') or {},
+            'is_cluster': is_cluster
+        }
 
-        snapshot = {}
-        snapshot['arn'] = raw_snapshot.pop('DBClusterSnapshotArn') if is_cluster else raw_snapshot.pop('DBSnapshotArn')
-        snapshot['id'] = snapshot_id,
-        snapshot['name'] = snapshot_id,
-        snapshot['vpc_id'] = raw_snapshot['VpcId']
-        snapshot['attributes'] = raw_snapshot['Attributes']
-        snapshot['is_cluster'] = is_cluster
-
-        attributes = [
-            'DBInstanceIdentifier',
-            'SnapshotCreateTime',
-            'Encrypted',
-            'OptionGroupName'
-        ]
-        for attribute in attributes:
-            snapshot[attribute] = raw_snapshot[attribute] if attribute in raw_snapshot else None
-
-        if snapshot['is_cluster']:  # Map some fields to do more generic and simple rules
-            snapshot['DBClusterIdentifier'] = raw_snapshot['DBClusterIdentifier']
-            snapshot['Encrypted'] = raw_snapshot['StorageEncrypted']
-
+        for field in ('DBInstanceIdentifier', 'SnapshotCreateTime',
+                      'Encrypted', 'OptionGroupName'):
+            snapshot[field] = raw_snapshot.get(field)
+        if is_cluster:
+            snapshot['DBClusterIdentifier'] = raw_snapshot.get('DBClusterIdentifier')
+            snapshot['Encrypted'] = raw_snapshot.get(
+                'StorageEncrypted', raw_snapshot.get('Encrypted')
+            )
         return snapshot_id, snapshot
