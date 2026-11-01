@@ -1,11 +1,12 @@
 """CI evidence must reject missing execution and incomplete fixtures."""
 
 import copy
+from threading import Barrier
 import xml.etree.ElementTree as ET
 
 import pytest
 
-from tools.ci import CLI_CASES, clean_environment, verify_execution
+from tools.ci import CLI_CASES, Pipeline, clean_environment, verify_execution
 
 
 def execution():
@@ -63,3 +64,32 @@ def test_ci_child_environment_clears_synthetic_credentials(monkeypatch, tmp_path
     assert env['HOME'] == str(tmp_path / 'home')
     assert env['PIP_NO_INDEX'] == '1'
     assert env['AWS_EC2_METADATA_DISABLED'] == 'true'
+
+
+def test_ci_parallel_independent_gates_execute_concurrently():
+    pipeline = object.__new__(Pipeline)
+    barrier = Barrier(3, timeout=5)
+    results = []
+
+    def job(name):
+        barrier.wait()
+        results.append(name)
+
+    pipeline.parallel([(name, lambda value=name: job(value))
+                       for name in ('test', 'wheel', 'sdist')])
+    assert set(results) == {'test', 'wheel', 'sdist'}
+
+
+def test_ci_parallel_gate_waits_for_all_and_propagates_failure():
+    pipeline = object.__new__(Pipeline)
+    completed = []
+
+    def fail():
+        raise ValueError('synthetic build failure')
+
+    def complete():
+        completed.append('other independent check completed')
+
+    with pytest.raises(RuntimeError, match='Parallel CI gates failed: broken'):
+        pipeline.parallel([('broken', fail), ('other', complete)], max_workers=2)
+    assert completed == ['other independent check completed']
