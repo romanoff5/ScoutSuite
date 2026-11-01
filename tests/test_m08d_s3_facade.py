@@ -105,6 +105,21 @@ class TestM08DS3Facade(TestCase):
                 await context.aclose()
         asyncio.run(scenario())
 
+    def test_verified_absent_bucket_policy_is_not_a_denial_error(self):
+        async def scenario():
+            client = Mock()
+            client.get_bucket_policy.side_effect = client_error(
+                'NoSuchBucketPolicy', 'GetBucketPolicy')
+            facade = S3Facade(Mock())
+            item = bucket()
+            with patch.object(AWSFacadeUtils, 'get_client', return_value=client):
+                await facade._get_and_set_s3_bucket_policy(item)
+            self.assertEqual(item['policy_collection_status'], 'absent')
+            self.assertNotIn('policy', item)
+            facade._set_s3_bucket_secure_transport(item)
+            self.assertFalse(item['secure_transport_enabled'])
+        asyncio.run(scenario())
+
     def test_https_enforcement_requires_unconditional_deny_on_both_resources(self):
         facade = S3Facade(Mock())
         item = bucket()
