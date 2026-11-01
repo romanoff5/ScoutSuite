@@ -15,6 +15,33 @@
         'script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet',
         'base', 'meta', 'link', 'style', 'svg', 'math', 'template', 'noscript'
     ]);
+    // Rendered report data cannot introduce network fetches through CSS functions
+    // (image-set, escaped url, @import, custom properties, etc.). Retain only
+    // simple static presentation declarations needed by legacy templates.
+    const SAFE_STYLE_PROPERTIES = new Set([
+        'display', 'text-align', 'background-color', 'color', 'position',
+        'margin', 'margin-left', 'margin-right', 'margin-top', 'margin-bottom',
+        'padding', 'padding-left', 'padding-right', 'padding-top', 'padding-bottom',
+        'width', 'height', 'max-height', 'min-height', 'max-width', 'min-width',
+        'float', 'overflow', 'overflow-x', 'overflow-y', 'font-size',
+        'font-weight', 'white-space', 'border', 'border-color', 'border-width'
+    ]);
+    function sanitizeInlineStyle(raw) {
+        if (typeof raw !== 'string' || raw.length > 4096) return null;
+        const output = [];
+        for (const item of raw.split(';')) {
+            if (!item.trim()) continue;
+            const colon = item.indexOf(':');
+            if (colon < 1) return null;
+            const property = item.slice(0, colon).trim().toLowerCase();
+            const value = item.slice(colon + 1).trim();
+            if (!SAFE_STYLE_PROPERTIES.has(property) ||
+                !/^[a-zA-Z0-9#.% +,-]+$/.test(value)) return null;
+            output.push(property + ': ' + value);
+        }
+        return output.length ? output.join('; ') : null;
+    }
+
     const URL_ATTRIBUTES = new Set([
         'href', 'src', 'xlink:href', 'poster', 'action', 'formaction'
     ]);
@@ -105,8 +132,10 @@
                     element.removeAttribute(attribute.name);
                     continue;
                 }
-                if (name === 'style' && /(?:url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding)/i.test(value)) {
-                    element.removeAttribute(attribute.name);
+                if (name === 'style') {
+                    const safeStyle = sanitizeInlineStyle(value);
+                    if (safeStyle === null) element.removeAttribute(attribute.name);
+                    else element.setAttribute('style', safeStyle);
                     continue;
                 }
                 if (!URL_ATTRIBUTES.has(name)) continue;

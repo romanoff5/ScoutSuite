@@ -3,13 +3,17 @@ import cherrypy
 
 import re
 import ipaddress
+import json
 from pathlib import Path
+
+from ScoutSuite.output.safe_sqlite import decode_sqlite_value
 
 count_re = re.compile(r".*_count$")
 MAX_PAGE_SIZE = 100
 MAX_PAGE_INDEX = 100000
 MAX_PATH_LENGTH = 2048
 MAX_PATH_DEPTH = 32
+MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 INTEGER_RE = re.compile(r'^(0|[1-9][0-9]*)$')
 
 
@@ -25,8 +29,15 @@ class Server:
         :param filename:                Name of the file to write data to.
         :return:                        The server object.
         """
-        self.results = SqliteDict(filename, flag='r')
-        self.report_root = Path(filename).resolve().parent
+        database_path = Path(filename).resolve()
+        self.results = SqliteDict(str(database_path), flag='r', decode=decode_sqlite_value)
+        # A standard report has <report>.html and inc-*/ beside scoutsuite-results/.
+        database_dir = database_path.parent
+        self.report_root = (database_dir.parent if database_dir.name == 'scoutsuite-results'
+                            else database_dir)
+        stem = database_path.stem
+        name = stem[len('scoutsuite_results_'):] if stem.startswith('scoutsuite_results_') else 'report'
+        self.report_filename = name + '.html'
 
     def check_same_origin(self):
         host = cherrypy.request.headers.get('Host', '').split(':', 1)[0].lower()
@@ -52,7 +63,7 @@ class Server:
         file = (self.report_root / relative).resolve()
         if not file.is_relative_to(self.report_root) or not file.is_file():
             raise cherrypy.HTTPError(404)
-        if (len(parts) == 1 and top.endswith('.html')):
+        if len(parts) == 1 and top == self.report_filename:
             pass
         elif (top.startswith('inc-') and
               file.suffix.lower() in ('.css', '.js', '.ico', '.png', '.jpg',
@@ -79,8 +90,8 @@ class Server:
         :return:                        The summary data of the report.
         """
         self.check_same_origin()
-        data = dict(self.results)
-        services = data.get('services') or {}
+        data = {key: self.results[key] for key in self.results if key != 'services'}
+        services = self.results.get('services') or {}
         stripped_services = {}
         for k1, v1 in services.items():
             service = {}
@@ -89,7 +100,7 @@ class Server:
                     service[k2] = v2
             stripped_services[k1] = service
         data['services'] = stripped_services
-        return {'data': data}
+        return self.bounded_payload({'data': data})
 
     @cherrypy.expose()
     @cherrypy.tools.json_out()
@@ -110,7 +121,7 @@ class Server:
             result = {'type': 'dict', 'keys': list(result.keys())}
         elif isinstance(result, list):
             result = {'type': 'list', 'length': len(result)}
-        return {'data': result}
+        return self.bounded_payload({'data': result})
 
     @cherrypy.expose()
     @cherrypy.tools.json_out()
@@ -125,10 +136,12 @@ class Server:
         :return:                        The data at the requested location.
         """
         self.check_same_origin()
+        if key is None or key == '':
+            raise cherrypy.HTTPError(400, 'A bounded result key is required')
         result = self.get_item(self.results, key)
         if isinstance(result, (dict, SqliteDict)):
             result = dict(result)
-        return {'data': result}
+        return self.bounded_payload({'data': result})
 
     @cherrypy.expose()
     @cherrypy.tools.json_out()
@@ -160,7 +173,7 @@ class Server:
         if isinstance(result, list):
             page = result[start:end]
 
-        return {'data': self.strip_nested_data(page)}
+        return self.bounded_payload({'data': self.strip_nested_data(page)})
 
     @staticmethod
     def init(database_filename, host, port):
@@ -190,6 +203,18 @@ class Server:
                 'server.thread_pool': 5,
         })
         cherrypy.quickstart(Server(database_filename), "/api", config=config)
+
+    @staticmethod
+    def bounded_payload(payload):
+        """Reject unbounded JSON responses instead of materializing them for HTTP."""
+        try:
+            serialized = json.dumps(payload, ensure_ascii=False, allow_nan=False,
+                                    separators=(',', ':'))
+        except (TypeError, ValueError, RecursionError) as error:
+            raise cherrypy.HTTPError(422, 'Report value cannot be serialized') from error
+        if len(serialized.encode('utf-8')) > MAX_RESPONSE_BYTES:
+            raise cherrypy.HTTPError(413, 'Report response exceeds size limit; use pagination')
+        return payload
 
     @staticmethod
     def parse_bounded_integer(raw, maximum, minimum=0):

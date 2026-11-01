@@ -8,6 +8,7 @@ from sqlitedict import SqliteDict
 from ScoutSuite import DEFAULT_REPORT_DIRECTORY
 from ScoutSuite.core.console import print_exception, print_info
 from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
+from ScoutSuite.output.safe_sqlite import decode_sqlite_value
 
 
 # Only RESULTS payloads carry a schema version. Exceptions and error files retain
@@ -85,7 +86,7 @@ class SqlLiteEncoder(ScoutResultEncoder):
                                           file_extension='db')
         if not os.path.isfile(config_path):
             raise FileNotFoundError(config_path)
-        with SqliteDict(config_path) as database:
+        with SqliteDict(config_path, flag='r', decode=decode_sqlite_value) as database:
             payload = dict(database)
         return validate_results(payload) if config_type == 'RESULTS' else payload
 
