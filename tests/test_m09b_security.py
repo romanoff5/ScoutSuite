@@ -15,6 +15,9 @@ def archive_with(name, payload=b'ok', symlink=False):
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, 'w') as z:
         info = zipfile.ZipInfo(name)
+        # ZipInfo normalizes Windows separators in its constructor. Restore the
+        # raw archive name to exercise malformed ZIP entries on both platforms.
+        info.filename = name
         if symlink:
             info.create_system = 3
             info.external_attr = (stat.S_IFLNK | 0o777) << 16
