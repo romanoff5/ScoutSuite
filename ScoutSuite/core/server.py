@@ -10,7 +10,7 @@ MAX_PAGE_SIZE = 100
 MAX_PAGE_INDEX = 100000
 MAX_PATH_LENGTH = 2048
 MAX_PATH_DEPTH = 32
-INTEGER_RE = re.compile(r'^(0|[1-9][0-9]*)
+INTEGER_RE = re.compile(r'^(0|[1-9][0-9]*)$')
 
 
 class Server:
