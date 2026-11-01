@@ -95,6 +95,13 @@ class TestM08DS3Exposure(TestCase):
         blocked_new['public_access_block_configuration']['BlockPublicAcls'] = True
         self.assertEqual(classify_bucket_exposure(blocked_new)[0], 'exposed')
 
+    def test_unknown_ownership_does_not_make_acl_exposure_certain(self):
+        uncertain = item(object_ownership=None, grantees=acl_public())
+        self.assertEqual(classify_bucket_exposure(uncertain)[0], 'unknown')
+        uncertain['public_access_block_configuration']['IgnorePublicAcls'] = True
+        self.assertEqual(classify_bucket_exposure(uncertain)[0],
+                         'no_bucket_level_exposure_detected')
+
     def test_denied_reads_and_unverified_account_constraints_are_unknown(self):
         unknown = item(policy_is_public=None, acl_collection_status='failed')
         self.assertEqual(classify_bucket_exposure(unknown)[0], 'unknown')
