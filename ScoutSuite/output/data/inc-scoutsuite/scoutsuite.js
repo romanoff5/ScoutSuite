@@ -129,12 +129,23 @@ function getPathArray() {
  */
 var loadAccountId = function () {
     var element = document.getElementById('account_id')
-    var value = '<i class="fa fa-cloud"></i> ' + runResults['provider_name'] +
-        ' <i class="fa fa-chevron-right"></i> ' + runResults['account_id']
-    if (('organization' in runResults) && (value in runResults['organization'])) {
-        value += ' (' + runResults['organization'][value]['Name'] + ')'
+    // Provider/account labels are untrusted report data, never HTML.
+    // Keep the icon markup local and static; render dynamic fields as text.
+    while (element.firstChild) element.removeChild(element.firstChild)
+    var cloud = document.createElement('i')
+    cloud.className = 'fa fa-cloud'
+    element.appendChild(cloud)
+    element.appendChild(document.createTextNode(' ' + String(runResults['provider_name'] || '')))
+    var arrow = document.createElement('i')
+    arrow.className = 'fa fa-chevron-right'
+    element.appendChild(document.createTextNode(' '))
+    element.appendChild(arrow)
+    element.appendChild(document.createTextNode(' ' + String(runResults['account_id'] || '')))
+    var org = runResults['organization']
+    var account = String(runResults['account_id'] || '')
+    if (org && Object.prototype.hasOwnProperty.call(org, account) && org[account] && org[account].Name) {
+        element.appendChild(document.createTextNode(' (' + String(org[account].Name) + ')'))
     }
-    element.innerHTML = value
 }
 
 /**
@@ -511,7 +522,7 @@ function iterateEC2ObjectsAndCall(data, entities, callback, callbackArgs) {
         var recurse = entities.length
         for (let i in data[entity]) {
             if (recurse) {
-                iterateEC2ObjectsAndCall(data[entity][i], eval(JSON.stringify(entities)), callback, callbackArgs)
+                iterateEC2ObjectsAndCall(data[entity][i], entities.slice(), callback, callbackArgs)
             } else {
                 callback(data[entity][i], callbackArgs)
             }
@@ -532,7 +543,7 @@ function findEC2Object(ec2Data, entities, id) {
         var recurse = entities.length
         for (let i in ec2Data[entity]) {
             if (recurse) {
-                var object = findEC2Object(ec2Data[entity][i], eval(JSON.stringify(entities)), id)
+                var object = findEC2Object(ec2Data[entity][i], entities.slice(), id)
                 if (object) {
                     return object
                 }
@@ -557,7 +568,7 @@ function findEC2ObjectByAttr(ec2Data, entities, attributes) {
         var recurse = entities.length
         for (let i in ec2Data[entity]) {
             if (recurse) {
-                var object = findEC2ObjectByAttr(ec2Data[entity][i], eval(JSON.stringify(entities)), attributes)
+                var object = findEC2ObjectByAttr(ec2Data[entity][i], entities.slice(), attributes)
                 if (object) {
                     return object
                 }
