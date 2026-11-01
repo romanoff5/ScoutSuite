@@ -1,0 +1,21 @@
+{
+    "description": "S3 Bucket with Effective Bucket-Level Public Exposure",
+    "rationale": "The observed bucket policy or effective bucket ACL provides a public-access vector not suppressed by restrictive account/bucket controls. The rule uses GetBucketPolicyStatus, Bucket/Object Ownership, ACLs, and effective Block Public Access. It does not evaluate access points, object ACLs, IAM, endpoint policies or SCP/RCP layers.",
+    "remediation": "Review policy public grants and ACLs; enable appropriate S3 Block Public Access settings and BucketOwnerEnforced where compatible. Independently verify access points and resource policies.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html",
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html"
+    ],
+    "dashboard_name": "Buckets",
+    "path": "s3.buckets.id",
+    "conditions": [
+        "and",
+        [
+            "public_exposure_status",
+            "equal",
+            "exposed"
+        ]
+    ],
+    "id_suffix": "public_exposure_status",
+    "evidence_policy": "s3-bucket-level-exposure-v1"
+}
