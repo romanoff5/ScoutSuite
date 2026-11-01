@@ -67,3 +67,19 @@ a previous regional endpoint rejected the request.
 Botocore model: `ListBuckets` input `MaxBuckets`, `ContinuationToken`;
 output `Buckets`, `ContinuationToken`. No SDK network/auth is used in
 contract tests.
+
+## M05-B CloudFront and SQS continuation (2026-11-01)
+
+- CloudFront `ListDistributions`: `MaxItems='100'`, then
+  `Marker=DistributionList.NextMarker` while
+  `DistributionList.IsTruncated` is true. `Items` can be omitted for an
+  empty list; the parent `DistributionList` and `IsTruncated` are required.
+  **IAM:** `cloudfront:ListDistributions` (no change).
+- SQS `ListQueues`: `MaxResults=1000` and continuation with `NextToken`.
+  `QueueUrls` can be omitted when empty. **IAM:** `sqs:ListQueues` (no change).
+  Individual `GetQueueAttributes` stays required. Deleted queues and malformed
+  attributes are recorded as incomplete rather than crashing the resource
+  converter; valid queues retain their original (URL, attributes) tuple output.
+
+Both facades retain already retrieved pages on later-page errors while emitting
+incomplete evidence. No security rules, resource identifiers or severities change.
