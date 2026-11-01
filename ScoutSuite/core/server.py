@@ -211,7 +211,7 @@ class Server:
         parts = key.split('¤')
         if (len(parts) > MAX_PATH_DEPTH or
                 any(not part or part.startswith('_') or part in (
-                    '__proto__', 'prototype', 'constructor') for part in parts)):
+                    '.', '..', '__proto__', 'prototype', 'constructor') for part in parts)):
             raise cherrypy.HTTPError(400, 'Invalid result path')
         for part in parts:
             if isinstance(data, (dict, SqliteDict)):
