@@ -144,36 +144,46 @@ class S3Facade(AWSBaseFacade):
                     print_exception('Failed to get web hosting configuration for {}: {}'.format(bucket['Name'], e))
 
     async def _get_and_set_s3_bucket_default_encryption(self, bucket: {}):
-        bucket_name = bucket['Name']
-        client = AWSFacadeUtils.get_client('s3', self.session, bucket['region'])
+        """S3 guarantees SSE-S3 baseline for new writes since January 2023."""
+        bucket['default_encryption_enabled'] = None
+        bucket['default_encryption_algorithm'] = None
+        bucket['default_encryption_key'] = None
+        bucket['encryption_evidence'] = 'unverified'
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        if client is None:
+            self._record_context_issue('BucketEncryption')
+            return
         try:
-            config = await run_concurrently(lambda: client.get_bucket_encryption(Bucket=bucket['Name']))
+            config = await run_concurrently(
+                lambda: client.get_bucket_encryption(Bucket=bucket['Name'])
+            )
+            rules = (config.get('ServerSideEncryptionConfiguration') or {}).get('Rules')
+            if not isinstance(rules, list) or len(rules) != 1:
+                raise ValueError('MalformedEncryptionConfiguration')
+            default = rules[0].get('ApplyServerSideEncryptionByDefault')
+            if not isinstance(default, dict):
+                raise ValueError('MalformedEncryptionConfiguration')
+            algorithm = default.get('SSEAlgorithm')
+            if algorithm not in ('AES256', 'aws:kms', 'aws:kms:dsse'):
+                raise ValueError('UnknownEncryptionAlgorithm')
             bucket['default_encryption_enabled'] = True
-            bucket['default_encryption_algorithm'] = config.get('ServerSideEncryptionConfiguration', {})\
-                .get('Rules', [{}])[0].get('ApplyServerSideEncryptionByDefault', {}).get('SSEAlgorithm')
-            bucket['default_encryption_key'] = config.get('ServerSideEncryptionConfiguration', {})\
-                .get('Rules', [{}])[0].get('ApplyServerSideEncryptionByDefault', {}).get('KMSMasterKeyID')
-        except ClientError as e:
-            if 'ServerSideEncryptionConfigurationNotFoundError' in e.response['Error']['Code']:
-                bucket['default_encryption_enabled'] = False
-                bucket['default_encryption_algorithm'] = None
-                bucket['default_encryption_key'] = None
+            bucket['default_encryption_algorithm'] = algorithm
+            bucket['default_encryption_key'] = default.get('KMSMasterKeyID')
+            bucket['encryption_evidence'] = 'api'
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code')
+            if code == 'ServerSideEncryptionConfigurationNotFoundError':
+                # This is no longer evidence of an unencrypted bucket.
+                # It describes new writes, not historical object encryption.
+                bucket['default_encryption_enabled'] = True
+                bucket['default_encryption_algorithm'] = 'AES256'
+                bucket['encryption_evidence'] = 'aws_baseline'
             else:
-                bucket['default_encryption_enabled'] = None
-                bucket['default_encryption_algorithm'] = None
-                bucket['default_encryption_key'] = None
-                if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                    print_warning(f'Failed to get encryption configuration for {bucket_name}: {e}')
-                else:
-                    print_exception(f'Failed to get encryption configuration for {bucket_name}: {e}')
-        except Exception as e:
-            bucket['default_encryption'] = 'Unknown'
-            bucket['default_encryption_algorithm'] = None
-            bucket['default_encryption_key'] = None
-            if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                print_warning(f'Failed to get encryption configuration for {bucket_name}: {e}')
-            else:
-                print_exception(f'Failed to get encryption configuration for {bucket_name}: {e}')
+                self._record_context_issue('BucketEncryption')
+                print_exception('Unable to verify S3 bucket encryption')
+        except Exception:
+            self._record_context_issue('BucketEncryption')
+            print_exception('Malformed or unavailable S3 encryption configuration')
 
     async def _get_and_set_s3_acls(self, bucket: {}, key_name=None):
         bucket_name = bucket['Name']
@@ -202,30 +212,40 @@ class S3Facade(AWSBaseFacade):
                 grantees[grantee].setdefault('permissions', self._init_s3_permissions())
                 self._set_s3_permissions(grantees[grantee]['permissions'], permission)
             bucket['grantees'] = grantees
+            bucket['acl_collection_status'] = 'success'
         except Exception as e:
             if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
                 print_warning(f'Failed to get ACL configuration for {bucket_name}: {e}')
             else:
                 print_exception(f'Failed to get ACL configuration for {bucket_name}: {e}')
             bucket['grantees'] = {}
+            bucket['acl_collection_status'] = 'failed'
+            self._record_context_issue('BucketACL')
 
     async def _get_and_set_s3_bucket_policy(self, bucket: {}):
-        client = AWSFacadeUtils.get_client('s3', self.session, bucket['region'])
+        bucket['policy_collection_status'] = 'failed'
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        if client is None:
+            self._record_context_issue('BucketPolicy')
+            return
         try:
-            bucket_policy = await run_concurrently(lambda: client.get_bucket_policy(Bucket=bucket['Name']))
-            bucket['policy'] = json.loads(bucket_policy['Policy'])
-        except ClientError as e:
-            if e.response['Error']['Code'] != 'NoSuchBucketPolicy':
-                if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                    print_warning('Failed to get bucket policy for {}: {}'.format(bucket['Name'], e))
-                else:
-                    print_exception('Failed to get bucket policy for {}: {}'.format(bucket['Name'], e))
-        except Exception as e:
-            if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                print_warning('Failed to get bucket policy for {}: {}'.format(bucket['Name'], e))
+            response = await run_concurrently(
+                lambda: client.get_bucket_policy(Bucket=bucket['Name'])
+            )
+            policy = json.loads(response['Policy'])
+            if not isinstance(policy, dict) or 'Statement' not in policy:
+                raise ValueError('MalformedBucketPolicy')
+            bucket['policy'] = policy
+            bucket['policy_collection_status'] = 'success'
+        except ClientError as error:
+            if error.response.get('Error', {}).get('Code') == 'NoSuchBucketPolicy':
+                bucket['policy_collection_status'] = 'absent'
             else:
-                print_exception('Failed to get bucket policy for {}: {}'.format(bucket['Name'], e))
-            bucket['grantees'] = {}
+                self._record_context_issue('BucketPolicy')
+                print_exception('Unable to verify S3 bucket policy')
+        except Exception:
+            self._record_context_issue('BucketPolicy')
+            print_exception('Malformed or unavailable S3 bucket policy')
 
     async def _get_and_set_s3_bucket_tags(self, bucket: {}):
         client = AWSFacadeUtils.get_client('s3', self.session, bucket['region'])
@@ -344,39 +364,78 @@ class S3Facade(AWSBaseFacade):
         for bucket in buckets:
             bucket['CreationDate'] = lookup.get(bucket['Name']) or bucket.get('CreationDate')
 
+    @staticmethod
+    def _policy_enforces_secure_transport(bucket):
+        """Prove an unconditional deny of HTTP for bucket AND object requests."""
+        policy = bucket.get('policy')
+        if not isinstance(policy, dict):
+            return False
+        statements = policy.get('Statement', [])
+        if isinstance(statements, dict):
+            statements = [statements]
+        if not isinstance(statements, list):
+            return False
+        name = bucket.get('Name') or bucket.get('name')
+        if not name:
+            return False
+        for statement in statements:
+            if not isinstance(statement, dict) or statement.get('Effect') != 'Deny':
+                continue
+            principal = statement.get('Principal')
+            if principal not in ('*', {'AWS': '*'}):
+                continue
+            actions = statement.get('Action', [])
+            if isinstance(actions, str):
+                actions = [actions]
+            if not isinstance(actions, list) or not any(
+                action in ('*', 's3:*') for action in actions
+            ):
+                continue
+            resources = statement.get('Resource', [])
+            if isinstance(resources, str):
+                resources = [resources]
+            if not isinstance(resources, list):
+                continue
+            has_bucket = any(
+                value == '*' or value.endswith(':s3:::' + name)
+                for value in resources if isinstance(value, str)
+            )
+            has_objects = any(
+                value == '*' or value.endswith(':s3:::' + name + '/*')
+                for value in resources if isinstance(value, str)
+            )
+            if not has_bucket or not has_objects:
+                continue
+            conditions = statement.get('Condition', {})
+            if not isinstance(conditions, dict) or set(conditions) != {'Bool'}:
+                continue
+            bools = conditions.get('Bool')
+            if not isinstance(bools, dict):
+                continue
+            normalized = {k.lower(): v for k, v in bools.items()
+                          if isinstance(k, str)}
+            if set(normalized) - {'aws:securetransport', 'aws:principalisawsservice'}:
+                continue
+            secure = normalized.get('aws:securetransport')
+            if str(secure).lower() != 'false':
+                continue
+            if ('aws:principalisawsservice' in normalized and
+                    str(normalized['aws:principalisawsservice']).lower() != 'false'):
+                continue
+            return True
+        return False
+
     def _set_s3_bucket_secure_transport(self, bucket: {}):
-        try:
-            if 'policy' in bucket:
-                bucket['secure_transport_enabled'] = False
-                for statement in bucket['policy']['Statement']:
-                    # evaluate statement to see if it contains a condition disallowing HTTP transport
-                    # TODO this might not cover all cases
-                    if 'Condition' in statement and \
-                            'Bool' in statement['Condition']:
-                        for key in statement['Condition']['Bool'].keys():
-                            if key.lower() == 'aws:securetransport' and \
-                                    ((statement['Condition']['Bool'][key] == 'false' and
-                                    statement['Effect'] == 'Deny') or
-                                    (statement['Condition']['Bool'][key] == 'true' and
-                                    statement['Effect'] == 'Allow')):
-                                bucket['secure_transport_enabled'] = True
-                    elif 'Condition' in statement and \
-                            'NumericLessThan' in statement['Condition']:
-                        for key in statement['Condition']['NumericLessThan'].keys():
-                            if key.lower() == 's3:tlsversion' and \
-                                    ((statement['Condition']['NumericLessThan'][key] >= '1.2' and
-                                    statement['Effect'] == 'Deny') or
-                                    (statement['Condition']['NumericGreaterThan'][key] >= '1.1' and
-                                    statement['Effect'] == 'Allow')):
-                                bucket['secure_transport_enabled'] = True
-            else:
-                bucket['secure_transport_enabled'] = False
-        except Exception as e:
-            if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                print_warning('Failed to evaluate bucket policy for {}: {}'.format(bucket['Name'], e))
-            else:
-                print_exception('Failed to evaluate bucket policy for {}: {}'.format(bucket['Name'], e))
-            bucket['secure_transport'] = None
+        state = bucket.get('policy_collection_status')
+        if state == 'absent':
+            bucket['secure_transport_enabled'] = False
+        elif state == 'success':
+            bucket['secure_transport_enabled'] = self._policy_enforces_secure_transport(
+                bucket
+            )
+        else:
+            bucket['secure_transport_enabled'] = None
+            self._record_context_issue('SecureTransportEvidence')
 
     def get_s3_public_access_block(self, account_id):
         # The S3 Control endpoint must belong to the credentials' partition.
