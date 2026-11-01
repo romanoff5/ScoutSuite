@@ -1,176 +1,213 @@
-from sqlitedict import SqliteDict
-import cherrypy
-import cherrypy_cors
-
+"""Bounded read-only local report API; never expose report data to websites."""
+import json
 import re
+import secrets
+from pathlib import Path
 
-count_re = re.compile(r".*_count$")
+import cherrypy
+from sqlitedict import SqliteDict
+
+from ScoutSuite.output.result_encoder import validate_results
+
+_SEPARATOR = '¤'
+_MAX_KEY_LENGTH = 2048
+_MAX_SEGMENTS = 64
+_MAX_PAGE_SIZE = 500
+_MAX_PAGE_OFFSET = 5_000_000
+_MAX_RESPONSE_BYTES = 3 * 1024 * 1024
+_FORBIDDEN_KEYS = frozenset(('__proto__', 'constructor', 'prototype'))
+
+
+def validate_key(key):
+    """Validate a report navigation key without assuming AWS IDs are alphanumeric."""
+    if key is None:
+        return []
+    if not isinstance(key, str) or len(key) > _MAX_KEY_LENGTH:
+        raise ValueError('Invalid report key')
+    parts = key.split(_SEPARATOR)
+    if (len(parts) > _MAX_SEGMENTS or any(not part or part in _FORBIDDEN_KEYS
+            or any(ord(char) < 32 or ord(char) == 127 for char in part)
+            for part in parts)):
+        raise ValueError('Invalid report key')
+    return parts
+
+
+def pagination(page, pagesize):
+    """Limit paging to bounded, nonnegative integers."""
+    if (not isinstance(page, str) or not re.fullmatch(r'[0-9]{1,8}', page)
+            or not isinstance(pagesize, str)
+            or not re.fullmatch(r'[0-9]{1,4}', pagesize)):
+        raise ValueError('Malformed pagination')
+    index, size = int(page), int(pagesize)
+    if size < 1 or size > _MAX_PAGE_SIZE or index * size > _MAX_PAGE_OFFSET:
+        raise ValueError('Pagination exceeds report API limits')
+    return index * size, size
+
+
+def validate_viewer_request(origin, token, expected_token, method='GET'):
+    """A file:// viewer sends Origin:null; a bearer token prevents null-origin exfil.
+
+    No remote HTTP(S) origin may use this API, even with a guessed session token.
+    """
+    if origin not in (None, 'null') or method not in ('GET', 'OPTIONS'):
+        return False
+    if method == 'OPTIONS':
+        return origin == 'null'
+    return isinstance(token, str) and secrets.compare_digest(token, expected_token)
+
+
+def _viewer_guard():
+    request = cherrypy.request
+    root = request.app.root
+    origin = request.headers.get('Origin')
+    method = request.method
+    token = request.headers.get('X-Scout-Viewer-Token')
+    if not validate_viewer_request(origin, token, root.viewer_token, method):
+        raise cherrypy.HTTPError(403, 'Report viewer request denied')
+    cherrypy.response.headers['Cache-Control'] = 'no-store'
+    cherrypy.response.headers['X-Content-Type-Options'] = 'nosniff'
+    cherrypy.response.headers['Vary'] = 'Origin'
+    if origin == 'null':
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = 'null'
+    if method == 'OPTIONS':
+        if (request.headers.get('Access-Control-Request-Method') != 'GET'
+                or request.headers.get('Access-Control-Request-Headers', '').lower()
+                not in ('x-scout-viewer-token', '')):
+            raise cherrypy.HTTPError(403, 'Invalid viewer preflight')
+        cherrypy.response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        cherrypy.response.headers['Access-Control-Allow-Headers'] = 'X-Scout-Viewer-Token'
+        cherrypy.response.status = 204
+        cherrypy.request.handler = lambda: b''
+
+
+def _api_call(fn):
+    """Conceal report internals; do not turn malformed paths into 500s."""
+    try:
+        result = fn()
+        if len(json.dumps(result, default=str).encode('utf-8')) > _MAX_RESPONSE_BYTES:
+            raise cherrypy.HTTPError(413, 'Response exceeds local viewer limit')
+        return {'data': result}
+    except (ValueError, TypeError):
+        raise cherrypy.HTTPError(400, 'Invalid report request')
+    except (IndexError, KeyError):
+        raise cherrypy.HTTPError(404, 'Report key not found')
 
 
 class Server:
-    """
-    Boots a server that serves the result of the report for the user. This is still a proof of concept,
-    but will eventually be used to serve data when it exceeds 400mb.
-    """
-    def __init__(self, filename):
-        """
-        Constructor of the server object. Should not be called directly outside the class.
+    """Read-only report data over loopback, with a session token from a local file."""
 
-        :param filename:                Name of the file to write data to.
-        :return:                        The server object.
-        """
-        self.results = SqliteDict(filename)
+    def __init__(self, filename, viewer_token=None):
+        filename = Path(filename)
+        if (not filename.is_file() or filename.is_symlink()
+                or filename.stat().st_size < 16
+                or filename.stat().st_size > 2 * 1024 * 1024 * 1024):
+            raise ValueError('Invalid report database file')
+        with filename.open('rb') as fp:
+            if fp.read(16) != b'SQLite format 3\x00':
+                raise ValueError('Invalid report SQLite header')
+        self.viewer_token = viewer_token or secrets.token_urlsafe(32)
+        self.results = SqliteDict(str(filename), flag='r')
+        validate_results(dict(self.results))
 
-    @cherrypy.expose()
+    @cherrypy.expose
     @cherrypy.tools.json_out()
     def summary(self):
-        """
-        Returns the stripped down data of the results that doesn't scale up when using a lot of resources,
-        used to render the summary.
-        Should be the first call from the server.
-        Can be found at GET /api/summary
+        def render():
+            data = dict(self.results)
+            stripped_services = {}
+            for name, service in data.get('services', {}).items():
+                selected = {}
+                for key, value in service.items():
+                    if key in ('findings', 'filters') or re.fullmatch(r'.*_count', key):
+                        selected[key] = value
+                stripped_services[name] = selected
+            data['services'] = stripped_services
+            return data
+        return _api_call(render)
 
-        :return:                        The summary data of the report.
-        """
-        data = dict(self.results)
-        services = data.get('services')
-        stripped_services = {}
-        for k1, v1 in services.items():
-            service = {}
-            for k2, v2 in v1.items():
-                if k2 == 'findings' or k2 == 'filters' or count_re.match(k2):
-                    service[k2] = v2
-            stripped_services[k1] = service
-        data['services'] = stripped_services
-        return {'data': data}
-
-    @cherrypy.expose()
+    @cherrypy.expose
     @cherrypy.tools.json_out()
     def data(self, key=None):
-        """
-        Return the data at the requested key. Doesn't returns nested dictionaries and lists.
-        If one of the value is a dictionary, it will return {'type': 'dict', 'keys': <Array of all the keys>}
-        If one of the value is a list, it will return {'type': 'list', 'count': <number of elements in the list>}
+        def render():
+            item = self.get_item(self.results, key)
+            if isinstance(item, dict) or isinstance(item, SqliteDict):
+                return {'type': 'dict', 'keys': list(item.keys())}
+            if isinstance(item, list):
+                return {'type': 'list', 'length': len(item)}
+            return item
+        return _api_call(render)
 
-        Can be found at GET /api/data?key=<KEY>
-        :param key:                     Key of the requested information, separated by the character '¤'.
-        :return:                        The data at the requested location stripped of its nested data.
-        """
-        result = self.get_item(self.results, key)
-        # Returns only indexes or length if it's a complex type
-        if isinstance(result, dict) or isinstance(result, SqliteDict):
-            result = {'type': 'dict', 'keys': list(result.keys())}
-        elif isinstance(result, list):
-            result = {'type': 'list', 'length': len(result)}
-        return {'data': result}
-
-    @cherrypy.expose()
+    @cherrypy.expose
     @cherrypy.tools.json_out()
     def full(self, key=None):
-        """
-        Return the data at the requested key. Returns all the nested data.
-        Be sure not to use it on a key that may contains a lot of data, as the request won't be answered
-        if it's too large(generally 3mb).
+        def render():
+            item = self.get_item(self.results, key)
+            return dict(item) if isinstance(item, SqliteDict) else item
+        return _api_call(render)
 
-        Can be found at GET /api/full?key=<KEY>
-        :param key:                     Key of the requested information, separated by the character '¤'.
-        :return:                        The data at the requested location.
-        """
-        result = self.get_item(self.results, key)
-        if isinstance(result, str) or isinstance(result, int):
-            return {'data': result}
-        return {'data': dict(result)}
-
-    @cherrypy.expose()
+    @cherrypy.expose
     @cherrypy.tools.json_out()
     def page(self, key=None, page=None, pagesize=None):
-        """
-        Return a page of the data at the requested key. Doesn't returns nested dictionaries and lists.
-        For example, if you set pagesize=10 and page=2, it should return element 10-19
-        If one of the value is a dictionary, it will return {'type': 'dict', 'keys': <Array of all the keys>}
-        If one of the value is a list, it will return {'type': 'list', 'count': <number of elements in the list>}
-
-        Can be found at GET /api/page?key=<KEY>&page=<PAGE>&pagesize=<PAGESIZE>
-        :param key:                     Key of the requested information, separated by the character '¤'.
-        :param page:                    The number of the page you request.
-        :param pagesize:                The size of the page you request.
-        :return:                        A subset of the data at the requested location.
-        """
-        result = self.get_item(self.results, key)
-
-        page = int(page)
-        pagesize = int(pagesize)
-
-        start = page * pagesize
-        end = min((page + 1) * pagesize, len(result))
-
-        if isinstance(result, dict) or isinstance(result, SqliteDict):
-            page = {k: result.get(k) for k in sorted(list(result))[start:end]}
-        if isinstance(result, list):
-            page = result[start:end]
-
-        return {'data': self.strip_nested_data(page)}
+        def render():
+            start, size = pagination(page, pagesize)
+            item = self.get_item(self.results, key)
+            if isinstance(item, dict) or isinstance(item, SqliteDict):
+                subset = {k: item[k] for k in sorted(item)[start:start + size]}
+            elif isinstance(item, list):
+                subset = item[start:start + size]
+            else:
+                raise ValueError('Cannot paginate scalar data')
+            return self.strip_nested_data(subset)
+        return _api_call(render)
 
     @staticmethod
     def init(database_filename, host, port):
-        """
-        Configure and starts the server.
-
-        :param database_filename:       Location of the database file.
-        :param host:                    Address on which to listen.
-        :param port:                    Port on which to listen.
-        """
-        cherrypy_cors.install()
-        config = {
-            '/': {
-                'cors.expose.on': True,
-                'tools.sessions.on': True,
-                'tools.response_headers.on': True,
-                'tools.response_headers.headers': [('Content-Type', 'text/plain')],
-            },
-        }
-        cherrypy.config.update({
-                'server.socket_host': host,
-                'server.socket_port': port,
-        })
-        cherrypy.quickstart(Server(database_filename), "/api", config=config)
+        if host != '127.0.0.1' or port != 8000:
+            raise ValueError('SQLite viewer only supports loopback 127.0.0.1:8000')
+        token = secrets.token_urlsafe(32)
+        server = Server(database_filename, viewer_token=token)
+        # The script is loaded with file:// in the locally generated report.
+        # It must never be exposed by the local HTTP API.
+        session_file = Path(database_filename).parent / 'scoutsuite_viewer_session.js'
+        if session_file.is_symlink():
+            raise ValueError('Viewer session path must not be a symlink')
+        import os
+        fd = os.open(str(session_file), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+                stream.write('window.scoutViewerSession = ' + json.dumps(token) + ';\n')
+        except Exception:
+            session_file.unlink(missing_ok=True)
+            raise
+        cherrypy.tools.scout_viewer_guard = cherrypy.Tool('before_handler', _viewer_guard)
+        config = {'/': {'tools.scout_viewer_guard.on': True,
+                        'tools.sessions.on': False}}
+        cherrypy.config.update({'server.socket_host': host, 'server.socket_port': port})
+        cherrypy.quickstart(server, '/api', config=config)
 
     @staticmethod
     def get_item(data, key):
-        """
-        Get a specific information from its key.
-
-        :param data:                    The dictionary in which the information is stored.
-        :param host:                    The key where the information is located.
-        :return:                        The nested data at the requested location.
-        """
-        if not key:
-            return data
-
-        keyparts = key.split('¤')
-        for k in keyparts:
-            if isinstance(data, dict) or isinstance(data, SqliteDict):
-                data = data.get(k)
+        for part in validate_key(key):
+            if isinstance(data, (dict, SqliteDict)):
+                data = data[part]
             elif isinstance(data, list):
-                data = data[int(k)]
+                if not re.fullmatch(r'[0-9]{1,10}', part):
+                    raise ValueError('Invalid list index')
+                data = data[int(part)]
+            else:
+                raise KeyError(part)
         return data
 
     @staticmethod
     def strip_nested_data(data):
-        """
-        Strip nested lists and dictionaries from the provided object to reduce its size.
-
-        :param data:                    The object to strip.
-        :return:                        The input data stripped of its nested lists and dictionaries.
-        """
         if not isinstance(data, dict):
             return data
-
         result = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                result[k] = {'type': 'dict', 'keys': list(v.keys())}
-            elif isinstance(v, list):
-                result[k] = {'type': 'list', 'length': len(v)}
+        for key, value in data.items():
+            if isinstance(value, dict):
+                result[key] = {'type': 'dict', 'keys': list(value.keys())}
+            elif isinstance(value, list):
+                result[key] = {'type': 'list', 'length': len(value)}
+            else:
+                result[key] = value
         return result
-
