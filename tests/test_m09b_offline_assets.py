@@ -62,7 +62,7 @@ def test_incomplete_vendor_zip_is_rejected_before_extraction():
 
 def test_no_network_dependency_in_report_shell():
     shell = (ROOT / 'ScoutSuite/output/data/html/report.html').read_text(encoding='utf8')
-    assert not re.search(r'(?:src|href)\\s*=\\s*[\"\\\']https?://', shell, re.I)
+    assert not re.search(r'(?:src|href)\s*=\s*"https?://', shell, re.I)
     assert 'Content-Security-Policy' in shell
     assert "object-src 'none'" in shell
     assert "default-src 'none'" in shell
