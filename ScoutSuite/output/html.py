@@ -12,6 +12,52 @@ from ScoutSuite.core.console import print_info, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.output.result_encoder import JavaScriptEncoder, SqlLiteEncoder
 from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
+from pathlib import PurePosixPath
+import stat
+
+
+_ASSET_ROOTS = frozenset({
+    'inc-bootstrap', 'inc-fontawesome', 'inc-handlebars', 'inc-jquery',
+})
+_REQUIRED_ASSETS = frozenset({
+    'inc-bootstrap/css/bootstrap.min.css',
+    'inc-bootstrap/css/bootstrap-light.min.css',
+    'inc-bootstrap/js/bootstrap.min.js',
+    'inc-fontawesome/css/all.min.css',
+    'inc-handlebars/handlebars-v3.0.0.js',
+    'inc-jquery/jquery-3.3.1.min.js',
+})
+
+
+def validate_asset_archive(bundle):
+    """Reject unsafe/partial local vendor bundles before extracting anything.
+
+    The ZIP is bundled with the package, not downloaded when a report opens.
+    """
+    infos = bundle.infolist()
+    if not infos or len(infos) > 4096:
+        raise ValueError('Invalid vendor asset archive entry count')
+    seen = set()
+    total_size = 0
+    for item in infos:
+        name = item.filename
+        path = PurePosixPath(name)
+        parts = path.parts
+        if (not name or '\\' in name or name.startswith('/')
+                or not parts or any(p in ('.', '..') for p in parts)
+                or parts[0] not in _ASSET_ROOTS
+                or ':' in name or name.startswith('//') or name in seen
+                or item.file_size > 32 * 1024 * 1024
+                or (item.external_attr >> 16) & 0o170000 == stat.S_IFLNK):
+            raise ValueError('Unsafe vendor asset archive member')
+        seen.add(name)
+        total_size += item.file_size
+        if total_size > 64 * 1024 * 1024:
+            raise ValueError('Vendor asset archive exceeds size limit')
+    if not _REQUIRED_ASSETS.issubset(seen):
+        raise ValueError('Vendor asset archive is missing required offline files')
+    if bundle.testzip() is not None:
+        raise ValueError('Corrupt vendor asset archive')
 
 
 class HTMLReport:
@@ -70,9 +116,11 @@ class HTMLReport:
             os.makedirs(run_results_dir)
         # Copy static 3rd-party files
         archive = os.path.join(self.scout_report_data_path, 'includes.zip')
-        zip_ref = zipfile.ZipFile(archive)
-        zip_ref.extractall(self.report_dir)
-        zip_ref.close()
+        # Only vendor asset directories may be extracted, never report data.
+        # Validation is completed *before* writing any ZIP member.
+        with zipfile.ZipFile(archive) as bundle:
+            validate_asset_archive(bundle)
+            bundle.extractall(self.report_dir)
         # Copy static files
         inc_scout_dir = os.path.join(self.report_dir, DEFAULT_INCLUDES_DIRECTORY)
         src_inc_scout_dir = os.path.join(self.scout_report_data_path, DEFAULT_INCLUDES_DIRECTORY)
