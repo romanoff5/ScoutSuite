@@ -1399,6 +1399,18 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ec2-instance-imdsv1-enabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "awslambda-function-deprecated-runtime.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

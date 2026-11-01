@@ -193,7 +193,113 @@ def classify_s3_bucket_exposure(bucket):
     return 'unknown'
 
 
+
+def classify_imds_v2(instance):
+    """Classify effective per-instance metadata settings from DescribeInstances."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    options = instance.get('metadata_options')
+    if not isinstance(options, dict) or not options:
+        return 'unknown'
+    if options.get('State') not in (None, 'applied'):
+        return 'unknown'
+    endpoint = options.get('HttpEndpoint')
+    if endpoint == 'disabled':
+        return 'not_applicable'
+    if endpoint not in (None, 'enabled'):
+        return 'unknown'
+    tokens = options.get('HttpTokens')
+    if tokens == 'required':
+        return 'secure'
+    if tokens == 'optional':
+        return 'insecure'
+    return 'unknown'
+
+
+@lru_cache(maxsize=1)
+def _lambda_runtime_catalog():
+    path = (Path(__file__).resolve().parents[1] / 'providers/aws/rules/catalogs'
+            / 'lambda-runtimes-2026-11.json')
+    data = json.loads(path.read_text(encoding='utf-8'))
+    dates = data.get('deprecation_dates')
+    if data.get('schema_version') != 1 or not data.get('catalog_version') or not isinstance(dates, dict):
+        raise ValueError('Invalid Lambda runtime catalog')
+    from datetime import date
+    return {runtime: date.fromisoformat(value) for runtime, value in dates.items()}
+
+
+def classify_lambda_runtime(function, as_of=None):
+    """ZIP managed runtimes only. Image packages have no inspectable runtime."""
+    if not isinstance(function, dict):
+        return 'unknown'
+    if function.get('package_type') == 'Image':
+        return 'not_applicable'
+    if function.get('package_type') not in (None, 'Zip'):
+        return 'unknown'
+    runtime = function.get('runtime')
+    if not isinstance(runtime, str) or not runtime:
+        return 'unknown'
+    from datetime import datetime, timezone
+    if as_of is None:
+        as_of = datetime.now(timezone.utc).date()
+    elif isinstance(as_of, datetime):
+        as_of = as_of.date()
+    deprecation = _lambda_runtime_catalog().get(runtime)
+    if deprecation is None:
+        return 'unknown'
+    return 'insecure' if as_of >= deprecation else 'secure'
+
+
+@lru_cache(maxsize=1)
+def _classic_elb_catalog():
+    path = (Path(__file__).resolve().parents[1] / 'providers/aws/rules/catalogs'
+            / 'classic-elb-tls-2026-11.json')
+    catalog = json.loads(path.read_text(encoding='utf-8'))
+    secure = catalog.get('allows_tls_1_2_or_newer_only', [])
+    old = catalog.get('allows_tls_before_1_2', [])
+    if (catalog.get('schema_version') != 1 or not secure or not old
+            or set(secure) & set(old)):
+        raise ValueError('Invalid Classic ELB TLS catalog')
+    return frozenset(secure), frozenset(old)
+
+
+def classify_classic_elb_policy(policy):
+    """Prefer real SSL policy attributes; never reuse ALB policy allowlists."""
+    if not isinstance(policy, dict):
+        return 'unknown'
+    kind = policy.get('PolicyTypeName')
+    if kind is not None and kind != 'SSLNegotiationPolicyType':
+        return 'not_applicable'
+    attrs = policy.get('PolicyAttributeDescriptions')
+    if not isinstance(attrs, list):
+        return 'unknown'
+    attributes = {}
+    for item in attrs:
+        if isinstance(item, dict) and isinstance(item.get('AttributeName'), str):
+            attributes[item['AttributeName']] = item.get('AttributeValue')
+    reference = attributes.get('Reference-Security-Policy')
+    # Use the policy's own name only for the documented predefined policies.
+    name = reference or policy.get('PolicyName') or policy.get('name')
+    secure, old = _classic_elb_catalog()
+    if name in secure:
+        return 'secure'
+    if name in old:
+        return 'insecure'
+    if reference:
+        return 'unknown'
+    legacy = ('Protocol-SSLv3', 'Protocol-TLSv1', 'Protocol-TLSv1.1')
+    if any(attributes.get(protocol) == 'true' for protocol in legacy):
+        return 'insecure'
+    if (all(attributes.get(protocol) == 'false' for protocol in legacy)
+            and attributes.get('Protocol-TLSv1.2') == 'true'):
+        return 'secure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'ec2-imds-v2-v1': classify_imds_v2,
+    'lambda-managed-runtime-v1': classify_lambda_runtime,
+    'classic-elb-tls-v1': classify_classic_elb_policy,
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
     'cloudtrail-data-events-v1': classify_cloudtrail_data_events,
     'cloudtrail-data-coverage-v1': classify_cloudtrail_data_coverage,
@@ -218,9 +324,16 @@ def evaluate_rule_evidence(rule, services):
     parts = rule.path.split('.')
     # SSL policy is a scalar; classification needs the parent listener
     # Protocol to distinguish HTTP/not-applicable from HTTPS/unknown.
-    if policy == 'alb-listener-tls-v1':
-        if not parts or parts[-1] != 'SslPolicy':
-            raise ValueError('Unexpected ALB security-policy rule path')
+    if policy in ('alb-listener-tls-v1', 'ec2-imds-v2-v1',
+                  'lambda-managed-runtime-v1', 'classic-elb-tls-v1'):
+        expected_field = {
+            'alb-listener-tls-v1': 'SslPolicy',
+            'ec2-imds-v2-v1': 'imds_v2_status',
+            'lambda-managed-runtime-v1': 'runtime_lifecycle_status',
+            'classic-elb-tls-v1': 'reference_security_policy',
+        }[policy]
+        if not parts or parts[-1] != expected_field:
+            raise ValueError('Unexpected rule evidence path')
         parts = parts[:-1]
     for path, resource in _walk_resources(services, parts):
         status = CLASSIFIERS[policy](resource)

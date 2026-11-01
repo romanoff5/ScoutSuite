@@ -4,6 +4,8 @@ from ScoutSuite.providers.aws.utils import get_name, get_keys, format_arn
 
 import re
 
+from ScoutSuite.core.rule_evidence import classify_imds_v2
+
 
 class EC2Instances(AWSResources):
     def __init__(self, facade: AWSFacade, region: str, vpc: str):
@@ -46,6 +48,10 @@ class EC2Instances(AWSResources):
             instance['network_interfaces'][eni['NetworkInterfaceId']] = nic
 
         instance['metadata_options'] = raw_instance.get('MetadataOptions', {})
+        instance['imds_v2_status'] = {
+            'secure': 'required', 'insecure': 'optional',
+            'not_applicable': 'disabled', 'unknown': 'unknown'
+        }[classify_imds_v2(instance)]
 
         if 'IamInstanceProfile' in raw_instance:
             instance['iam_role'] = raw_instance['IamInstanceProfile']['Arn'].split('/')[-1]

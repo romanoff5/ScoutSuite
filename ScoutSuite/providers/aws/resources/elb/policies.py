@@ -2,6 +2,7 @@ from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.utils import format_arn
 from ScoutSuite.providers.utils import get_non_provider_id
+from ScoutSuite.core.rule_evidence import classify_classic_elb_policy
 
 
 class Policies(AWSResources):
@@ -19,6 +20,10 @@ class Policies(AWSResources):
             self[id] = policy
 
     def _parse_policy(self, raw_policy):
+        raw_policy['reference_security_policy'] = {
+            'secure': 'modern', 'insecure': 'legacy',
+            'not_applicable': 'not_applicable', 'unknown': 'unknown'
+        }[classify_classic_elb_policy(raw_policy)]
         raw_policy['name'] = raw_policy.pop('PolicyName')
         policy_id = get_non_provider_id(raw_policy['name'])
         raw_policy['arn'] = format_arn(self.partition, self.service, self.region, '', raw_policy['name'], self.resource_type)

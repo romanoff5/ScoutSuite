@@ -1,0 +1,19 @@
+{
+    "description": "EC2 Instance Allows IMDSv1 (IMDSv2 Not Required)",
+    "rationale": "When metadata endpoint is enabled with HttpTokens=optional, IMDSv1 requests remain possible. Disabled metadata endpoints are not applicable. Missing or pending MetadataOptions are unknown, not compliant.",
+    "references": [
+        "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html"
+    ],
+    "dashboard_name": "EC2 Instances",
+    "display_path": "ec2.regions.id.vpcs.id.instances.id",
+    "path": "ec2.regions.id.vpcs.id.instances.id.imds_v2_status",
+    "conditions": [
+        "and",
+        [
+            "this",
+            "equal",
+            "optional"
+        ]
+    ],
+    "evidence_policy": "ec2-imds-v2-v1"
+}

@@ -1,0 +1,19 @@
+{
+    "description": "AWS Lambda ZIP Function Uses Deprecated Managed Runtime",
+    "rationale": "A managed Lambda runtime on or beyond its AWS deprecation date is deprecated. The dated catalog is evaluated against UTC scan date; unknown runtimes are incomplete, container images are not assessed, and upcoming deprecations are not yet deprecated.",
+    "references": [
+        "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html"
+    ],
+    "dashboard_name": "Lambda Functions",
+    "display_path": "lambda.regions.id.functions.id",
+    "path": "lambda.regions.id.functions.id.runtime_lifecycle_status",
+    "conditions": [
+        "and",
+        [
+            "this",
+            "equal",
+            "deprecated"
+        ]
+    ],
+    "evidence_policy": "lambda-managed-runtime-v1"
+}

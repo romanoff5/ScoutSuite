@@ -1,6 +1,7 @@
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.utils import get_non_provider_id
+from ScoutSuite.core.rule_evidence import classify_lambda_runtime
 
 
 class Functions(AWSResources):
@@ -20,6 +21,11 @@ class Functions(AWSResources):
         function_dict['name'] = raw_function.get('FunctionName')
         function_dict['arn'] = raw_function.get('FunctionArn')
         function_dict['runtime'] = raw_function.get('Runtime')
+        function_dict['package_type'] = raw_function.get('PackageType')
+        function_dict['runtime_lifecycle_status'] = {
+            'secure': 'supported', 'insecure': 'deprecated',
+            'not_applicable': 'image', 'unknown': 'unknown'
+        }[classify_lambda_runtime(function_dict)]
         function_dict['handler'] = raw_function.get('Handler')
         function_dict['code_size'] = raw_function.get('CodeSize')
         function_dict['description'] = raw_function.get('Description')

@@ -1,0 +1,23 @@
+{
+    "schema_version": 1,
+    "catalog_id": "aws-classic-elb-tls-protocols",
+    "catalog_version": "2026.11.0",
+    "review_date": "2026-11-01",
+    "owner": "ScoutSuite fork maintainer",
+    "security_floor": "TLSv1.2",
+    "scope": "Classic ELB SSLNegotiationPolicyType only; protocol floor, not cipher or certificate strength",
+    "reference_urls": [
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-security-policy-table.html"
+    ],
+    "allows_tls_1_2_or_newer_only": [
+        "ELBSecurityPolicy-TLS-1-2-2017-01"
+    ],
+    "allows_tls_before_1_2": [
+        "ELBSecurityPolicy-TLS-1-1-2017-01",
+        "ELBSecurityPolicy-2016-08",
+        "ELBSecurityPolicy-2015-05",
+        "ELBSecurityPolicy-2015-03",
+        "ELBSecurityPolicy-2015-02"
+    ],
+    "note": "Unknown/custom configurations require explicit protocol attributes; ALB/NLB policy names are not evidence of CLB capabilities."
+}
