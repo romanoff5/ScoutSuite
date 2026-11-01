@@ -32,6 +32,8 @@ class Server:
         host = cherrypy.request.headers.get('Host', '').split(':', 1)[0].lower()
         if host not in ('127.0.0.1', 'localhost', '[::1]'):
             raise cherrypy.HTTPError(403, 'Invalid local report host')
+        if cherrypy.request.headers.get('Sec-Fetch-Site') == 'cross-site':
+            raise cherrypy.HTTPError(403, 'Cross-site requests are not permitted')
         origin = cherrypy.request.headers.get('Origin')
         if origin:
             valid = {'http://127.0.0.1:' + str(cherrypy.server.socket_port),
