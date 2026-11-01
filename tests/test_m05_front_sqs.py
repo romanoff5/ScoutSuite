@@ -38,7 +38,7 @@ class TestCloudFrontPagination(TestCase):
                              {'MaxItems': '100'})
             self.assertEqual(client.list_distributions.call_args_list[1].kwargs,
                              {'MaxItems': '100', 'Marker': 'marker-1'})
-            client.list_distributions.reset_mock()
+            client.list_distributions.reset_mock(side_effect=True)
             client.list_distributions.return_value = {
                 'DistributionList': {'IsTruncated': False}
             }
