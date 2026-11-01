@@ -41,7 +41,7 @@ class HTMLReport:
     def get_content_from_folder(self, templates_type):
         contents = ''
         template_dir = os.path.join(self.html_data_path, templates_type)
-        template_files = [os.path.join(template_dir, f) for f in os.listdir(template_dir) if
+        template_files = [os.path.join(template_dir, f) for f in sorted(os.listdir(template_dir)) if
                           os.path.isfile(os.path.join(template_dir, f))]
         for filename in template_files:
             try:
