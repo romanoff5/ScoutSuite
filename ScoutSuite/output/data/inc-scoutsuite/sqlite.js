@@ -12,17 +12,20 @@ var defaultPort = 8000
  */
 function requestDb (query, pageSize, pageIndex) {
   // TODO: Add the option of using a different port
-  let url = 'http://127.0.0.1:' + defaultPort + '/api/'
+  let url = window.location.origin + '/api/'
+  if (window.location.protocol === 'file:') {
+    throw new Error('SQLite reports require the local same-origin HTTP viewer; file:// is unsupported')
+  }
   let response = ''
 
   if (arguments.length === 0) {
     url += 'summary'
   } else if (arguments.length === 1) {
-    url += 'data?key=' + query
+    url += 'data?key=' + encodeURIComponent(query)
   } else if (arguments.length === 2) {
-    url += 'full?key=' + query
+    url += 'full?key=' + encodeURIComponent(query)
   } else {
-    url += 'page?pagesize=' + pageSize + '&page=' + pageIndex + '&key=' + query
+    url += 'page?pagesize=' + pageSize + '&page=' + pageIndex + '&key=' + encodeURIComponent(query)
   }
 
   $.ajax({
