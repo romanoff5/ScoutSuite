@@ -1491,6 +1491,11 @@ function downloadAsCsv(filename, rows) {
                 innerValue = row[j].toLocaleString()
             }
 
+            // Spreadsheet software must not execute attacker-supplied resource
+            // names or policy strings as formulas when a CSV is opened.
+            if (/^[\\s\\x00-\\x1f]*[=+@-]/.test(innerValue)) {
+                innerValue = "'" + innerValue
+            }
             var result = innerValue.replace(/"/g, '""')
             if (result.search(/("|,|\n)/g) >= 0) {
                 result = '"' + result + '"'
