@@ -1,0 +1,153 @@
+{
+    "schema_version": 1,
+    "profile_id": "cis-aws-foundations-partial",
+    "profile_version": "2026.11.0",
+    "about": "Opt-in PARTIAL candidate crosswalk to CIS AWS Foundations Benchmark v7.1.0 (2026-10-02). This is not a CIS-certified assessment or complete benchmark coverage. Manual and unsupported controls remain unassessed. Historical CIS 1.2.0 ruleset is unchanged.",
+    "benchmark": {
+        "id": "cis-aws-foundations",
+        "version": "7.1.0",
+        "date": "2026-10-02",
+        "coverage": "partial",
+        "source_url": "https://www.cisecurity.org/benchmark/amazon_web_services",
+        "notice": "Control identifiers are metadata only; benchmark text and PDFs are not redistributed. Obtain and use the licensed benchmark from CIS."
+    },
+    "control_mappings": {
+        "iam-root-account-with-active-keys.json": [
+            {
+                "control_id": "2.4",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-root-account-no-mfa.json": [
+            {
+                "control_id": "2.5",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-password-policy-minimum-length.json": [
+            {
+                "control_id": "2.8",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-password-policy-reuse-enabled.json": [
+            {
+                "control_id": "2.9",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-managed-policy-allows-full-privileges.json": [
+            {
+                "control_id": "2.14",
+                "coverage": "candidate"
+            }
+        ],
+        "cloudtrail-no-log-file-validation.json": [
+            {
+                "control_id": "4.2",
+                "coverage": "candidate"
+            }
+        ],
+        "config-recorder-not-configured.json": [
+            {
+                "control_id": "4.3",
+                "coverage": "candidate"
+            }
+        ],
+        "cloudtrail-no-encryption-with-kms.json": [
+            {
+                "control_id": "4.5",
+                "coverage": "candidate"
+            }
+        ],
+        "kms-cmk-rotation-disabled.json": [
+            {
+                "control_id": "4.6",
+                "coverage": "candidate"
+            }
+        ],
+        "ec2-default-security-group-with-rules.json": [
+            {
+                "control_id": "6.5",
+                "coverage": "candidate"
+            }
+        ],
+        "ec2-instance-imdsv1-enabled.json": [
+            {
+                "control_id": "6.7",
+                "coverage": "candidate"
+            }
+        ]
+    },
+    "rules": {
+        "iam-root-account-with-active-keys.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "iam-root-account-no-mfa.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "iam-password-policy-minimum-length.json": [
+            {
+                "args": [
+                    "14"
+                ],
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "iam-password-policy-reuse-enabled.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "iam-managed-policy-allows-full-privileges.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "cloudtrail-no-log-file-validation.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "config-recorder-not-configured.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "cloudtrail-no-encryption-with-kms.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "kms-cmk-rotation-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-default-security-group-with-rules.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-instance-imdsv1-enabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ]
+    }
+}
