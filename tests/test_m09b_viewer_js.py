@@ -91,3 +91,28 @@ def test_js_and_legacy_templates_contain_no_external_resource_fallback():
     js = (ROOT / 'ScoutSuite/output/data/inc-scoutsuite/sqlite.js').read_text(encoding='utf8')
     assert 'X-Scout-Viewer-Token' in js
     assert 'window.scoutViewerSession' in js
+
+
+def test_csv_export_does_not_emit_executable_spreadsheet_formulas():
+    script = r"""
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+let csvBlob;
+const document = {};
+const jq = () => ({ready: () => {}});
+const ctx = vm.createContext({
+  window:{$:jq, location:{hash:''}},
+  document:document, console:console, Blob:Blob,
+  navigator:{msSaveBlob:blob => {csvBlob = blob}}
+});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), ctx, {timeout:3000});
+vm.runInContext('downloadAsCsv("test.csv", [["field"],["=1+1"],["\\t@SUM(A1)"],["safe"]])',
+                ctx, {timeout:3000});
+assert(csvBlob, 'Expected offline CSV export Blob');
+csvBlob.text().then(csv => {
+  assert(csv.includes("'=1+1"));
+  assert(csv.includes("'\\t@SUM(A1)"));
+  assert(csv.includes('safe'));
+  assert(!csv.includes('\\n=1+1\\n'));
+}).catch(err => {console.error(err);process.exitCode=1});
+"""
+    evaluate(script, 'ScoutSuite/output/data/inc-scoutsuite/scoutsuite.js')
