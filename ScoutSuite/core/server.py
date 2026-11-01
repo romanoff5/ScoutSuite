@@ -206,7 +206,7 @@ class Server:
         if key is None or key == '':
             return data
         if (not isinstance(key, str) or len(key) > MAX_PATH_LENGTH
-                or '\\x00' in key or '/' in key or '\\\\' in key):
+                or '\\x00' in key):
             raise cherrypy.HTTPError(400, 'Invalid result path')
         parts = key.split('¤')
         if (len(parts) > MAX_PATH_DEPTH or
