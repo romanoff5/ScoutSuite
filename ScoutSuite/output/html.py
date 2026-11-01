@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+import json
 import os
 import shutil
 import zipfile
@@ -12,7 +14,7 @@ from ScoutSuite.core.console import print_info, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.output.result_encoder import JavaScriptEncoder, SqlLiteEncoder
 from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 import stat
 
 
@@ -120,7 +122,25 @@ class HTMLReport:
         # Validation is completed *before* writing any ZIP member.
         with zipfile.ZipFile(archive) as bundle:
             validate_asset_archive(bundle)
+            # Do not follow an existing vendor-root symlink out of the output.
+            for root in _ASSET_ROOTS:
+                if os.path.islink(os.path.join(self.report_dir, root)):
+                    raise ValueError('Unsafe existing vendor asset destination')
             bundle.extractall(self.report_dir)
+            asset_manifest = {
+                'schema_version': 1,
+                'source': 'bundled-includes.zip',
+                'archive_sha256': hashlib.sha256(
+                    Path(archive).read_bytes()).hexdigest(),
+                'files': {
+                    item.filename: hashlib.sha256(bundle.read(item)).hexdigest()
+                    for item in sorted(bundle.infolist(), key=lambda member: member.filename)
+                    if not item.is_dir()
+                },
+            }
+        with open(os.path.join(self.report_dir, 'scoutsuite-assets-manifest.json'),
+                  'w', encoding='utf-8') as manifest_file:
+            json.dump(asset_manifest, manifest_file, sort_keys=True, indent=2)
         # Copy static files
         inc_scout_dir = os.path.join(self.report_dir, DEFAULT_INCLUDES_DIRECTORY)
         src_inc_scout_dir = os.path.join(self.scout_report_data_path, DEFAULT_INCLUDES_DIRECTORY)
