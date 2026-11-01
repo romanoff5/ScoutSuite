@@ -1,5 +1,6 @@
 """M09-B local assets: no remote runtime dependencies and hostile ZIP rejection."""
 import io
+import json
 import re
 import zipfile
 from pathlib import Path
@@ -26,6 +27,13 @@ def test_bundled_vendor_assets_are_offline_and_valid(tmp_path):
     with zipfile.ZipFile(path) as archive:
         validate_asset_archive(archive)
     html.prepare_html_report_dir()
+    manifest_path = tmp_path / 'scoutsuite-assets-manifest.json'
+    manifest = json.loads(manifest_path.read_text(encoding='utf8'))
+    assert manifest['schema_version'] == 1
+    assert len(manifest['archive_sha256']) == 64
+    assert len(manifest['files']['inc-jquery/jquery-3.3.1.min.js']) == 64
+    html.prepare_html_report_dir()
+    assert json.loads(manifest_path.read_text(encoding='utf8')) == manifest
     for name in ('inc-jquery/jquery-3.3.1.min.js',
                  'inc-handlebars/handlebars-v3.0.0.js',
                  'inc-bootstrap/js/bootstrap.min.js',
@@ -67,3 +75,17 @@ def test_no_network_dependency_in_report_shell():
     assert "object-src 'none'" in shell
     assert "default-src 'none'" in shell
     assert "referrer" in shell
+
+def test_existing_asset_root_symlink_does_not_redirect_extraction(tmp_path):
+    outside = tmp_path / 'outside'
+    outside.mkdir()
+    report_dir = tmp_path / 'report'
+    report_dir.mkdir()
+    try:
+        (report_dir / 'inc-jquery').symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip('Cannot create test symlink on this runner')
+    html = HTMLReport(report_name='test', report_dir=str(report_dir))
+    with pytest.raises(ValueError, match='destination'):
+        html.prepare_html_report_dir()
+    assert not (outside / 'jquery-3.3.1.min.js').exists()
