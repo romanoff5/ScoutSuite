@@ -154,12 +154,54 @@ def classify_alb_listener_tls(listener):
     return 'unknown'
 
 
+def classify_s3_encryption(bucket):
+    """Check observed new-write encryption, not all historical S3 objects."""
+    if not isinstance(bucket, dict):
+        return 'unknown'
+    evidence = bucket.get('encryption_evidence')
+    algorithm = bucket.get('default_encryption_algorithm')
+    enabled = bucket.get('default_encryption_enabled')
+    if (enabled is True and evidence in ('api', 'aws_baseline')
+            and algorithm in ('AES256', 'aws:kms', 'aws:kms:dsse')):
+        return 'secure'
+    # A positively observed disabled configuration could be insecure, but
+    # absence of an explicit configuration is SSE-S3 since January 2023.
+    if enabled is False and evidence == 'api':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_s3_secure_transport(bucket):
+    if not isinstance(bucket, dict):
+        return 'unknown'
+    status = bucket.get('secure_transport_enabled')
+    if status is True:
+        return 'secure'
+    if status is False:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_s3_bucket_exposure(bucket):
+    if not isinstance(bucket, dict):
+        return 'unknown'
+    state = bucket.get('public_exposure_status')
+    if state == 'exposed':
+        return 'insecure'
+    if state == 'no_bucket_level_exposure_detected':
+        return 'secure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
     'cloudtrail-data-events-v1': classify_cloudtrail_data_events,
     'cloudtrail-data-coverage-v1': classify_cloudtrail_data_coverage,
     'rds-ca-lifecycle-v1': classify_rds_ca_lifecycle,
     'alb-listener-tls-v1': classify_alb_listener_tls,
+    's3-new-write-encryption-v1': classify_s3_encryption,
+    's3-secure-transport-v1': classify_s3_secure_transport,
+    's3-bucket-level-exposure-v1': classify_s3_bucket_exposure,
 }
 
 
