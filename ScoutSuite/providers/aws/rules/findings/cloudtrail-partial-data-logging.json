@@ -20,5 +20,6 @@
             ""
         ]
     ],
-    "id_suffix": "cloudtrail-data-events-disabled"
+    "id_suffix": "cloudtrail-data-events-disabled",
+    "evidence_policy": "cloudtrail-data-coverage-v1"
 }
