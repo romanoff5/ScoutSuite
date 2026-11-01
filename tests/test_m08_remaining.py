@@ -76,7 +76,7 @@ def test_rule_engine_reports_insecure_only_and_marks_unknown(tmp_path):
              'bad': {'imds_v2_status': 'optional', 'metadata_options': {'HttpTokens': 'optional'}},
              'denied': {'imds_v2_status': 'unknown', 'metadata_options': {}},
              'disabled': {'imds_v2_status': 'disabled', 'metadata_options': {'HttpEndpoint': 'disabled'}},
-         }}}}}}},
+         }}}}}},
          'ec2.regions.us-east-1.vpcs.vpc-1.instances.bad.imds_v2_status'),
         ('awslambda-function-deprecated-runtime.json', 'lambda',
          {'regions': {'us-east-1': {'functions': {
