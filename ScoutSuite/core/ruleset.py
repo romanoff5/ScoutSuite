@@ -32,6 +32,25 @@ def _check_profile(data):
         raise PolicyProfileError('Unsupported policy profile schema version')
     if not isinstance(data.get('rules'), dict) or not data['rules']:
         raise PolicyProfileError('Profile must explicitly select rule definitions')
+    benchmark = data.get('benchmark')
+    if benchmark is not None:
+        if (not isinstance(benchmark, dict)
+                or benchmark.get('coverage') != 'partial'
+                or not isinstance(benchmark.get('id'), str)
+                or not re.fullmatch(r'[0-9]+(?:\.[0-9]+){2}', str(benchmark.get('version')))):
+            raise PolicyProfileError('Invalid partial benchmark metadata')
+        mappings = data.get('control_mappings')
+        if not isinstance(mappings, dict) or not mappings:
+            raise PolicyProfileError('Benchmark crosswalk must declare mapped rules')
+        for rule_name, entries in mappings.items():
+            if rule_name not in data['rules'] or not isinstance(entries, list) or not entries:
+                raise PolicyProfileError('Benchmark crosswalk references an undeclared rule')
+            for entry in entries:
+                if (not isinstance(entry, dict) or entry.get('coverage') != 'candidate'
+                        or not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+',
+                                            str(entry.get('control_id', '')))):
+                    raise PolicyProfileError('Unverified benchmark crosswalk entry')
+
 
 
 class Ruleset:
@@ -102,6 +121,8 @@ class Ruleset:
                     self.about = ruleset['about'] if 'about' in ruleset else ''
                     self.profile_id = ruleset.get('profile_id')
                     self.profile_version = ruleset.get('profile_version')
+                    self.benchmark = ruleset.get('benchmark')
+                    self.control_mappings = ruleset.get('control_mappings', {})
                     self.rules = {}
                     for filename in ruleset['rules']:
                         self.rules[filename] = []
@@ -125,6 +146,8 @@ class Ruleset:
         self.about = ruleset['about']
         self.profile_id = ruleset.get('profile_id')
         self.profile_version = ruleset.get('profile_version')
+        self.benchmark = ruleset.get('benchmark')
+        self.control_mappings = ruleset.get('control_mappings', {})
         self.rules = {}
         for filename in ruleset['rules']:
             self.rules[filename] = []
