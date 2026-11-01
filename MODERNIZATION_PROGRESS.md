@@ -159,3 +159,22 @@ Existing Classic ELB finding identifier retained. Added dedicated synthetic four
 IAM and standards: performed a limitation/mapping review without claiming effective permissions or inventing a new CIS edition mapping; see `docs/modernization/M08_IAM_STANDARDS_REVIEW.md`.
 
 **Validation status:** GitHub Actions for this feature branch must pass before merge to master. Local repository checkout is not present in this execution environment, and no local offline suite or diff-check has been executed. This branch is therefore **not accepted/integrated** until verifiable CI. Do not claim live AWS testing. No Azure/GCP changes.
+
+
+## M08 completion — 2026-11-01
+
+- Branch `modernization/m08-imds-lambda-clb-iam-standards-20261101`, source code commits from `b4e597c6` through `fb2354e1`.
+- Implemented EC2 IMDSv2, ZIP Lambda runtime lifecycle, Classic ELB TLS evidence classification, dated static catalogs, synthetic four-state tests; IAM catalog and newer standards are documented as partial work, not falsely certified.
+- CI failure corrections: `tests/test_m08_remaining.py` nested literal syntax, `tests/data/rule-fixtures.json` manifest inventory, and `tests/data/provider-catalogs.json` expected catalog. Existing fixtures preserved.
+- Verified offline Windows Python 3.11.9 and Ubuntu Python 3.11.18 success in [run 41347955928](https://github.com/romanoff5/ScoutSuite/actions/runs/41347955928).
+- Integrated `origin/master` by guarded fast-forward to `fb2354e1915648d0e153b35f0cc2d7cfd3f63aa5`, verified remote ref. All older branches were ancestors or identical; no duplicated merges or upstream PRs.
+
+## Task 11 / M09-A and CIS Foundations 7.1.0 — 2026-11-01
+
+- Branch `modernization/m09a-versioned-report-cis-7-1-0`, implemented from validated M08 baseline `fb2354e1`.
+- Changes: non-mutating, deterministic report serialization; explicit RESULTS schema v1 in JS and SQLite; compatible unversioned v0 reader; clear rejection of future/malformed schema versions; sorted report HTML template ordering. Existing finding IDs, user exceptions, filter paths and data keys are retained.
+- New user-requested CIS Foundations **v7.1.0** opt-in, **partial candidate** crosswalk (`cis-foundations-7.1.0-partial.json`): 11 control IDs linked to existing evidence rules, explicitly `compliance_verified=false`. Unassessed/manual controls are not passed. Historical `cis-1.2.0.json` remains unchanged.
+- Sources include user-provided benchmark PDFs used locally for mapping. PDFs and protected control text were **not** uploaded to the public repository. Additional supplied Compute/Database/Storage/End User Compute benchmarks are tracked as references without false coverage claims.
+- Synthetic golden v0 fixture and v1 JS/SQLite round-trip tests; offline preservation/packaging smoke run. **Windows Python 3.11.9: 305 passed, 34 subtests passed, 161 warnings; Ubuntu Python 3.11.18: 305 passed, 34 subtests passed, 161 warnings**. Lint, build, dependency, test, packaging and workflow checks all passed: [run 41348332005](https://github.com/romanoff5/ScoutSuite/actions/runs/41348332005).
+- Verified remote integration of 10 M09 commits, fast-forwarding `master` from `fb2354e1` to `6de02364d34778da1c2d0cbea8c781c766e43090`, without rewriting history.
+- Limitations: no live AWS/customer scan, no Python 3.14 validation for M09, no full CIS v7.1.0 scoring or certification, no M09-B browser/SQLite server security overhaul. Rollback via explicit commit reverts (never force-reset shared history), or use the historical v0 loader for unversioned reports.
