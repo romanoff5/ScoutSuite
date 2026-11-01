@@ -8,11 +8,11 @@ Handlebars.registerHelper('displayPolicy', function (blob) {
         if (attr === 'Statement') {
             policy += '&nbsp;&nbsp;"Statement": [<br/>'
             for (let sid in blob['Statement']) {
-                policy += '<span id="foobar">' + JSON.stringify(blob['Statement'][sid], null, 2) + '</span>,\n'
+                policy += '<span id="foobar">' + Handlebars.Utils.escapeExpression(JSON.stringify(blob['Statement'][sid], null, 2)) + '</span>,\n'
             }
             policy += '  ]'
         } else {
-            policy += '  "' + attr + '": ' + JSON.stringify(blob[attr], null, 2)
+            policy += '  "' + Handlebars.Utils.escapeExpression(attr) + '": ' + Handlebars.Utils.escapeExpression(JSON.stringify(blob[attr], null, 2))
         }
         policy += ',\n'
     }
@@ -83,7 +83,7 @@ Handlebars.registerHelper('good_bad_icon', function (finding, bucketId, keyId, s
     var index = runResults['services']['s3']['findings'][finding]['items'].indexOf(keyPath)
     var level = runResults['services']['s3']['findings'][finding]['level']
     if (index > -1) {
-        return '<i class="fa fa-times finding-' + level + '"></i>'
+        return new Handlebars.SafeString('<i class="fa fa-times finding-' + String(level).replace(/[^a-z0-9-]/gi, '') + '"></i>')
     } else {
         var keyDetails = runResults['services']['s3']['buckets'][bucketId]['keys'][keyId]
         if ((finding === 's3-object-acls-mismatch-bucket') && ('grantees' in keyDetails)) {
@@ -479,10 +479,11 @@ Handlebars.registerHelper('get_rule', function (ruleFilename, attribute) {
 })
 
 var ruleCleanup = function (rule, attribute) {
-    if (attribute in rule) {
-        delete rule[attribute]
+    var result = Object.assign({}, rule)
+    if (attribute in result) {
+        delete result[attribute]
     }
-    return rule
+    return result
 }
 
 Handlebars.registerHelper('get_arg_name', function (ruleFilename, argIndex) {
