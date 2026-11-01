@@ -2,16 +2,12 @@
 import shutil
 import subprocess
 
-import pytest
-
 from tests.fixtures import ROOT
 
 
 NODE = shutil.which('node')
-pytestmark = pytest.mark.skipif(NODE is None, reason='Node.js runtime unavailable for JS helper smoke')
-
-
 def evaluate(script, *paths):
+    assert NODE is not None, 'M09-B JavaScript security tests require Node.js'
     command = [NODE, '-e', script, *[str(ROOT / p) for p in paths]]
     result = subprocess.run(command, text=True, capture_output=True, check=False,
                             timeout=15)
