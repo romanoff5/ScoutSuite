@@ -89,3 +89,18 @@ def test_existing_asset_root_symlink_does_not_redirect_extraction(tmp_path):
     with pytest.raises(ValueError, match='destination'):
         html.prepare_html_report_dir()
     assert not (outside / 'jquery-3.3.1.min.js').exists()
+
+def test_nested_asset_symlink_does_not_redirect_extraction(tmp_path):
+    outside = tmp_path / 'outside'
+    outside.mkdir()
+    report_dir = tmp_path / 'report'
+    nested = report_dir / 'inc-bootstrap'
+    nested.mkdir(parents=True)
+    try:
+        (nested / 'css').symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip('Cannot create test symlink on this runner')
+    html = HTMLReport(report_name='test', report_dir=str(report_dir))
+    with pytest.raises(ValueError, match='destination'):
+        html.prepare_html_report_dir()
+    assert not (outside / 'bootstrap.min.css').exists()
