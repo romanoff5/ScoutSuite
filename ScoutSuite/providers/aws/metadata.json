@@ -360,6 +360,14 @@
         }
     },
     "security": {
+        "accessanalyzer": {
+            "resources": {
+                "analyzers": {
+                    "cols": 2,
+                    "path": "services.accessanalyzer.regions.id.analyzers"
+                }
+            }
+        },
         "iam": {
             "resources": {
                 "groups": {
