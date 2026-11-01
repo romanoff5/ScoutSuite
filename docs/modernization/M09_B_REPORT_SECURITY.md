@@ -25,3 +25,9 @@ Date: 2026-11-01. Scope: local report assets, AWS-facing report rendering sinks 
 Guarded Windows (Python 3.11.9) and Ubuntu (Python 3.11.18) offline CI, full preserved AWS/Azure/GCP report characterization, archive extraction and path traversal negatives, synthetic malicious policy/account strings, JS runtime with Node.js where available, read-only SQLite API navigation and pagination, disallowed CORS-origin and missing-token checks, packaging/inventory and independent remote branch verification.
 
 No protected benchmark PDF or customer evidence should be committed. If required guards or changed-feature tests fail, keep the feature on this branch rather than merging into `master`.
+
+## Restricted legacy SQLite value deserialization
+
+Historical `SqliteDict` report values are stored as Python pickle BLOBs. A valid SQLite header and read-only connection do **not** make arbitrary pickle payloads safe. Both the local SQLite API and `SqlLiteEncoder.load_from_file` now use `decode_report_pickle`, a restricted decoder which rejects pickle GLOBAL references, persistent objects, unsupported Python types, non-string mapping keys, excessive nesting and trailing bytes. Only JSON-compatible primitive/container values are supported. Synthetic malicious `__reduce__` payloads must be rejected by both read paths.
+
+This preserves normal historical ScoutSuite reports created from the JSON-safe `ScoutResultEncoder.to_dict` representation. It intentionally does not support third-party SQLite files containing arbitrary Python objects; these are unsafe as report inputs and must fail closed. Resource data and filter navigation continue to use primitive values. File-backed report databases remain sensitive and should be shared only with authorized recipients.
