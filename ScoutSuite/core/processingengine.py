@@ -84,6 +84,19 @@ class ProcessingEngine:
                                 'id': profile_id,
                                 'version': self.ruleset.profile_version
                             }
+                        benchmark = getattr(self.ruleset, 'benchmark', None)
+                        if benchmark:
+                            mappings = getattr(self.ruleset, 'control_mappings', {})
+                            entries = mappings.get(rule.filename, [])
+                            if entries:
+                                finding['standard_mappings'] = [{
+                                    'benchmark_id': benchmark['id'],
+                                    'benchmark_version': benchmark['version'],
+                                    'control_id': entry['control_id'],
+                                    'coverage': 'candidate',
+                                    'compliance_verified': False,
+                                } for entry in entries]
+
                 except Exception as e:
                     print_exception(f'Failed to process rule defined in {rule.filename}: {e}')
                     # Never encode a failed evaluation as an empty compliant result.
