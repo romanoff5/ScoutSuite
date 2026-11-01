@@ -14,7 +14,7 @@
             <li>{{makeTitle @key}}</li>
             <ul>
               {{#each this}}
-                <li><a href="javascript:showObject('services.iam.{{@../key}}.{{id}}')">{{name}}</a></li>
+                <li><a href="#" data-scout-object-path="services.iam.{{@../key}}.{{id}}">{{name}}</a></li>
               {{/each}}
             </ul>
           {{/each}}
