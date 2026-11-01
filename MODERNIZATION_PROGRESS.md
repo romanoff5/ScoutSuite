@@ -178,3 +178,14 @@ IAM and standards: performed a limitation/mapping review without claiming effect
 - Synthetic golden v0 fixture and v1 JS/SQLite round-trip tests; offline preservation/packaging smoke run. **Windows Python 3.11.9: 305 passed, 34 subtests passed, 161 warnings; Ubuntu Python 3.11.18: 305 passed, 34 subtests passed, 161 warnings**. Lint, build, dependency, test, packaging and workflow checks all passed: [run 41348332005](https://github.com/romanoff5/ScoutSuite/actions/runs/41348332005).
 - Verified remote integration of 10 M09 commits, fast-forwarding `master` from `fb2354e1` to `6de02364d34778da1c2d0cbea8c781c766e43090`, without rewriting history.
 - Limitations: no live AWS/customer scan, no Python 3.14 validation for M09, no full CIS v7.1.0 scoring or certification, no M09-B browser/SQLite server security overhaul. Rollback via explicit commit reverts (never force-reset shared history), or use the historical v0 loader for unversioned reports.
+
+## Task 13 / M10-A — IAM Access Analyzer (2026-11-02)
+
+First opt-in vertical slice on `modernization/m10-access-analyzer-vertical-slice`. Implemented read-only bounded
+`ListAnalyzers`, explicit incomplete/denied evidence, account-visible scope,
+normalized stable IDs, an inactive-analyzer finding, escaped report partial,
+and strict synthetic integration tests. This **does not complete M10**.
+
+Scope, API permissions, exclusions, test contract and rollback:
+[docs/modernization/M10_ACCESS_ANALYZER.md](docs/modernization/M10_ACCESS_ANALYZER.md).
+Acceptance remains conditional on Windows/Ubuntu CI and installed package tests.
