@@ -15,5 +15,6 @@
             ""
         ]
     ],
-    "id_suffix": "Inactive"
+    "id_suffix": "Inactive",
+    "evidence_policy": "access-analyzer-state-v1"
 }
