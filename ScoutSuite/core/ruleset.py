@@ -26,7 +26,7 @@ def _check_profile(data):
         raise PolicyProfileError('Profile ID and version must both be present')
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{1,63}', data['profile_id']):
         raise PolicyProfileError('Invalid profile ID')
-    if not re.fullmatch(r'[0-9]{4}\\.[0-9]{1,2}\\.[0-9]+', data['profile_version']):
+    if not re.fullmatch(r'[0-9]{4}\.[0-9]{1,2}\.[0-9]+', data['profile_version']):
         raise PolicyProfileError('Invalid profile version')
     if data.get('schema_version') != 1:
         raise PolicyProfileError('Unsupported policy profile schema version')
