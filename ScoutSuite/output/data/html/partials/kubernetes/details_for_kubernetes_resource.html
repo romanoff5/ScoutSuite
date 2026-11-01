@@ -13,7 +13,7 @@
             {{#if roleRef}}
                 <div class="list-group-item">
                     <b>Role Reference:</b>
-                    <a href="{{ roleRef.href }}">
+                    <a href="{{safe_report_href roleRef.href}}">
                         {{ roleRef.text }}
                     </a>
                 </div>
@@ -25,7 +25,7 @@
                     <ul style="list-style: none">
                         {{#each ownerReferences}}
                             <li class="list-group-item-text no-margin">
-                                <a href="{{ href }}">
+                                <a href="{{safe_report_href href}}">
                                     {{ text }}
                                 </a>
                             </li>
