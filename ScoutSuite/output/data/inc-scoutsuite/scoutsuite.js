@@ -1493,7 +1493,7 @@ function downloadAsCsv(filename, rows) {
 
             // Spreadsheet software must not execute attacker-supplied resource
             // names or policy strings as formulas when a CSV is opened.
-            if (/^[\\s\\x00-\\x1f]*[=+@-]/.test(innerValue)) {
+            if (/^[\s\x00-\x1f]*[=+@-]/.test(innerValue)) {
                 innerValue = "'" + innerValue
             }
             var result = innerValue.replace(/"/g, '""')
