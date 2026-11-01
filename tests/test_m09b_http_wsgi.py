@@ -78,3 +78,78 @@ def test_real_cherrypy_wsgi_report_and_api_routes(tmp_path):
         assert page['status'] == 200, page
     finally:
         server.results.close()
+
+
+def test_paginated_sqlite_http_preserves_scalars_and_bounds_nested_data(tmp_path):
+    """Exercise genuine CherryPy HTTP/WSGI routing with a disk SQLite report."""
+    from urllib.parse import urlencode
+
+    db = tmp_path / 'scoutsuite_results_report.db'
+    resources = {
+        'r%04d' % i: {
+            'name': 'resource-%04d' % i,
+            'active': i % 2 == 0,
+            'risk': None if i == 0 else i,
+            'details': {'owner': 'team', 'zone': 'test'},
+            'events': [{'id': j} for j in range(3)],
+        }
+        for i in range(1500)
+    }
+    huge = {'k%06d' % i: i for i in range(30000)}
+    with SqliteDict(str(db)) as writer:
+        writer['resources'] = resources
+        writer['entries'] = [1, False, None, {'nested': 'value'}, ['nested'], 0]
+        writer['large'] = {'container': huge, 'scalar': 0}
+        writer['account_id'] = 'synthetic'
+        writer.commit()
+
+    server = Server(str(db))
+    app = cherrypy.Application(server, script_name='/api')
+    cherrypy.server.socket_port = 8000
+
+    def get(path, key, index=0, size=10):
+        query = urlencode({'key': key, 'page': index, 'pagesize': size})
+        response = _request(app, path, query=query)
+        assert response['status'] == 200, response
+        return json.loads(response['body'])['data']
+
+    try:
+        first = get('/page', 'resources', 0, 10)
+        second = get('/page', 'resources', 1, 10)
+        last = get('/page', 'resources', 149, 10)
+        assert len(first) == len(second) == len(last) == 10
+        assert not (set(first) & set(second))
+        assert first['r0000']['type'] == 'dict'
+        assert first['r0000']['keys'] == ['name', 'active', 'risk', 'details', 'events']
+        assert list(second) == ['r%04d' % i for i in range(10, 20)]
+        assert list(last)[-1] == 'r1499'
+        assert get('/page', 'resources', 150, 10) == {}
+
+        # Fetch selected resource in full; the page must not embed it.
+        full = _request(app, '/full', query=urlencode({'key': 'resources¤r0000'}))
+        assert full['status'] == 200, full
+        obj = json.loads(full['body'])['data']
+        assert obj['name'] == 'resource-0000'
+        assert obj['active'] is True and obj['risk'] is None
+        assert obj['events'] == [{'id': j} for j in range(3)]
+
+        entries = get('/page', 'entries', 0, 6)
+        assert entries == [1, False, None, {'type': 'dict', 'keys': ['nested']},
+                           {'type': 'list', 'length': 1}, 0]
+        assert get('/page', 'large', 0, 10)['scalar'] == 0
+        large_meta = get('/page', 'large', 0, 10)['container']
+        assert large_meta['type'] == 'dict'
+        assert large_meta['truncated'] is True
+        assert large_meta['length'] == 30000
+        assert len(large_meta['keys']) == 100
+        assert len(json.dumps(large_meta)) < 4000
+
+        # Invalid pagination and cross-origin checks remain effective.
+        bad = _request(app, '/page',
+                       query=urlencode({'key': 'resources', 'page': '-1', 'pagesize': 20}))
+        assert bad['status'] == 400
+        assert _request(app, '/page', query=urlencode(
+            {'key': 'resources', 'page': 0, 'pagesize': 1}),
+            origin='https://example.invalid')['status'] == 403
+    finally:
+        server.results.close()
