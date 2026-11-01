@@ -1,6 +1,7 @@
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.base import AWSCompositeResources
 from .buckets import Buckets
+from .exposure import combine_public_access_blocks, annotate_bucket_exposure
 
 
 class S3(AWSCompositeResources):
@@ -19,21 +20,15 @@ class S3(AWSCompositeResources):
         await self._fetch_children(self)
 
     async def finalize(self):
-        for bucket_id in self['buckets']:
-            if "public_access_block_configuration" in self['buckets'][bucket_id]:
-                # The resulting configuration will be the most restrictive
-                self['buckets'][bucket_id]["public_access_block_configuration"]["BlockPublicAcls"] = \
-                self['buckets'][bucket_id]["public_access_block_configuration"]["BlockPublicAcls"] or \
-                self['public_access_block_configuration']["BlockPublicAcls"]
-                self['buckets'][bucket_id]["public_access_block_configuration"]["IgnorePublicAcls"] = \
-                self['buckets'][bucket_id]["public_access_block_configuration"]["IgnorePublicAcls"] or \
-                self['public_access_block_configuration']["IgnorePublicAcls"]
-                self['buckets'][bucket_id]["public_access_block_configuration"]["BlockPublicPolicy"] = \
-                self['buckets'][bucket_id]["public_access_block_configuration"]["BlockPublicPolicy"] or \
-                self['public_access_block_configuration']["BlockPublicPolicy"]
-                self['buckets'][bucket_id]["public_access_block_configuration"]["RestrictPublicBuckets"] = \
-                self['buckets'][bucket_id]["public_access_block_configuration"]["RestrictPublicBuckets"] or \
-                self['public_access_block_configuration']["RestrictPublicBuckets"]
-            else:
-                # No bucket-level configuration, use account level configuration
-                self['buckets'][bucket_id]["public_access_block_configuration"] = self['public_access_block_configuration']
+        account = self.get('public_access_block_configuration')
+        for bucket in self.get('buckets', {}).values():
+            # Keep raw bucket settings separate from the computed effective
+            # account+bucket values. Never mutate the SDK response in-place.
+            original = bucket.get('public_access_block_configuration')
+            bucket['bucket_public_access_block_configuration'] = (
+                dict(original) if isinstance(original, dict) else None
+            )
+            bucket['public_access_block_configuration'] = (
+                combine_public_access_blocks(account, original)
+            )
+            annotate_bucket_exposure(bucket)
