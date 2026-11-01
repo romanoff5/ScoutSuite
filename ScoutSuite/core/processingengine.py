@@ -1,5 +1,6 @@
 from ScoutSuite.core.console import print_debug, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
 from ScoutSuite.utils import manage_dictionary
 
 from ScoutSuite.core.utils import recurse
@@ -68,6 +69,21 @@ class ProcessingEngine:
                         rule.compliance if hasattr(rule, 'compliance') else None
                     cloud_provider.services[service][self.ruleset.rule_type][rule.key]['references'] = \
                         rule.references if hasattr(rule, 'references') else None
+                    if self.ruleset.rule_type == 'findings':
+                        finding = cloud_provider.services[service][self.ruleset.rule_type][rule.key]
+                        evidence = evaluate_rule_evidence(rule, cloud_provider.services)
+                        if evidence is not None:
+                            finding['evaluation_summary'] = evidence
+                            if evidence['assessment_status'] == 'incomplete':
+                                finding['assessment_status'] = 'incomplete'
+                            elif evidence['assessment_status'] == 'not_applicable':
+                                finding['assessment_status'] = 'not_applicable'
+                        profile_id = getattr(self.ruleset, 'profile_id', None)
+                        if profile_id:
+                            finding['policy_profile'] = {
+                                'id': profile_id,
+                                'version': self.ruleset.profile_version
+                            }
                 except Exception as e:
                     print_exception(f'Failed to process rule defined in {rule.filename}: {e}')
                     # Never encode a failed evaluation as an empty compliant result.
