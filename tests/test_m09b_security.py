@@ -26,8 +26,8 @@ def archive_with(name, payload=b'ok', symlink=False):
     # Patch both local/central directory filename bytes (same byte length)
     # so the opened archive contains the intended hostile raw backslash.
     raw = stream.getvalue()
-    if '\\\\' in name:
-        normalized = name.replace('\\\\', '/').encode('ascii')
+    if chr(92) in name:
+        normalized = name.replace(chr(92), '/').encode('ascii')
         hostile = name.encode('ascii')
         raw = raw.replace(normalized, hostile)
     return zipfile.ZipFile(io.BytesIO(raw))
