@@ -6,6 +6,7 @@ from ScoutSuite.core.console import print_exception, print_debug, print_warning
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.facade.pagination import collect_token_pages, PaginationError
+from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.utils import run_concurrently, get_and_set_concurrently
 
 
@@ -53,7 +54,9 @@ class S3Facade(AWSBaseFacade):
                  self._get_and_set_s3_acls,
                  self._get_and_set_s3_bucket_policy,
                  self._get_and_set_s3_bucket_tags,
-                 self._get_and_set_s3_bucket_block_public_access],
+                 self._get_and_set_s3_bucket_block_public_access,
+                 self._get_and_set_s3_bucket_ownership,
+                 self._get_and_set_s3_bucket_policy_status],
                 buckets)
 
             # Non-async post-processing
@@ -242,19 +245,88 @@ class S3Facade(AWSBaseFacade):
                 print_exception('Failed to get bucket tags for {}: {}'.format(bucket['Name'], e))
             bucket['tags'] = {}
 
+    @staticmethod
+    def _record_context_issue(reason):
+        context = get_current_run_context()
+        if context is not None:
+            context.record_collection_issue('partial', 's3', reason)
+
+    @staticmethod
+    def _absent_access_block():
+        return {
+            'BlockPublicAcls': False, 'IgnorePublicAcls': False,
+            'BlockPublicPolicy': False, 'RestrictPublicBuckets': False
+        }
+
     async def _get_and_set_s3_bucket_block_public_access(self, bucket: {}):
-        client = AWSFacadeUtils.get_client('s3', self.session, bucket['region'])
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        bucket['public_access_block_configuration'] = None
+        if client is None:
+            self._record_context_issue('BucketPublicAccessBlock')
+            return
         try:
-            bucket_public_access_block_conf = await run_concurrently(lambda: client.get_public_access_block(Bucket=bucket['Name']))
-            bucket['public_access_block_configuration'] = bucket_public_access_block_conf['PublicAccessBlockConfiguration']
-        except ClientError as e:
-            # No such configuration found for the bucket, nothing to be done
-            pass
-        except Exception as e:
-            if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                print_warning('Failed to get the public access block configuration for {}: {}'.format(bucket['Name'], e))
+            result = await run_concurrently(
+                lambda: client.get_public_access_block(Bucket=bucket['Name'])
+            )
+            bucket['public_access_block_configuration'] = result[
+                'PublicAccessBlockConfiguration']
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code')
+            if code == 'NoSuchPublicAccessBlockConfiguration':
+                bucket['public_access_block_configuration'] = self._absent_access_block()
             else:
-                print_exception('Failed to get the public access block configuration for {}: {}'.format(bucket['Name'], e))
+                self._record_context_issue('BucketPublicAccessBlock')
+                print_exception('Unable to verify S3 bucket public-access settings')
+        except Exception:
+            self._record_context_issue('BucketPublicAccessBlock')
+            print_exception('Unable to verify S3 bucket public-access settings')
+
+    async def _get_and_set_s3_bucket_ownership(self, bucket: {}):
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        bucket['object_ownership'] = None
+        if client is None:
+            self._record_context_issue('BucketOwnership')
+            return
+        try:
+            response = await run_concurrently(
+                lambda: client.get_bucket_ownership_controls(Bucket=bucket['Name'])
+            )
+            rules = (response.get('OwnershipControls') or {}).get('Rules', [])
+            values = [rule.get('ObjectOwnership') for rule in rules if isinstance(rule, dict)]
+            bucket['object_ownership'] = values[0] if len(values) == 1 else None
+        except ClientError as error:
+            if error.response.get('Error', {}).get('Code') != 'OwnershipControlsNotFoundError':
+                self._record_context_issue('BucketOwnership')
+                print_exception('Unable to retrieve S3 object ownership configuration')
+        except Exception:
+            self._record_context_issue('BucketOwnership')
+            print_exception('Unable to retrieve S3 object ownership configuration')
+
+    async def _get_and_set_s3_bucket_policy_status(self, bucket: {}):
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        bucket['policy_is_public'] = None
+        if client is None:
+            self._record_context_issue('BucketPolicyStatus')
+            return
+        try:
+            response = await run_concurrently(
+                lambda: client.get_bucket_policy_status(Bucket=bucket['Name'])
+            )
+            value = (response.get('PolicyStatus') or {}).get('IsPublic')
+            if not isinstance(value, bool):
+                self._record_context_issue('BucketPolicyStatus')
+            else:
+                bucket['policy_is_public'] = value
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code')
+            if code == 'NoSuchBucketPolicy':
+                bucket['policy_is_public'] = False
+            else:
+                self._record_context_issue('BucketPolicyStatus')
+                print_exception('Unable to verify S3 bucket policy exposure')
+        except Exception:
+            self._record_context_issue('BucketPolicyStatus')
+            print_exception('Unable to verify S3 bucket policy exposure')
 
     async def _get_and_set_s3_bucket_creationdate(self, buckets):
         # Preserve original CreationDate on lookup failure. Unlike the
@@ -307,28 +379,31 @@ class S3Facade(AWSBaseFacade):
             bucket['secure_transport'] = None
 
     def get_s3_public_access_block(self, account_id):
-        # We need a region to generate the client
-        # However, the settings are global, so they are not region-dependent
-        region = 'us-east-1'
+        # The S3 Control endpoint must belong to the credentials' partition.
+        region = getattr(self.session, 'region_name', None) or 'us-east-1'
+        if region.startswith('cn-'):
+            region = 'cn-north-1'
+        elif region.startswith('us-gov-'):
+            region = 'us-gov-west-1'
+        else:
+            region = 'us-east-1'
         client = AWSFacadeUtils.get_client('s3control', self.session, region)
+        if client is None:
+            self._record_context_issue('AccountPublicAccessBlock')
+            return None
         try:
-            s3_public_access_block = client.get_public_access_block(AccountId=account_id)
-            return s3_public_access_block['PublicAccessBlockConfiguration']
-        except ClientError:
-            # No public access block configuration at the S3 level, returning the default
-            return {
-                "BlockPublicAcls": False,
-                "IgnorePublicAcls": False,
-                "BlockPublicPolicy": False,
-                "RestrictPublicBuckets": False
-            }
-        except Exception as e:
-            if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                print_warning(
-                    f'Failed to get the public access block configuration for the account {account_id}: {e}')
-            else:
-                print_exception(
-                    f'Failed to get the public access block configuration for the account {account_id}: {e}')
+            result = client.get_public_access_block(AccountId=account_id)
+            return result['PublicAccessBlockConfiguration']
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code')
+            if code == 'NoSuchPublicAccessBlockConfiguration':
+                return self._absent_access_block()
+            self._record_context_issue('AccountPublicAccessBlock')
+            print_exception('Unable to verify S3 account public-access settings')
+            return None
+        except Exception:
+            self._record_context_issue('AccountPublicAccessBlock')
+            print_exception('Unable to verify S3 account public-access settings')
             return None
 
     @staticmethod
