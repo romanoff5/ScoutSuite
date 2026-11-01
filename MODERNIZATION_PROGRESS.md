@@ -146,3 +146,16 @@ Remaining work is explicitly tracked: HTML viewer presentation (M09),
 full AWS direct-client timeout/pagination inventory (M05/M06),
 Python 3.14 after M04, cross-account live AWS execution, and full
 long-running/scale evidence. Those checks are not claimed complete.
+
+
+## M08 continuation — 2026-11-01
+
+Branch: `modernization/m08-imds-lambda-clb-iam-standards-20261101`, based on `3ed56dd5`.
+Implemented: evidence-aware EC2 IMDSv2 requirement based on existing MetadataOptions;
+Lambda ZIP runtime lifecycle with a static UTC-date reference catalog and explicit Image NA;
+Classic ELB TLS protocol floor using policy details and a separate catalog (no ALB policy reuse).
+Existing Classic ELB finding identifier retained. Added dedicated synthetic four-state tests.
+
+IAM and standards: performed a limitation/mapping review without claiming effective permissions or inventing a new CIS edition mapping; see `docs/modernization/M08_IAM_STANDARDS_REVIEW.md`.
+
+**Validation status:** GitHub Actions for this feature branch must pass before merge to master. Local repository checkout is not present in this execution environment, and no local offline suite or diff-check has been executed. This branch is therefore **not accepted/integrated** until verifiable CI. Do not claim live AWS testing. No Azure/GCP changes.
