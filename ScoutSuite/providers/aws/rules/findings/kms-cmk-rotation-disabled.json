@@ -1,6 +1,6 @@
 {
     "description": "KMS Customer Master Keys (CMKs) with Rotation Disabled",
-    "rationale": "Cryptographic best practices discourage extensive reuse of encryption keys. Consequently, Customer Master Keys (CMKs) should be rotated to prevent usage of compromised keys.<br><br>Note that AWS KMS supports optional automatic key rotation only for customer managed CMKs.",
+    "rationale": "Cryptographic best practices discourage extensive reuse of encryption keys. Consequently, Customer Master Keys (CMKs) should be rotated to prevent usage of compromised keys.<br><br>Note that AWS KMS supports optional automatic key rotation only for customer managed CMKs.\n\nEvaluation note: missing or denied rotation evidence is incomplete, while unsupported key types are not applicable to automatic rotation. The rule preserves its existing finding ID and severity.",
     "remediation": "For every KMS Customer Master Keys (CMKs), ensure that Rotate this key every year is enabled",
     "compliance": [
         {
@@ -48,5 +48,6 @@
             ""
         ]
     ],
-    "id_suffix": "rotation_enabled"
+    "id_suffix": "rotation_enabled",
+    "evidence_policy": "kms-automatic-rotation-v1"
 }
