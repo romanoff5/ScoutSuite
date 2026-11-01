@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError
 from ScoutSuite.core.console import print_exception, print_debug, print_warning
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
+from ScoutSuite.providers.aws.facade.pagination import collect_token_pages, PaginationError
 from ScoutSuite.providers.utils import run_concurrently, get_and_set_concurrently
 
 
@@ -21,15 +22,20 @@ class S3Facade(AWSBaseFacade):
             for region in region_list:
                 try:
                     client = AWSFacadeUtils.get_client('s3', self.session, region)
-                    buckets = await run_concurrently(lambda: client.list_buckets()['Buckets'])
+                    buckets = await self._list_bucket_pages(client, record_failure=False)
                 except Exception as e:
                     exception = e
                 else:
                     exception = None  # Fix for https://github.com/nccgroup/ScoutSuite/issues/916#issuecomment-728783965
                     break
+            if exception:
+                from ScoutSuite.core.run_context import get_current_run_context
+                context = get_current_run_context()
+                if context is not None:
+                    context.record_collection_issue('failed', 's3', 'ListBuckets')
+                print_exception('Failed to list S3 buckets in all candidate regions')
+                return []
             if not buckets:
-                if exception:
-                    print_exception(f'Failed to list buckets: {exception}')
                 return []
         except Exception as e:
             print_exception(f'Failed to list buckets: {e}')
@@ -54,9 +60,18 @@ class S3Facade(AWSBaseFacade):
             for bucket in buckets:
                 self._set_s3_bucket_secure_transport(bucket)
             # Try to update CreationDate of all buckets with the correct values from 'us-east-1'
-            self._get_and_set_s3_bucket_creationdate(buckets)
+            await self._get_and_set_s3_bucket_creationdate(buckets)
 
             return buckets
+
+    @staticmethod
+    async def _list_bucket_pages(client, *, record_failure=True):
+        return await collect_token_pages(
+            client.list_buckets, items_path=('Buckets',),
+            input_token='ContinuationToken', output_token=('ContinuationToken',),
+            first_kwargs={'MaxBuckets': 1000}, scope='s3',
+            record_failure=record_failure
+        )
 
     async def _get_and_set_s3_bucket_location(self, bucket: {}, region=None):
         client = AWSFacadeUtils.get_client('s3', self.session, region)
@@ -241,22 +256,21 @@ class S3Facade(AWSBaseFacade):
             else:
                 print_exception('Failed to get the public access block configuration for {}: {}'.format(bucket['Name'], e))
 
-    def _get_and_set_s3_bucket_creationdate(self, buckets):
-        # When using region other than 'us-east-1', the 'CreationDate' is the last modified time according to bucket's
-        # last replication in the respective region
-        # Source: https://github.com/aws/aws-cli/issues/3597#issuecomment-424167129
-        # Fixes issue https://github.com/nccgroup/ScoutSuite/issues/858
+    async def _get_and_set_s3_bucket_creationdate(self, buckets):
+        # Preserve original CreationDate on lookup failure. Unlike the
+        # historical unpaginated request, this retrieves the complete catalog.
         client = AWSFacadeUtils.get_client('s3', self.session, 'us-east-1')
+        if client is None:
+            return
         try:
-            buckets_useast1 = client.list_buckets()['Buckets']
-            for bucket in buckets:
-                # Find the bucket with the same name and update 'CreationDate' from the 'us-east-1' region data,
-                # if doesn't exist keep the original value
-                bucket['CreationDate'] = next((b['CreationDate'] for b in buckets_useast1 if
-                                               b['Name'] == bucket['Name']), bucket['CreationDate'])
-        except Exception as e:
-            # Only output exception when in debug mode
-            print_debug('Failed to get bucket creation date from "us-east-1" region')
+            listing = await self._list_bucket_pages(client)
+        except PaginationError as error:
+            listing = error.items
+            print_debug('Unable to retrieve the complete S3 creation date catalog')
+        lookup = {item['Name']: item.get('CreationDate')
+                  for item in listing if isinstance(item, dict) and 'Name' in item}
+        for bucket in buckets:
+            bucket['CreationDate'] = lookup.get(bucket['Name']) or bucket.get('CreationDate')
 
     def _set_s3_bucket_secure_transport(self, bucket: {}):
         try:

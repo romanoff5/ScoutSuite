@@ -47,3 +47,23 @@ This is a reproducible scope summary, not a complete call graph. Dynamic `getatt
 - Build request and paginator-model checks from a reviewed explicit operation manifest in M05. Capture dynamic IAM calls, default filters, permissions, optional fields and result schemas. Additions require strict offline stub cases, not just a successful model lookup.
 
 See [baseline](BASELINE.md) for service coverage gaps and [M05/M06 in the roadmap](ROADMAP.md) for acceptance criteria.
+
+## M05-A pagination contracts (2026-11-01)
+
+S3 `ListBuckets` now requests `MaxBuckets=1000` for every page and
+continues with the `ContinuationToken` returned by the service. The
+us-east-1 CreationDate reconciliation uses the same paginated path.
+Requests enumerate **general-purpose buckets**; S3 Express/directory
+buckets are outside this collector and require a separate adapter.
+No IAM action delta: `s3:ListAllMyBuckets` remains required.
+
+For this and subsequent M05 collectors, pages are accumulated with a
+checked token sequence. An API exception, repeated continuation token,
+missing token on a truncated page or malformed response records incomplete
+collection evidence and preserves already fetched pages. Candidate-region
+fallback does not mark a successful S3 enumeration incomplete merely because
+a previous regional endpoint rejected the request.
+
+Botocore model: `ListBuckets` input `MaxBuckets`, `ContinuationToken`;
+output `Buckets`, `ContinuationToken`. No SDK network/auth is used in
+contract tests.
