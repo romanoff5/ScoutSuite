@@ -296,7 +296,20 @@ def classify_classic_elb_policy(policy):
     return 'unknown'
 
 
+def classify_access_analyzer(analyzer):
+    """Current account-visible analyzer state; CREATING or unknown is incomplete."""
+    if not isinstance(analyzer, dict):
+        return 'unknown'
+    state = analyzer.get('status')
+    if state == 'ACTIVE':
+        return 'secure'
+    if state in ('FAILED', 'DISABLED'):
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
     'lambda-managed-runtime-v1': classify_lambda_runtime,
     'classic-elb-tls-v1': classify_classic_elb_policy,
