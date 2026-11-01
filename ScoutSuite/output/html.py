@@ -32,9 +32,12 @@ def safe_extract_report_assets(archive, destination):
         raise ValueError('Report asset archive exceeds file count limit')
     for info in infos:
         name = info.filename
+        # On Windows ZipInfo normalizes backslashes in filename, but retains
+        # the original central-directory name. Reject before normalization.
+        raw_name = getattr(info, 'orig_filename', name)
         path = PurePosixPath(name)
         mode = (info.external_attr >> 16) & 0xFFFF
-        if (not name or '\\' in name or path.is_absolute() or
+        if (not name or '\\' in raw_name or path.is_absolute() or
                 any(part in ('', '.', '..') for part in name.rstrip('/').split('/')) or
                 not name.startswith(approved) or
                 (mode and stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR))):
