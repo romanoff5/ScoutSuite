@@ -18,10 +18,19 @@ class Recorders(AWSResources):
         recorder = {}
         recorder['name'] = raw_recorder['name']
         recorder['region'] = self.region
-        recorder['role_ARN'] = raw_recorder['roleARN']
-        recorder['recording_group'] = raw_recorder['recordingGroup']
-        recorder['enabled'] = raw_recorder['ConfigurationRecordersStatus']['recording']
-        recorder['last_status'] = raw_recorder['ConfigurationRecordersStatus'].get('lastStatus')
-        recorder['last_start_time'] = raw_recorder['ConfigurationRecordersStatus'].get('lastStartTime')
-        recorder['last_status_change_time'] = raw_recorder['ConfigurationRecordersStatus'].get('lastStatusChangeTime')
+        recorder['role_ARN'] = raw_recorder.get('roleARN')
+        recorder['recording_group'] = raw_recorder.get('recordingGroup')
+        status = raw_recorder.get('ConfigurationRecordersStatus') or {}
+        recorder['enabled'] = status.get('recording')
+        recorder['last_status'] = status.get('lastStatus')
+        recorder['last_start_time'] = status.get('lastStartTime')
+        recorder['last_status_change_time'] = status.get('lastStatusChangeTime')
+        recorder['arn'] = raw_recorder.get('arn')
+        recorder['recording_scope'] = raw_recorder.get('recordingScope')
+        recorder['recording_mode'] = raw_recorder.get('recordingMode')
+        recorder['recording_strategy'] = (
+            (raw_recorder.get('recordingGroup') or {}).get('recordingStrategy')
+        )
+        recorder['service_principal'] = raw_recorder.get('servicePrincipal')
+        recorder['status_complete'] = bool(status)
         return get_non_provider_id(recorder['name']), recorder
