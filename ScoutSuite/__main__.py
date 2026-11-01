@@ -643,7 +643,20 @@ async def _run_impl(context: RunContext,
 
     # Post-processing can also emit errors; reflect those before serialization.
     if context.collection_issues or context.errors:
-        cloud_provider.collection_status = context.collection_summary(checked_items)
+        # Preserve issues loaded from an earlier incomplete --local report.
+        existing = getattr(cloud_provider, 'collection_status', None)
+        existing = existing if isinstance(existing, dict) else {}
+        current = context.collection_summary(checked_items)
+        for issue in existing.get('issues', []):
+            if issue not in current['issues']:
+                current['issues'].append(issue)
+        current['complete'] = existing.get('complete', True) and not current['issues']
+        current['status'] = 'success' if current['complete'] else 'partial'
+        current['checked_items'] = max(current['checked_items'], existing.get('checked_items', 0))
+        current['evidence_evaluated'] = bool(
+            current['evidence_evaluated'] or existing.get('evidence_evaluated', False)
+        )
+        cloud_provider.collection_status = current
 
     # Save config and create HTML report
     try:

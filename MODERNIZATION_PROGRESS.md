@@ -67,11 +67,21 @@ calls are used. See [development rules](AGENTS.md) and [roadmap](docs/modernizat
 - [x] Python 3.11 behavior preserved
 - [x] Separate client contexts for different accounts
 
-### Remaining work for full M03 completion:
+### M03 corrective follow-up and validation (2026-11-01)
 
-- Denied/timeout/unsupported/malformed fixture visibility in reports
-- Fake-clock tests for throttling behavior
-- Full characterization contracts pass (requires offline harness execution)
+The historical implementation receipt above refers to the earlier revision,
+not the final checked code. Corrected lifecycle commits `1deaf552`,
+`1c2e3e73` and `15bcb1bc` were fast-forwarded into `origin/master`
+at `15bcb1bc8301d82f48ab413d1a9e65cab8f3217f`.
+GitHub Actions [offline run 41303798662](https://github.com/romanoff5/ScoutSuite/actions/runs/41303798662)
+passed on Windows Python 3.11.9 and Ubuntu Python 3.11.18.
+A master-branch rerun also passed. Local Python 3.14 (with
+`pkg_resources` compatibility shim) previously passed 168 guarded tests;
+the later M04 changes are not yet confirmed on Python 3.14.
+
+Fake-clock bounded retry tests and structured incomplete collection fixtures
+are added in later M04 increments below. These must not be backdated to the
+original `942202db` implementation.
 
 ## Task 00 — fork workflow migration and accumulated integration
 
@@ -110,3 +120,29 @@ with the actual integrated commits; no upstream PR is created.
 Rollback: retain original default `7909f2fc6186063e5c9e7ddef8c4d7d1072c8f3d`
 and the original implementation commits. Revert specific increments on the fork;
 do not force-reset published history or change the stable scanner environment.
+
+## M04 — runtime isolation and assessment integrity (2026-11-01)
+
+The following increments are chained on `15bcb1bc`, with no Azure/GCP
+SDK modernization. They remain in validated development branches until the
+final CI gate passes, and are **not yet merged to master** as of this
+documentation change.
+
+| Increment | Commit | Scope | Validation |
+| --- | --- | --- | --- |
+| M04-A | `be2db62` | Per-run, per-session AWS clients; close on cleanup | Windows/Ubuntu Offline CI passed |
+| M04-B | `74b96c1` | Additive incomplete statuses and per-run errors | Windows/Ubuntu Offline CI passed |
+| M04-C | `63ed73a` | Bounded tasks; capped opt-in throttling retries | Windows/Ubuntu Offline CI passed |
+| M04-D | `87ba3f9` | Strict completeness exit 201; finite AWS SDK timeouts | Windows/Ubuntu Offline CI passed |
+| Acceptance | `d5c6759` | Real CLI exit and JSON round-trip; timeout/unsupported | CI pending when documented |
+
+See [M04-A](docs/modernization/M04_A_CLIENT_ISOLATION.md),
+[M04-B](docs/modernization/M04_B_COMPLETENESS.md),
+[M04-C](docs/modernization/M04_C_BOUNDS.md),
+[M04-D](docs/modernization/M04_D_STRICT.md) and
+[acceptance tests](docs/modernization/M04_ACCEPTANCE.md).
+
+Remaining work is explicitly tracked: HTML viewer presentation (M09),
+full AWS direct-client timeout/pagination inventory (M05/M06),
+Python 3.14 after M04, cross-account live AWS execution, and full
+long-running/scale evidence. Those checks are not claimed complete.

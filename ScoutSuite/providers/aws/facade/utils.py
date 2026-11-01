@@ -48,16 +48,16 @@ class AWSFacadeUtils:
             :return: A dictionary with the entity keys as keys, and the fetched entities lists as values.
         """
 
-        client = AWSFacadeUtils.get_client(service, session, region)
-
-        # Building a paginator doesn't require any API call so no need to do it concurrently:
-        paginator = client.get_paginator(
-            paginator_name).paginate(**paginator_args)
-
-        # Getting all pages from a paginator requires API calls so we need to do it concurrently:
+        # Creation failures must not be confused with an empty successful page.
         empty = {key: [] for key in entities}
         context = get_current_run_context()
+        client = AWSFacadeUtils.get_client(service, session, region)
+        if client is None:
+            if context is not None:
+                context.record_collection_issue('failed', service, 'ClientConstruction')
+            return empty
         try:
+            paginator = client.get_paginator(paginator_name).paginate(**paginator_args)
             return await run_concurrently(lambda: AWSFacadeUtils._get_all_pages_from_paginator(paginator, entities))
         except ClientError as error:
             code = error.response.get('Error', {}).get('Code', 'ClientError')
