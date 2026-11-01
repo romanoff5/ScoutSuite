@@ -3,6 +3,10 @@
 Does not rewrite legacy findings or infer compliance from missing resources.
 Every supported policy has a narrow named contract and remains read-only.
 """
+import json
+from functools import lru_cache
+from pathlib import Path
+
 from ScoutSuite.core.run_context import get_current_run_context
 
 
@@ -83,10 +87,42 @@ def classify_cloudtrail_data_coverage(trail):
     return 'unknown'
 
 
+@lru_cache(maxsize=1)
+def _rds_ca_catalog():
+    path = (Path(__file__).resolve().parents[1] / 'providers/aws/rules/catalogs'
+            / 'rds-ca-2026-11.json')
+    catalog = json.loads(path.read_text(encoding='utf-8'))
+    if catalog.get('schema_version') != 1 or not catalog.get('catalog_version'):
+        raise ValueError('Unsupported RDS CA reference catalog')
+    current = catalog.get('current_ca', [])
+    deprecated = catalog.get('deprecated_ca', [])
+    if (not current or not deprecated or set(current) & set(deprecated)
+            or len(set(current)) != len(current)
+            or len(set(deprecated)) != len(deprecated)):
+        raise ValueError('Invalid RDS CA reference catalog')
+    return frozenset(current), frozenset(deprecated)
+
+
+def classify_rds_ca_lifecycle(instance):
+    """Current, deprecated or unknown CA; never invent validity for new names."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    identifier = instance.get('CACertificateIdentifier')
+    if not isinstance(identifier, str) or not identifier:
+        return 'unknown'
+    current, deprecated = _rds_ca_catalog()
+    if identifier in current:
+        return 'secure'
+    if identifier in deprecated:
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
     'cloudtrail-data-events-v1': classify_cloudtrail_data_events,
     'cloudtrail-data-coverage-v1': classify_cloudtrail_data_coverage,
+    'rds-ca-lifecycle-v1': classify_rds_ca_lifecycle,
 }
 
 
