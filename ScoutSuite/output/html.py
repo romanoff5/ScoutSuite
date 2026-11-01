@@ -123,9 +123,12 @@ class HTMLReport:
         with zipfile.ZipFile(archive) as bundle:
             validate_asset_archive(bundle)
             # Do not follow an existing vendor-root symlink out of the output.
-            for root in _ASSET_ROOTS:
-                if os.path.islink(os.path.join(self.report_dir, root)):
-                    raise ValueError('Unsafe existing vendor asset destination')
+            for item in bundle.infolist():
+                target = Path(self.report_dir)
+                for part in PurePosixPath(item.filename).parts:
+                    target = target / part
+                    if target.is_symlink():
+                        raise ValueError('Unsafe existing vendor asset destination')
             bundle.extractall(self.report_dir)
             asset_manifest = {
                 'schema_version': 1,
