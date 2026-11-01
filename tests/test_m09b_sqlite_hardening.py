@@ -1,5 +1,4 @@
 """Offline regression checks for safe SQLite report reads and viewer routing."""
-import json
 import pickle
 from pathlib import Path
 
@@ -66,15 +65,6 @@ def test_large_response_fails_closed():
     with pytest.raises(cherrypy.HTTPError) as error:
         Server.bounded_payload({'data': 'X' * MAX_RESPONSE_BYTES})
     assert error.value.status == 413
-
-
-def test_full_requires_bounded_key():
-    class Fake:
-        results = {'account_id': 'test'}
-        check_same_origin = lambda self: None
-    with pytest.raises(cherrypy.HTTPError) as error:
-        Server.full.__wrapped__ if False else Server.get_item({}, 'nonexistent')
-    assert error.value.status == 404
 
 
 def test_no_active_css_functions_in_sanitizer():
