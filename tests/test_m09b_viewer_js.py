@@ -89,6 +89,7 @@ def test_js_and_legacy_templates_contain_no_external_resource_fallback():
     js = (ROOT / 'ScoutSuite/output/data/inc-scoutsuite/sqlite.js').read_text(encoding='utf8')
     assert 'X-Scout-Viewer-Token' in js
     assert 'window.scoutViewerSession' in js
+    assert js.count('encodeURIComponent(query)') == 3
 
 
 def test_csv_export_does_not_emit_executable_spreadsheet_formulas():
