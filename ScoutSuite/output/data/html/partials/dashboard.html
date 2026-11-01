@@ -37,13 +37,13 @@
                         <div class="col-sm-9">
                             <b>Description</b><br>
                             {{#if rationale}}
-                                <p>{{{rationale}}}</p>
+                                <p class="scout-finding-text">{{rationale}}</p>
                             {{else}}
                                 <p>No description available.</p>
                             {{/if}}
                             {{#if remediation}}
                                 <b>Remediation</b><br>
-                                <p>{{{remediation}}}</p>
+                                <p class="scout-finding-text">{{remediation}}</p>
                             {{/if}}
                             {{#if compliance}}
                             <b>Compliance</b><br>
@@ -58,7 +58,7 @@
                                 <b>References</b><br>
                                 <ul>
                                     {{#each references}}
-                                    <li><a href="{{this}}">{{this}}</a></li>
+                                    <li><a href="{{safe_report_href this}}" rel="noopener noreferrer" target="_blank">{{this}}</a></li>
                                     {{/each}}
                                 </ul>
                             {{/if}}
