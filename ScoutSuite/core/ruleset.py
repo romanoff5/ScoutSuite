@@ -76,6 +76,8 @@ class Ruleset:
                 with open(self.filename) as f:
                     ruleset = json.load(f)
                     self.about = ruleset['about'] if 'about' in ruleset else ''
+                    self.profile_id = ruleset.get('profile_id')
+                    self.profile_version = ruleset.get('profile_version')
                     self.rules = {}
                     for filename in ruleset['rules']:
                         self.rules[filename] = []
@@ -94,6 +96,8 @@ class Ruleset:
         file.seek(0)
         ruleset = json.load(file)
         self.about = ruleset['about']
+        self.profile_id = ruleset.get('profile_id')
+        self.profile_version = ruleset.get('profile_version')
         self.rules = {}
         for filename in ruleset['rules']:
             self.rules[filename] = []
