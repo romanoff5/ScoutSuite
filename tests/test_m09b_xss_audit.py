@@ -96,10 +96,10 @@ def test_every_rendered_html_sink_uses_a_sanitizer_and_no_eval():
     assert "Object.assign({}, getResource(path))" in js
 
 
-def test_legacy_js_action_parser_rejects_code_injection_and_malicious_urls():
+def check_legacy_js_action_parser_rejects_code_injection_and_malicious_urls():
     node = shutil.which('node')
     if not node:
-        pytest.skip('Node is unavailable; the static guard suite still runs')
+        raise RuntimeError('Node is required for JS action parser security verification')
     script = r"""
     const assert = require('assert');
     require(process.argv[1]);
@@ -145,12 +145,12 @@ def test_legacy_js_action_parser_rejects_code_injection_and_malicious_urls():
     assert proc.returncode == 0, proc.stdout + '\n' + proc.stderr
 
 
-def test_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_path):
+def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_path):
     chrome = next((shutil.which(binary) for binary in (
         'chromium', 'chromium-browser', 'google-chrome', 'chrome')
         if shutil.which(binary)), None)
     if not chrome:
-        pytest.skip('Headless Chromium not installed on this runner')
+        return False
     malicious = (
         '<img src="x" onerror="document.body.dataset.pwned=1">'
         '<svg onload="document.body.dataset.pwned=1"></svg>'
@@ -200,3 +200,4 @@ def test_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_path
         'badHref': None, 'attackAction': None, 'dataHref': None,
         'scripts': 0, 'errorHandler': False,
     }
+    return True
