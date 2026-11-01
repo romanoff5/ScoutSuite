@@ -3,6 +3,7 @@ import cherrypy
 
 import re
 import ipaddress
+from pathlib import Path
 
 count_re = re.compile(r".*_count$")
 MAX_PAGE_SIZE = 100
@@ -25,6 +26,41 @@ class Server:
         :return:                        The server object.
         """
         self.results = SqliteDict(filename, flag='r')
+        self.report_root = Path(filename).resolve().parent
+
+    def check_same_origin(self):
+        host = cherrypy.request.headers.get('Host', '').split(':', 1)[0].lower()
+        if host not in ('127.0.0.1', 'localhost', '[::1]'):
+            raise cherrypy.HTTPError(403, 'Invalid local report host')
+        origin = cherrypy.request.headers.get('Origin')
+        if origin:
+            valid = {'http://127.0.0.1:' + str(cherrypy.server.socket_port),
+                     'http://localhost:' + str(cherrypy.server.socket_port)}
+            if origin not in valid:
+                raise cherrypy.HTTPError(403, 'Cross-origin access denied')
+
+    @cherrypy.expose
+    def default(self, *parts):
+        """Read-only same-origin HTML and packaged static assets. Never serve databases."""
+        self.check_same_origin()
+        if not parts or any(p in ('', '.', '..') for p in parts):
+            raise cherrypy.HTTPError(404)
+        relative = Path(*parts)
+        top = parts[0]
+        file = (self.report_root / relative).resolve()
+        if not file.is_relative_to(self.report_root) or not file.is_file():
+            raise cherrypy.HTTPError(404)
+        if (len(parts) == 1 and top.endswith('.html')):
+            pass
+        elif (top.startswith('inc-') and
+              file.suffix.lower() in ('.css', '.js', '.ico', '.png', '.jpg',
+                                      '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf')):
+            pass
+        else:
+            raise cherrypy.HTTPError(404)
+        cherrypy.response.headers['Cache-Control'] = 'no-store'
+        cherrypy.response.headers['X-Content-Type-Options'] = 'nosniff'
+        return cherrypy.lib.static.serve_file(str(file))
 
     @cherrypy.expose()
     @cherrypy.tools.json_out()
@@ -37,6 +73,7 @@ class Server:
 
         :return:                        The summary data of the report.
         """
+        self.check_same_origin()
         data = dict(self.results)
         services = data.get('services') or {}
         stripped_services = {}
@@ -61,6 +98,7 @@ class Server:
         :param key:                     Key of the requested information, separated by the character '¤'.
         :return:                        The data at the requested location stripped of its nested data.
         """
+        self.check_same_origin()
         result = self.get_item(self.results, key)
         # Returns only indexes or length if it's a complex type
         if isinstance(result, dict) or isinstance(result, SqliteDict):
@@ -81,6 +119,7 @@ class Server:
         :param key:                     Key of the requested information, separated by the character '¤'.
         :return:                        The data at the requested location.
         """
+        self.check_same_origin()
         result = self.get_item(self.results, key)
         if isinstance(result, (dict, SqliteDict)):
             result = dict(result)
@@ -101,6 +140,7 @@ class Server:
         :param pagesize:                The size of the page you request.
         :return:                        A subset of the data at the requested location.
         """
+        self.check_same_origin()
         result = self.get_item(self.results, key)
 
         page = self.parse_bounded_integer(page, MAX_PAGE_INDEX, minimum=0)
