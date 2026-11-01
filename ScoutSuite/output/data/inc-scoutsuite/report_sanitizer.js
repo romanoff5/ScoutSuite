@@ -57,7 +57,8 @@
     function allowedHref(value) {
         if (typeof value !== 'string') return false;
         const url = value.trim();
-        if (!url || /[\u0000-\u001f\u007f]/.test(url) || url.startsWith('//')) return false;
+        if (!url || /[\u0000-\u001f\u007f]/.test(url) || url.startsWith('//') ||
+                url.split(/[?#]/, 1)[0].split('/').includes('..')) return false;
         return url.startsWith('#') || /^(https?:\/\/|mailto:)/i.test(url) ||
             /^(?:\.\/)?[A-Za-z0-9_./%-]+(?:\?[A-Za-z0-9_=&%.-]*)?$/.test(url);
     }
@@ -65,7 +66,7 @@
     function allowedAsset(value) {
         if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) return false;
         const url = value.trim();
-        return /^(?:\.\/)?inc-[a-z0-9_-]+\/[a-zA-Z0-9_./%-]+$/.test(url) &&
+        return /^(?:\.\/)?inc-[a-z0-9_-]+\/[a-zA-Z0-9_./-]+$/.test(url) &&
             !url.split('/').includes('..');
     }
 
