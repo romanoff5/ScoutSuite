@@ -23,6 +23,15 @@ def archive_with(name, payload=b'ok', symlink=False):
     return zipfile.ZipFile(stream)
 
 
+def test_bundled_third_party_assets_extract_offline(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    archive = root / 'ScoutSuite/output/data/includes.zip'
+    with zipfile.ZipFile(archive) as z:
+        safe_extract_report_assets(z, tmp_path)
+    assert (tmp_path / 'inc-fontawesome/css/all.min.css').is_file()
+    assert (tmp_path / 'inc-jquery/jquery-3.3.1.min.js').is_file()
+
+
 def test_approved_local_assets_extract(tmp_path):
     with archive_with('inc-fontawesome/css/all.min.css') as z:
         safe_extract_report_assets(z, tmp_path)
