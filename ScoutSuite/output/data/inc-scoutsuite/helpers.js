@@ -1,3 +1,11 @@
+
+/* External reference links may be controlled by custom rulesets, cloud metadata,
+ * or local report files. A valid HTML-escaped string is not a safe URL scheme. */
+Handlebars.registerHelper('safe_report_href', function (href) {
+    if (typeof href !== 'string' || typeof scoutSafeHref !== 'function') return '#';
+    return scoutSafeHref(href) ? href.trim() : '#';
+});
+
 /**********************
  * Handlebars helpers *
  **********************/
