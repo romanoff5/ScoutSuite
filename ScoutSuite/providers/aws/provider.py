@@ -52,6 +52,9 @@ class AWSProvider(BaseProvider):
 
         super().__init__(report_dir, timestamp,
                                           services, skipped_services, result_format)
+        # M10 services require explicit opt-in. Preserve legacy default scans.
+        if not services and 'accessanalyzer' in self.service_list:
+            self.service_list.remove('accessanalyzer')
 
     def get_report_name(self):
         """
