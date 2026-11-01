@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import tempfile
 
 from ScoutSuite.core.console import print_debug, print_error, prompt_yes_no, print_exception
@@ -9,6 +10,28 @@ from ScoutSuite.core.rule_definition import RuleDefinition
 
 aws_ip_ranges_filename = 'ip-ranges.json'
 ip_ranges_from_args = 'ip-ranges-from-args'
+
+
+class PolicyProfileError(ValueError):
+    """Invalid opt-in policy profile; never fall back to an empty ruleset."""
+
+
+def _check_profile(data):
+    """Validate optional profile metadata without changing legacy rulesets."""
+    values = (data.get('profile_id'), data.get('profile_version'))
+    declared = any(value is not None for value in values)
+    if not declared:
+        return
+    if not all(isinstance(value, str) and value for value in values):
+        raise PolicyProfileError('Profile ID and version must both be present')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{1,63}', data['profile_id']):
+        raise PolicyProfileError('Invalid profile ID')
+    if not re.fullmatch(r'[0-9]{4}\\.[0-9]{1,2}\\.[0-9]+', data['profile_version']):
+        raise PolicyProfileError('Invalid profile version')
+    if data.get('schema_version') != 1:
+        raise PolicyProfileError('Unsupported policy profile schema version')
+    if not isinstance(data.get('rules'), dict) or not data['rules']:
+        raise PolicyProfileError('Profile must explicitly select rule definitions')
 
 
 class Ruleset:
@@ -75,6 +98,7 @@ class Ruleset:
             try:
                 with open(self.filename) as f:
                     ruleset = json.load(f)
+                    _check_profile(ruleset)
                     self.about = ruleset['about'] if 'about' in ruleset else ''
                     self.profile_id = ruleset.get('profile_id')
                     self.profile_version = ruleset.get('profile_version')
@@ -83,6 +107,8 @@ class Ruleset:
                         self.rules[filename] = []
                         for rule in ruleset['rules'][filename]:
                             self.handle_rule_versions(filename, rule_type, rule)
+            except PolicyProfileError:
+                raise
             except Exception as e:
                 print_exception(f'Ruleset file {self.filename} contains malformed JSON: {e}')
                 self.rules = []
@@ -95,6 +121,7 @@ class Ruleset:
     def load_rules(self, file, rule_type):
         file.seek(0)
         ruleset = json.load(file)
+        _check_profile(ruleset)
         self.about = ruleset['about']
         self.profile_id = ruleset.get('profile_id')
         self.profile_version = ruleset.get('profile_version')
