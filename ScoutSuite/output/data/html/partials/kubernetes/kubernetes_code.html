@@ -62,5 +62,10 @@
 
     }
 
+    // Legacy code-copy function was declared as a top-level const (not a
+    // window property). Expose this trusted implementation to the
+    // sanitizer's delegated click handler; never inline untrusted IDs as JS.
+    window.copyCode = copyCode
+
     Handlebars.registerPartial('kubernetes_code', $('#kubernetes_code_partial').html())
 </script>
