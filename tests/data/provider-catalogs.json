@@ -77,6 +77,7 @@
         "default_rule_keys": [
             "acm-certificate-with-close-expiration-date.json",
             "acm-certificate-with-transparency-logging-disabled.json",
+            "awslambda-function-deprecated-runtime.json",
             "cloudformation-stack-with-role.json",
             "cloudfront-distribution-cleartext-origin.json",
             "cloudfront-distribution-insecure-origin.json",
@@ -99,6 +100,7 @@
             "ec2-ebs-snapshot-not-encrypted.json",
             "ec2-ebs-snapshot-public.json",
             "ec2-ebs-volume-not-encrypted.json",
+            "ec2-instance-imdsv1-enabled.json",
             "ec2-instance-in-security-group.json",
             "ec2-instance-type.json",
             "ec2-instance-types.json",
