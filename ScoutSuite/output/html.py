@@ -42,7 +42,9 @@ def validate_asset_archive(bundle):
     seen = set()
     total_size = 0
     for item in infos:
-        name = item.filename
+        # ZipInfo.filename is normalized on Windows. Validate the raw entry
+        # name too, so a crafted backslash/drive path cannot bypass checks.
+        name = item.orig_filename
         path = PurePosixPath(name)
         parts = path.parts
         if (not name or '\\' in name or name.startswith('/')
