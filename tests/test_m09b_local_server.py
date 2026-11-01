@@ -1,10 +1,13 @@
 """M09-B: bounded, bearer-authorized, read-only local SQLite API."""
 from pathlib import Path
+import pickle
 
 import cherrypy
 import pytest
 from sqlitedict import SqliteDict
 
+from ScoutSuite.output.safe_pickle import UnsafeReportValue, decode_report_pickle
+from ScoutSuite.output.result_encoder import SqlLiteEncoder
 from ScoutSuite.core.server import (
     Server, pagination, validate_key, validate_viewer_request,
 )
@@ -112,3 +115,37 @@ def test_server_starts_only_on_fixed_loopback_with_local_token(monkeypatch, loca
     file = Path(local_db).parent / 'scoutsuite_viewer_session.js'
     assert token in file.read_text(encoding='utf8')
     assert 'http' not in file.read_text(encoding='utf8')
+
+
+class _Poison:
+    def __reduce__(self):
+        return (eval, ("__import__('os').system('echo UNSAFE-PICKLE')",))
+
+
+def test_legacy_sqlite_pickle_decoder_allows_only_json_values():
+    benign = {'services': {'ec2': {'findings': {'example': {
+        'items': ['a', 'b'], 'flagged_items': 1}}}},
+        'collection_status': {'complete': False, 'issues': []}}
+    assert decode_report_pickle(pickle.dumps(benign)) == benign
+    assert decode_report_pickle(pickle.dumps([None, True, 'text', 3, 1.25])) == [
+        None, True, 'text', 3, 1.25]
+    with pytest.raises(UnsafeReportValue):
+        decode_report_pickle(pickle.dumps(_Poison()))
+    with pytest.raises(UnsafeReportValue):
+        decode_report_pickle(pickle.dumps({'x': 1}) + b'junk')
+    with pytest.raises(UnsafeReportValue):
+        decode_report_pickle(pickle.dumps({'x': {1: 'not a JSON key'}}))
+
+
+def test_untrusted_sqlite_pickled_globals_rejected_by_server_and_loader(tmp_path):
+    db_file = tmp_path / 'malicious.db'
+    with SqliteDict(str(db_file), autocommit=True) as db:
+        db['provider_code'] = 'aws'
+        db['report_schema_version'] = 1
+        db['services'] = {}
+        db['payload'] = _Poison()
+    with pytest.raises(UnsafeReportValue):
+        Server(str(db_file))
+    reader = SqlLiteEncoder(report_name='malicious', report_dir=str(tmp_path))
+    with pytest.raises(UnsafeReportValue):
+        reader.load_from_file('RESULTS', config_path=str(db_file))
