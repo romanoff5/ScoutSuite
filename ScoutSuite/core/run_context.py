@@ -50,6 +50,7 @@ class RunContext:
     _owns_loop: bool = field(default=False, init=False, repr=False)
     _token: Optional[Token] = field(default=None, init=False, repr=False)
     _children: Set[asyncio.Future] = field(default_factory=set, init=False, repr=False)
+    _api_semaphore: Optional[asyncio.Semaphore] = field(default=None, init=False, repr=False)
     errors: list = field(default_factory=list, init=False, repr=False)
     collection_issues: list = field(default_factory=list, init=False, repr=False)
     _clients: dict = field(default_factory=dict, init=False, repr=False)
@@ -83,6 +84,13 @@ class RunContext:
             self._executor = ThreadPoolExecutor(max_workers=self.max_workers)
         return self._executor
     
+    @property
+    def api_semaphore(self) -> asyncio.Semaphore:
+        """Bound API work in flight for this one assessment."""
+        if self._api_semaphore is None:
+            self._api_semaphore = asyncio.Semaphore(max(1, self.max_workers))
+        return self._api_semaphore
+
     @property
     def throttler(self) -> Throttler:
         """Get the throttler for this run."""
@@ -187,6 +195,7 @@ class RunContext:
         self._loop = None
         self._owns_loop = False
         self._children.clear()
+        self._api_semaphore = None
 
     async def aclose(self) -> None:
         """Drain owned tasks and join workers without blocking the event loop."""

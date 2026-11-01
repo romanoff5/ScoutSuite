@@ -1,5 +1,7 @@
 import asyncio
 import inspect
+import random
+from itertools import product
 from contextvars import copy_context
 import re
 from weakref import WeakKeyDictionary
@@ -30,32 +32,42 @@ def get_non_provider_id(name):
 _fallback_throttlers = WeakKeyDictionary()
 
 
-async def run_concurrently(function, backoff_seconds=15):
-    try:
-        ctx = get_current_run_context()
-        if ctx is not None:
-            throttler = ctx.throttler
-        else:
-            loop = asyncio.get_running_loop()
-            throttler = _fallback_throttlers.get(loop)
-            if throttler is None:
-                throttler = _fallback_throttlers[loop] = Throttler(rate_limit=999999, period=1)
-        async with throttler:
-            return await run_function_concurrently(function)
-    except Exception as e:
-        raise
-        """
-        Commented out so this does not trigger errors from is_throttled, which is not fully implemented
-        # Determine whether the exception is due to API throttling
-        if is_throttled(e):
-            source_file = inspect.getsourcefile(function)
-            source_file_line = inspect.getsourcelines(function)[1]
-            print_warning(f'Hitting API rate limiting ({"/".join(source_file.split("/")[-2:])} L{source_file_line}), will retry in {backoff_seconds}s')
-            await asyncio.sleep(backoff_seconds)
-            return await run_concurrently(function, backoff_seconds + 15)
-        else:
+async def run_concurrently(function, backoff_seconds=15, *, max_attempts=1):
+    """Run a read-only SDK call with bounded concurrency and opt-in retries.
+
+    Botocore already retries; default to one application-level attempt to
+    avoid multiplying retry layers. Explicit retries are throttling-only.
+    """
+    if not isinstance(max_attempts, int) or not 1 <= max_attempts <= 10:
+        raise ValueError('max_attempts must be between 1 and 10')
+    if backoff_seconds <= 0:
+        raise ValueError('backoff_seconds must be positive')
+
+    ctx = get_current_run_context()
+    if ctx is not None:
+        throttler = ctx.throttler
+    else:
+        loop = asyncio.get_running_loop()
+        throttler = _fallback_throttlers.get(loop)
+        if throttler is None:
+            throttler = _fallback_throttlers[loop] = Throttler(rate_limit=999999, period=1)
+
+    for attempt in range(max_attempts):
+        try:
+            if ctx is not None:
+                async with ctx.api_semaphore:
+                    async with throttler:
+                        return await run_function_concurrently(function)
+            async with throttler:
+                return await run_function_concurrently(function)
+        except asyncio.CancelledError:
             raise
-        """
+        except Exception as error:
+            if attempt + 1 == max_attempts or not is_throttled(error):
+                raise
+            delay = min(backoff_seconds * (2 ** attempt), 60)
+            delay *= random.uniform(0.75, 1.25)
+            await asyncio.sleep(delay)
 
 
 def run_function_concurrently(function):
@@ -80,63 +92,80 @@ def _create_tracked_task(coroutine):
     return context.track_future(task) if context is not None else task
 
 
+def _record_child_failure():
+    """An incomplete child result must never masquerade as a clean scan."""
+    context = get_current_run_context()
+    if context is not None:
+        context.record_collection_issue('failed', 'assessment', 'ChildTaskError')
+    from ScoutSuite.core.console import print_exception
+    print_exception('Collection child task failed')
+
+
+async def _bounded_workers(jobs, worker, limit):
+    """Consume lazy jobs using at most `limit` live asyncio tasks."""
+    iterator = iter(jobs)
+    results = []
+
+    async def consume():
+        while True:
+            try:
+                job = next(iterator)
+            except StopIteration:
+                return
+            try:
+                result = await worker(job)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _record_child_failure()
+            else:
+                results.append(result)
+
+    count = min(max(1, limit), len(jobs))
+    tasks = [_create_tracked_task(consume()) for _ in range(count)]
+    try:
+        await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+    return results
+
+
 async def get_and_set_concurrently(get_and_set_funcs: [], entities: [], **kwargs):
-    """
-    Given a list of get_and_set_* functions (ex: get_and_set_description, get_and_set_attributes,
-    get_and_set_policy, etc.) and a list of entities (ex: stacks, keys, load balancers, vpcs, etc.),
-    get_and_set_concurrently will call each of these functions concurrently on each entity.
-
-    :param get_and_set_funcs: list of functions that takes a region and an entity (they must have the following
-    signature: region: str, entity: {}) and then fetch and set some kind of attributes to this entity.
-    :param entities: list of a same kind of entities
-    :param kwargs: used to pass cloud provider specific parameters (ex: region or vpc for AWS, etc.) to the given
-    functions.
-
-    :return:
-    """
-
-    if len(entities) == 0:
+    """Fetch per-entity attributes with a bounded number of child tasks."""
+    if not entities or not get_and_set_funcs:
         return
+    context = get_current_run_context()
+    limit = context.max_workers if context is not None else 10
+    class Jobs:
+        def __len__(self):
+            return len(entities) * len(get_and_set_funcs)
 
-    tasks = {
-        _create_tracked_task(get_and_set_func(entity, **kwargs))
-        for entity in entities for get_and_set_func in get_and_set_funcs
-    }
-    await asyncio.wait(tasks)
+        def __iter__(self):
+            return product(entities, get_and_set_funcs)
+
+    jobs = Jobs()
+
+    async def invoke(job):
+        func, entity = job[1], job[0]
+        await func(entity, **kwargs)
+
+    await _bounded_workers(jobs, invoke, limit)
 
 
 async def map_concurrently(coroutine, entities, **kwargs):
-    """
-    Given a list of entities, executes coroutine `coroutine` concurrently on each entity and returns a list of the
-    obtained results ([await coroutine(entity_x), await coroutine(entity_a), ..., await coroutine(entity_z)]).
-
-    :param coroutine: coroutine to be executed concurrently. Takes an entity as parameter and returns a new entity.
-    If the given coroutine does some exception handling, it should ensure to propagate the handled exceptions so
-    `map_concurrently` can handle them as well (in particular ignoring them) to avoid `None` values in the list
-    returned.
-    :param entities: a list of the same type of entity (ex: cluster ids)
-
-    :return: a list of new entities (ex: clusters)
-    """
-
-    if len(entities) == 0:
+    """Map with bounded tasks, preserving completion-order successful results."""
+    if not entities:
         return []
+    context = get_current_run_context()
+    limit = context.max_workers if context is not None else 10
 
-    results = []
+    async def invoke(entity):
+        return await coroutine(entity, **kwargs)
 
-    tasks = {
-        _create_tracked_task(coroutine(entity, **kwargs)) for entity in entities
-    }
-
-    for task in asyncio.as_completed(tasks):
-        try:
-            result = await task
-        except Exception:
-            pass
-        else:
-            results.append(result)
-
-    return results
+    return await _bounded_workers(entities, invoke, limit)
 
 
 def is_throttled(exception):
