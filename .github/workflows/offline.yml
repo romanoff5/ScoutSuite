@@ -76,6 +76,9 @@ jobs:
       - name: Full guarded offline suite including M01 negative and CLI cases
         if: "!cancelled() && steps.build.outcome == 'success'"
         run: python -B tools/ci.py tests
+      - name: Network-isolated adversarial XSS parser and browser verification
+        if: "!cancelled() && steps.build.outcome == 'success'"
+        run: python -B tools/ci.py xss_browser
       - name: Guarded installed package and minimal dependency smoke
         if: "!cancelled() && steps.build.outcome == 'success'"
         run: python -B tools/ci.py packaging
