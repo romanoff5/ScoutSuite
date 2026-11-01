@@ -229,7 +229,7 @@ function processTemplate(id1, containerId, list, replace) {
     if (document.getElementById(id1)) {
         var templateToCompile = document.getElementById(id1).innerHTML
         var compiledTemplate = Handlebars.compile(templateToCompile)
-        var innerHtml = compiledTemplate({items: list})
+        var innerHtml = sanitizeReportHTML(compiledTemplate({items: list}))
         if (replace) {
             document.getElementById(containerId).innerHTML = innerHtml
         } else {
@@ -618,8 +618,7 @@ function findAndShowEC2Object(path, id) {
     } else if (etype === 'vpcs') {
         showPopup(single_vpc_template(object))
     } else if (etype === 'network_acls') {
-        object['name'] = id
-        showPopup(single_vpc_network_acl_template(object))
+        showPopup(single_vpc_network_acl_template(Object.assign({}, object, {name: id})))
     }
 }
 
@@ -688,7 +687,7 @@ function showEC2SecurityGroup(region, vpc, id) {
 function showObject(path, attrName, attrValue) {
     const pathArray = path.split('.')
     const pathLength = pathArray.length
-    let data = getResource(path)
+    let data = Object.assign({}, getResource(path))
 
     // Adds the resource path values to the data context
     for (let i = 0; i < pathLength - 1; i += 2) {
@@ -745,8 +744,7 @@ function showIAMManagedPolicy(policyId) {
     } else if (getFormat() === resultFormats.sqlite) {
         console.log('TODO (SQLite) 6')
     }
-    data['policy_id'] = policyId
-    showIAMPolicy(data)
+    showIAMPolicy(Object.assign({}, data, {policy_id: policyId}))
 }
 
 /**
@@ -799,9 +797,9 @@ function showS3Object(bucketId, keyId) {
     } else if (getFormat() === resultFormats.sqlite) {
         console.log('TODO (SQLite) 9')
     }
-    data['key_id'] = keyId
-    data['bucket_id'] = bucketId
-    showPopup(single_s3_object_template(data))
+    showPopup(single_s3_object_template(Object.assign({}, data, {
+        key_id: keyId, bucket_id: bucketId
+    })))
 }
 
 /**
@@ -809,7 +807,7 @@ function showS3Object(bucketId, keyId) {
  * @param {*} content
  */
 function showPopup(content) {
-    $('#modal-container').html(content)
+    $('#modal-container').html(sanitizeReportHTML(content))
     $('#modal-container').modal()
 }
 
@@ -893,7 +891,7 @@ function exportSummary() {
  * Show About Scout Suite modal
  */
 function showAbout() {
-    $('#modal-container').html(about_scoutsuite_template())
+    $('#modal-container').html(sanitizeReportHTML(about_scoutsuite_template()))
     $('#modal-container').modal()
 }
 
@@ -911,7 +909,7 @@ function hidePleaseWait () {
  * Shows last run details modal
  */
 function showLastRunDetails() {
-    $('#modal-container').html(last_run_details_template(runResults))
+    $('#modal-container').html(sanitizeReportHTML(last_run_details_template(runResults)))
     $('#modal-container').modal()
 }
 
@@ -919,7 +917,7 @@ function showLastRunDetails() {
  * Shows resources details modal
  */
 function showResourcesDetails() {
-    $('#modal-container').html(resources_details_template(runResults));
+    $('#modal-container').html(sanitizeReportHTML(resources_details_template(runResults)));
     $('#modal-container').modal()
 
     $('#resources_details_download_csv_button').click(function(){
@@ -1388,7 +1386,7 @@ function addTemplate(group, service, section, resourceType, path, suffix) {
         })) {
             throw new Error('Invalid report template identifier')
         }
-        template.innerHTML = '{{> ' + partialName + " service_group = '" + group + "' service_name = '" + service + "' resource_type = '" + resourceType + "' partial_name = '" + path + "'}}"
+        template.textContent = '{{> ' + partialName + " service_group = '" + group + "' service_name = '" + service + "' resource_type = '" + resourceType + "' partial_name = '" + path + "'}}"
         $('body').append(template)
     }
 }
