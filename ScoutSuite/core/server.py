@@ -56,6 +56,9 @@ class Server:
               file.suffix.lower() in ('.css', '.js', '.ico', '.png', '.jpg',
                                       '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf')):
             pass
+        elif (top == 'scoutsuite-results' and len(parts) == 2 and
+              (parts[1].endswith('-exceptions.js') or parts[1].endswith('-errors.js'))):
+            pass
         else:
             raise cherrypy.HTTPError(404)
         cherrypy.response.headers['Cache-Control'] = 'no-store'
