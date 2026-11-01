@@ -8,6 +8,7 @@ import cherrypy
 from sqlitedict import SqliteDict
 
 from ScoutSuite.output.result_encoder import validate_results
+from ScoutSuite.output.safe_pickle import decode_report_pickle
 
 _SEPARATOR = '¤'
 _MAX_KEY_LENGTH = 2048
@@ -106,7 +107,7 @@ class Server:
             if fp.read(16) != b'SQLite format 3\x00':
                 raise ValueError('Invalid report SQLite header')
         self.viewer_token = viewer_token or secrets.token_urlsafe(32)
-        self.results = SqliteDict(str(filename), flag='r')
+        self.results = SqliteDict(str(filename), flag='r', decode=decode_report_pickle)
         validate_results(dict(self.results))
 
     @cherrypy.expose
