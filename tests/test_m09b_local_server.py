@@ -41,7 +41,7 @@ def test_path_is_treated_as_data_not_disk(local_db, value):
     api = Server(str(local_db), viewer_token='B' * 32)
     with pytest.raises(cherrypy.HTTPError) as e:
         api.full(value)
-    assert e.value.status == '404 Not Found'
+    assert e.value.status == 404
 
 
 @pytest.mark.parametrize('bad', [
