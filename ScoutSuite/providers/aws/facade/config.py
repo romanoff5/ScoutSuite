@@ -77,7 +77,7 @@ class ConfigFacade(AWSBaseFacade):
                 statuses = result.get('ConfigurationRecordersStatus', [])
                 status = next((
                     s for s in statuses if (arn and s.get('arn') == arn)
-                    or (not arn and s.get('name') == name)
+                    or (name and s.get('name') == name)
                 ), None)
             except Exception:
                 status = None
