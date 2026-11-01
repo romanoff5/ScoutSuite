@@ -118,11 +118,48 @@ def classify_rds_ca_lifecycle(instance):
     return 'unknown'
 
 
+@lru_cache(maxsize=1)
+def _alb_tls_catalog():
+    path = (Path(__file__).resolve().parents[1] / 'providers/aws/rules/catalogs'
+            / 'alb-tls-2026-11.json')
+    catalog = json.loads(path.read_text(encoding='utf-8'))
+    if catalog.get('schema_version') != 1 or not catalog.get('catalog_version'):
+        raise ValueError('Unsupported ALB TLS protocol catalog')
+    secure = catalog.get('allows_tls_1_2_or_newer_only', [])
+    legacy = catalog.get('allows_tls_before_1_2', [])
+    if (not secure or not legacy or set(secure) & set(legacy)
+            or len(set(secure)) != len(secure)
+            or len(set(legacy)) != len(legacy)):
+        raise ValueError('Invalid ALB TLS protocol catalog')
+    return frozenset(secure), frozenset(legacy)
+
+
+def classify_alb_listener_tls(listener):
+    """Evaluate protocol floor only, not cipher strength or FIPS compliance."""
+    if not isinstance(listener, dict):
+        return 'unknown'
+    protocol = listener.get('Protocol')
+    if protocol in ('HTTP', 'TCP', 'UDP', 'TCP_UDP'):
+        return 'not_applicable'
+    if protocol not in ('HTTPS', 'TLS'):
+        return 'unknown'
+    policy = listener.get('SslPolicy')
+    if not isinstance(policy, str) or not policy:
+        return 'unknown'
+    secure, legacy = _alb_tls_catalog()
+    if policy in secure:
+        return 'secure'
+    if policy in legacy:
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
     'cloudtrail-data-events-v1': classify_cloudtrail_data_events,
     'cloudtrail-data-coverage-v1': classify_cloudtrail_data_coverage,
     'rds-ca-lifecycle-v1': classify_rds_ca_lifecycle,
+    'alb-listener-tls-v1': classify_alb_listener_tls,
 }
 
 
@@ -136,7 +173,14 @@ def evaluate_rule_evidence(rule, services):
 
     counts = {key: 0 for key in ('secure', 'insecure', 'unknown', 'not_applicable')}
     unknown_paths = []
-    for path, resource in _walk_resources(services, rule.path.split('.')):
+    parts = rule.path.split('.')
+    # SSL policy is a scalar; classification needs the parent listener
+    # Protocol to distinguish HTTP/not-applicable from HTTPS/unknown.
+    if policy == 'alb-listener-tls-v1':
+        if not parts or parts[-1] != 'SslPolicy':
+            raise ValueError('Unexpected ALB security-policy rule path')
+        parts = parts[:-1]
+    for path, resource in _walk_resources(services, parts):
         status = CLASSIFIERS[policy](resource)
         counts[status] += 1
         if status == 'unknown':
