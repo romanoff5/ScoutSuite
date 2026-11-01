@@ -51,7 +51,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/scoutsuite-ci/pip-cache
-          key: offline-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-${{ hashFiles('requirements*.txt', 'dev-requirements.txt', 'tests/requirements*.txt', 'constraints/**', 'pyproject.toml', 'tools/ci.py') }}
+          key: offline-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-${{ hashFiles('requirements*.txt', 'dev-requirements.txt', 'tests/requirements*.txt', 'constraints/**', 'pyproject.toml') }}
+          restore-keys: |
+            offline-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-
       - name: Acquire pinned dependencies and workflow validator (online setup only)
         id: acquire
         run: python -B tools/ci.py acquire
