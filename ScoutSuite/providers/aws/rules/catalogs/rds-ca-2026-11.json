@@ -1,0 +1,21 @@
+{
+    "schema_version": 1,
+    "catalog_id": "aws-rds-ca",
+    "catalog_version": "2026.11.0",
+    "review_date": "2026-11-01",
+    "owner": "ScoutSuite fork maintainer",
+    "reference_urls": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL-certificate-rotation.html",
+        "https://aws.amazon.com/blogs/aws/rotate-your-ssl-tls-certificates-now-amazon-rds-and-aurora-expire-in-2024/"
+    ],
+    "current_ca": [
+        "rds-ca-rsa2048-g1",
+        "rds-ca-rsa4096-g1",
+        "rds-ca-ecc384-g1"
+    ],
+    "deprecated_ca": [
+        "rds-ca-2015",
+        "rds-ca-2019"
+    ],
+    "notes": "Deprecated means migration needed/review; do not claim certificate expiration per resource without region-specific DescribeCertificates. rds-ca-2019 expiry timelines vary by region. Exact unknown names are not automatically trusted."
+}
