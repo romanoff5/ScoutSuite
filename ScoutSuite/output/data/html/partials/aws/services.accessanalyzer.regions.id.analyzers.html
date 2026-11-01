@@ -1,0 +1,23 @@
+<!-- M10-A: escaped text only; no untrusted URLs or event attributes. -->
+<script id="services.accessanalyzer.regions.id.analyzers.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active">
+    <h4 class="list-group-item-heading">{{name}}</h4>
+  </div>
+  <div class="list-group-item">
+    <h4>Analyzer configuration</h4>
+    <ul>
+      <li>ARN: <samp>{{arn}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Type: {{type}}</li>
+      <li>Status: {{status}}</li>
+      <li>Status reason: {{status_reason}}</li>
+      <li>Evaluation: {{evaluation_status}}</li>
+    </ul>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial(
+    "services.accessanalyzer.regions.id.analyzers",
+    $("#services\\.accessanalyzer\\.regions\\.id\\.analyzers\\.partial").html()
+  );
+</script>
