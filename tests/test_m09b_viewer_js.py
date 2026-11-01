@@ -110,9 +110,9 @@ vm.runInContext('downloadAsCsv("test.csv", [["field"],["=1+1"],["\\t@SUM(A1)"],[
 assert(csvBlob, 'Expected offline CSV export Blob');
 csvBlob.text().then(csv => {
   assert(csv.includes("'=1+1"));
-  assert(csv.includes("'\\t@SUM(A1)"));
+  assert(csv.includes("'\t@SUM(A1)"));
   assert(csv.includes('safe'));
-  assert(!csv.includes('\\n=1+1\\n'));
+  assert(!csv.includes('\n=1+1\n'));
 }).catch(err => {console.error(err);process.exitCode=1});
 """
     evaluate(script, 'ScoutSuite/output/data/inc-scoutsuite/scoutsuite.js')
