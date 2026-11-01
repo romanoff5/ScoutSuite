@@ -1,4 +1,4 @@
-import time
+from datetime import datetime, timedelta, timezone
 
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.base import AWSResources
@@ -44,30 +44,99 @@ class Trails(AWSResources):
                     'LatestCloudWatchLogsDeliveryError', 'LatestCloudWatchLogsDeliveryTime']:
             trail[key] = trail[key] if key in trail else None
 
-        # using trail ARN instead of name as with Organizations the trail would be located in another account
+        # Selector collection failure is not the same as no events configured.
+        if trail.get('selector_collection_status') == 'failed':
+            trail['DataEventsEnabled'] = None
+            trail['ManagementEventsEnabled'] = None
+            trail['wildcard_data_logging'] = None
+            return trail_id, trail
+
+        basic = trail.get('EventSelectors') or []
+        advanced = trail.get('AdvancedEventSelectors') or []
+        data_enabled = any(
+            bool(selector.get('DataResources'))
+            for selector in basic
+        )
+        management_enabled = any(
+            selector.get('IncludeManagementEvents') is True
+            for selector in basic
+        )
+        for selector in advanced:
+            categories = self._selector_values(
+                selector, 'eventCategory', 'Equals'
+            )
+            data_enabled = data_enabled or 'Data' in categories
+            management_enabled = management_enabled or 'Management' in categories
+
+        trail['DataEventsEnabled'] = data_enabled
+        trail['ManagementEventsEnabled'] = management_enabled
         trail['wildcard_data_logging'] = self.data_logging_status(trail)
-
-        for event_selector in trail.get('EventSelectors', []):
-            trail['DataEventsEnabled'] = len(event_selector['DataResources']) > 0
-            trail['ManagementEventsEnabled'] = event_selector['IncludeManagementEvents']
-
         return trail_id, trail
 
+    @staticmethod
+    def _selector_values(selector, field, operator):
+        values = []
+        for item in selector.get('FieldSelectors', []):
+            if item.get('Field') == field:
+                values.extend(item.get(operator, []) or [])
+        return values
+
     def data_logging_status(self, trail):
-        for event_selector in trail.get('EventSelectors', []):
-            has_wildcard = \
-                {'Values': ['arn:aws:s3'], 'Type': 'AWS::S3::Object'} in event_selector['DataResources'] or \
-                {'Values': ['arn:aws:lambda'], 'Type': 'AWS::Lambda::Function'} in event_selector['DataResources']
-            is_logging = trail['IsLogging']
-            if has_wildcard and is_logging and self.is_fresh(trail):
+        if not trail.get('IsLogging') or not self.is_fresh(trail):
+            return False
+
+        for selector in trail.get('EventSelectors') or []:
+            for resource in selector.get('DataResources') or []:
+                if resource.get('Type') in ('AWS::S3::Object', 'AWS::Lambda::Function'):
+                    arn_values = resource.get('Values') or []
+                    if any(value in ('arn:aws:s3', 'arn:aws:lambda',
+                                     'arn:aws-us-gov:s3', 'arn:aws-cn:s3',
+                                     'arn:aws-us-gov:lambda', 'arn:aws-cn:lambda')
+                           for value in arn_values):
+                        return True
+
+        for selector in trail.get('AdvancedEventSelectors') or []:
+            if 'Data' not in self._selector_values(
+                selector, 'eventCategory', 'Equals'
+            ):
+                continue
+            kinds = self._selector_values(selector, 'resources.type', 'Equals')
+            if not any(kind in ('AWS::S3::Object', 'AWS::Lambda::Function')
+                       for kind in kinds):
+                continue
+            # An explicit resources.ARN restriction cannot prove wildcard
+            # coverage unless it starts at the service-wide prefix.
+            filters = [
+                item for item in selector.get('FieldSelectors', [])
+                if item.get('Field') == 'resources.ARN'
+            ]
+            if not filters:
                 return True
+            for item in filters:
+                if any(value in ('arn:aws:s3:::', 'arn:aws-us-gov:s3:::',
+                                 'arn:aws-cn:s3:::', 'arn:aws:lambda:',
+                                 'arn:aws-us-gov:lambda:',
+                                 'arn:aws-cn:lambda:')
+                       for value in item.get('StartsWith', []) or []):
+                    return True
         return False
 
     @staticmethod
-    def is_fresh(trail_details):
-        if trail_details.get('LatestCloudWatchLogsDeliveryTime'):
-            delivery_time = trail_details.get('LatestCloudWatchLogsDeliveryTime').strftime("%s")
-            delivery_age = ((int(time.time()) - int(delivery_time)) / 1440)
-            return delivery_age <= 24
-        else:
+    def is_fresh(trail_details, now=None):
+        delivered = trail_details.get('LatestCloudWatchLogsDeliveryTime')
+        if not delivered:
             return False
+        if isinstance(delivered, str):
+            try:
+                delivered = datetime.fromisoformat(delivered.replace('Z', '+00:00'))
+            except ValueError:
+                return False
+        if not isinstance(delivered, datetime):
+            return False
+        if delivered.tzinfo is None:
+            delivered = delivered.replace(tzinfo=timezone.utc)
+        current = now if now is not None else datetime.now(timezone.utc)
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=timezone.utc)
+        age = current.astimezone(timezone.utc) - delivered.astimezone(timezone.utc)
+        return timedelta(0) <= age <= timedelta(hours=24)

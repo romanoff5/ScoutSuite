@@ -101,3 +101,31 @@ currently contains a conflicting permission note referring to
 `elasticfilesystem:DescribeAccessPoints`; verify the exact role
 permission with the account owner and record any AccessDenied response
 rather than silently falling back to a different API.
+
+## M05-D CloudTrail selector and home-region contracts (2026-11-01)
+
+`GetEventSelectors(TrailName=TrailARN)` reads both `EventSelectors` and
+`AdvancedEventSelectors`. Both are preserved under their original AWS
+field names. Status and selector requests target `HomeRegion`, including
+when describing multi-region shadow trails; organization-trail queries
+continue to use full ARNs and denied responses become incomplete status.
+
+Resource adapter aggregations use **any** matching basic or advanced
+selector rather than the last basic selector. The existing
+`DataEventsEnabled`, `ManagementEventsEnabled` and
+`wildcard_data_logging` fields remain stable; unknown selector state
+results in `None` plus an explicit `selector_collection_status='failed'`.
+Wildcard determination is conservative and requires full logging plus
+recent delivery evidence. Windows-portable timestamp math replaces
+`strftime('%s')` and the incorrect seconds/1440 comparison with
+an actual 24-hour interval.
+
+**IAM:** `cloudtrail:GetEventSelectors`,
+`cloudtrail:GetTrailStatus` and `cloudtrail:DescribeTrails`; no new
+operation or policy action introduced. Full ARN is particularly relevant
+for organization trails in member accounts. Partial evaluation from
+denied home-region access must not be represented as no data events.
+
+This changes selector aggregation behavior by design, but leaves
+resource IDs and serialized source AWS fields intact. Other CloudTrail
+rule logic is not modernized as part of M05.
