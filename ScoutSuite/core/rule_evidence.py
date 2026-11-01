@@ -55,7 +55,39 @@ def classify_kms_automatic_rotation(key):
     return 'unknown'
 
 
-CLASSIFIERS = {'kms-automatic-rotation-v1': classify_kms_automatic_rotation}
+def classify_cloudtrail_data_events(trail):
+    """Unknown selectors are not evidence that CloudTrail data logging is on."""
+    if not isinstance(trail, dict):
+        return 'unknown'
+    if trail.get('selector_collection_status') == 'failed':
+        return 'unknown'
+    enabled = trail.get('DataEventsEnabled')
+    if enabled is True:
+        return 'secure'
+    if enabled is False:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_cloudtrail_data_coverage(trail):
+    """Avoid false clean when wildcard selector evidence was unavailable."""
+    if not isinstance(trail, dict):
+        return 'unknown'
+    if trail.get('selector_collection_status') == 'failed':
+        return 'unknown'
+    coverage = trail.get('wildcard_data_logging')
+    if coverage is True:
+        return 'secure'
+    if coverage is False:
+        return 'insecure'
+    return 'unknown'
+
+
+CLASSIFIERS = {
+    'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
+    'cloudtrail-data-events-v1': classify_cloudtrail_data_events,
+    'cloudtrail-data-coverage-v1': classify_cloudtrail_data_coverage,
+}
 
 
 def evaluate_rule_evidence(rule, services):
