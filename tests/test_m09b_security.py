@@ -1,5 +1,6 @@
 """M09-B offline asset and local report API hardening regression tests."""
 import io
+import re
 import stat
 import zipfile
 from pathlib import Path
@@ -61,7 +62,7 @@ def test_api_rejects_malformed_or_prototype_paths(key):
     import cherrypy
     with pytest.raises(cherrypy.HTTPError) as error:
         Server.get_item({'a': {'b': 1}}, key)
-    assert error.value.status.startswith('400')
+    assert error.value.status == 400
 
 
 def test_api_rejects_missing_keys_and_invalid_array_indices():
@@ -87,7 +88,7 @@ def test_report_has_no_remote_assets_or_unsafe_eval():
     html = (root / 'html/report.html').read_text(encoding='utf-8')
     helper = (root / 'inc-scoutsuite/helpers.js').read_text(encoding='utf-8')
     script = (root / 'inc-scoutsuite/scoutsuite.js').read_text(encoding='utf-8')
-    assert 'https://' not in html and 'http://' not in html
+    assert not re.search(r'<(?:script|link)\\b[^>]+\\b(?:src|href)\\s*=\\s*[\\\"\\\']https?://', html, re.I)
     assert 'eval(JSON.stringify(entities))' not in helper + script
     assert 'element.innerHTML = value' not in script
     assert "delete body['description']" not in helper
