@@ -1,6 +1,7 @@
 """CI acquisition and explicit offline gates; no scanner or cloud CLI invocation."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -85,6 +86,26 @@ class Pipeline:
         print('+ ' + ' '.join(command), flush=True)
         subprocess.run(command, cwd=cwd or self.root, env=self.env, check=True)
 
+    def parallel(self, tasks, max_workers=3):
+        """Run independent, isolated CI environment gates concurrently.
+
+        Every task owns its destination venv/output. Wait for *all* tasks and
+        propagate failures: parallelism must never convert a failure to success.
+        """
+        if not tasks:
+            return
+        errors = []
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as executor:
+            submitted = [(name, executor.submit(callback)) for name, callback in tasks]
+            for name, future in submitted:
+                try:
+                    future.result()
+                except Exception as error:
+                    errors.append((name, error))
+        if errors:
+            names = ', '.join(name for name, _ in errors)
+            raise RuntimeError('Parallel CI gates failed: ' + names) from errors[0][1]
+
     def pip(self, name, *arguments):
         self.run([python_at(self.root, name), '-m', 'pip', '--isolated', *arguments])
 
@@ -100,7 +121,7 @@ class Pipeline:
                  '-r', SOURCE / 'tests/requirements-offline.txt', '-r', SOURCE / 'constraints/build-py311.txt',
                  '-c', SOURCE / 'constraints/ci-py311.txt', '-c', SOURCE / 'constraints/combined-py311.txt',
                  '--wheel-dir', self.root / 'wheelhouse')
-        for name in ('core', 'aws'):
+        def prepare_profile(name):
             self.create(name)
             self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', 'pip==24.0',
                      'setuptools==80.9.0', 'wheel==0.45.1')
@@ -110,6 +131,9 @@ class Pipeline:
             else:
                 self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', '--no-build-isolation',
                          '-r', SOURCE / 'requirements-core.txt', '-c', SOURCE / 'constraints/aws-core-py311.txt')
+
+        self.parallel([(name, lambda profile=name: prepare_profile(profile))
+                       for name in ('core', 'aws')], max_workers=2)
         suffix, digest = ACTIONLINT[platform.system()]
         archive = self.root / ('actionlint_' + suffix)
         url = 'https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_' + suffix
@@ -140,7 +164,7 @@ class Pipeline:
                   '--outdir', self.root / 'dist', staging])
         wheel, = (self.root / 'dist').glob('*.whl')
         sdist, = (self.root / 'dist').glob('*.tar.gz')
-        for name, artifact in (('test', wheel), ('wheel', wheel), ('sdist', sdist)):
+        def install_distribution(name, artifact):
             self.create(name)
             self.pip(name, 'install', '--no-index', '--find-links', self.root / 'wheelhouse',
                      '-r', SOURCE / 'constraints/build-py311.txt')
@@ -150,17 +174,24 @@ class Pipeline:
                 self.pip(name, 'install', '--no-index', '--find-links', self.root / 'wheelhouse',
                          '-c', SOURCE / 'constraints/combined-py311.txt', '-c', SOURCE / 'constraints/ci-py311.txt',
                          '-r', SOURCE / 'tests/requirements-offline.txt')
+
+        distributions = (('test', wheel), ('wheel', wheel), ('sdist', sdist))
+        self.parallel([(name, lambda n=name, a=artifact: install_distribution(n, a))
+                       for name, artifact in distributions])
         self.write('artifacts', {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                                  for path in (wheel, sdist)})
 
     def dependencies(self):
-        for name in ('build', 'core', 'aws', 'test', 'wheel', 'sdist'):
+        def check_profile(name):
             self.pip(name, 'check')
             # Exact versions only, no environment variables, credential files or pip config.
             code = ('import importlib.metadata as m,json,sys; '
                     'print(json.dumps({"python":sys.version.split()[0],"packages":'
                     '{d.metadata["Name"]:d.version for d in m.distributions()}},sort_keys=True))')
             self.run([python_at(self.root, name), '-I', '-c', code])
+
+        self.parallel([(name, lambda profile=name: check_profile(profile))
+                       for name in ('build', 'core', 'aws', 'test', 'wheel', 'sdist')])
 
     def lint(self):
         self.run([python_at(self.root, 'test'), '-m', 'flake8', '.'], cwd=SOURCE)
@@ -185,11 +216,14 @@ class Pipeline:
                   SOURCE / 'tools/verify_report_xss.py'], cwd=SOURCE)
 
     def packaging(self):
-        for name in ('core', 'aws', 'wheel', 'sdist'):
+        def smoke(name):
             profile = name if name in ('core', 'aws') else 'combined'
             self.run([python_at(self.root, name), '-I', '-B', SOURCE / 'tools/verify_distribution.py',
                       '--source', self.root / 'source', '--profile', profile,
                       '--output', self.root / (name + '-smoke.json')])
+
+        self.parallel([(name, lambda profile=name: smoke(profile))
+                       for name in ('core', 'aws', 'wheel', 'sdist')])
 
     def write(self, name, value):
         (self.root / (name + '.json')).write_text(json.dumps(value, indent=2) + '\n', encoding='utf-8')
