@@ -1,0 +1,93 @@
+"""M09-B: execute isolated legacy JS helpers with hostile synthetic report data."""
+import shutil
+import subprocess
+
+import pytest
+
+from tests.fixtures import ROOT
+
+
+NODE = shutil.which('node')
+pytestmark = pytest.mark.skipif(NODE is None, reason='Node.js runtime unavailable for JS helper smoke')
+
+
+def evaluate(script, *paths):
+    command = [NODE, '-e', script, *[str(ROOT / p) for p in paths]]
+    result = subprocess.run(command, text=True, capture_output=True, check=False,
+                            timeout=15)
+    assert result.returncode == 0, result.stderr
+
+
+def test_iam_policy_and_rule_helper_escapes_payload_without_mutation():
+    script = r"""
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+let helpers = {};
+const handlebars = {
+  registerHelper: (name, f) => { helpers[name] = f },
+  Utils: { escapeExpression: value => String(value).replace(/[&<>"'\u0060=]/g,
+    char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;','=':'&#x3D;','\u0060':'&#x60;'}[char] || char)) }
+};
+const ctx = vm.createContext({Handlebars: handlebars, console: console});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), ctx, {timeout: 3000});
+const input = {'Statement':[{'Effect':'Allow',
+  'Resource':'</span><img src=x onerror=alert(1)>'}],
+  '<svg onload=alert(1)>':'<script>alert(1)</script>'};
+const original = JSON.stringify(input);
+const html = helpers.displayPolicy(input);
+assert(html.includes('&lt;img'));
+assert(!html.includes('<img'));
+assert(!html.includes('<svg'));
+assert(!html.includes('<script>'));
+assert(html.includes('<br/>'));
+assert.strictEqual(JSON.stringify(input), original);
+const jsonInput = {description:'keep',args:[1],name:'a'};
+assert.strictEqual(helpers.jsonStringify(jsonInput).includes('description'), false);
+assert.strictEqual(jsonInput.description, 'keep');
+assert.deepStrictEqual(jsonInput.args, [1]);
+ctx.runResults = {rule_definitions:{'x.json':{
+  file_path:'private', description:'Do not mutate', key:'x'}}};
+const output = helpers.get_rule('x.json', '');
+assert.strictEqual(output.file_path, undefined);
+assert.strictEqual(ctx.runResults.rule_definitions['x.json'].file_path, 'private');
+assert(!fs.readFileSync(process.argv[1], 'utf8').includes('eval('));
+"""
+    evaluate(script, 'ScoutSuite/output/data/inc-scoutsuite/helpers.js')
+
+
+def test_account_id_uses_dom_text_nodes_not_data_interpreted_as_markup():
+    script = r"""
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const children = [];
+const account = {
+  firstChild: null,
+  removeChild: () => {throw Error('No stale children expected')},
+  appendChild: node => {children.push(node); return node},
+  set innerHTML(v) {throw Error('HTML insertion reached')},
+};
+const document = {
+  getElementById: id => (id === 'account_id' ? account : null),
+  createElement: tag => ({tagName:tag, className:''}),
+  createTextNode: text => ({textContent:text}),
+};
+const jq = () => ({ready: () => {}});
+const ctx = vm.createContext({window:{$:jq, location:{hash:''}},
+  document:document, console:console});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), ctx, {timeout:3000});
+ctx.runResults = {provider_name:'AWS<img src=x onerror=alert(1)>',
+                  account_id:'<svg onload=alert(1)>',organization:{}};
+vm.runInContext('loadAccountId()', ctx, {timeout:3000});
+assert(children.some(x => x.textContent && x.textContent.includes('<img')));
+assert(children.some(x => x.textContent && x.textContent.includes('<svg')));
+assert.strictEqual(children.filter(x => x.tagName).length, 2);
+assert(!fs.readFileSync(process.argv[1], 'utf8').includes('eval(JSON.stringify(entities))'));
+"""
+    evaluate(script, 'ScoutSuite/output/data/inc-scoutsuite/scoutsuite.js')
+
+
+def test_js_and_legacy_templates_contain_no_external_resource_fallback():
+    shell = (ROOT / 'ScoutSuite/output/data/html/report.html').read_text(encoding='utf8')
+    assert 'use.fontawesome.com' not in shell
+    assert 'oss.maxcdn.com' not in shell
+    js = (ROOT / 'ScoutSuite/output/data/inc-scoutsuite/sqlite.js').read_text(encoding='utf8')
+    assert 'X-Scout-Viewer-Token' in js
+    assert 'window.scoutViewerSession' in js
