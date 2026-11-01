@@ -26,42 +26,72 @@ class Keys(AWSCompositeResources):
         )
 
     async def _parse_key(self, raw_key):
-        key_dict = {}
-        key_dict['id'] = key_dict['name'] = raw_key.get('KeyId')
-        key_dict['arn'] = raw_key.get('KeyArn')
-        key_dict['policy'] = raw_key.get('policy')
+        key = {
+            'id': raw_key.get('KeyId'),
+            'name': raw_key.get('KeyId'),
+            'arn': raw_key.get('KeyArn'),
+            'policy': raw_key.get('policy'),
+            'rotation_enabled': None,
+            'rotation_status': 'unknown',
+            'rotation_period_days': None,
+            'next_rotation_date': None,
+        }
 
-        if 'metadata' in raw_key:
-            key_dict['creation_date'] = raw_key['metadata']['KeyMetadata']['CreationDate'] if \
-                raw_key['metadata']['KeyMetadata']['CreationDate'] else None
-            key_dict['key_enabled'] = False if raw_key['metadata']['KeyMetadata']['KeyState'] in \
-                ['Disabled', 'PendingDeletion'] else True
-            key_dict['description'] = raw_key['metadata']['KeyMetadata']['Description'] if len(
-                raw_key['metadata']['KeyMetadata']['Description'].strip()) > 0 else None
-            key_dict['origin'] = raw_key['metadata']['KeyMetadata']['Origin'] if len(
-                raw_key['metadata']['KeyMetadata']['Origin'].strip()) > 0 else None
-            key_dict['key_manager'] = raw_key['metadata']['KeyMetadata']['KeyManager'] if len(
-                raw_key['metadata']['KeyMetadata']['KeyManager'].strip()) > 0 else None
+        metadata = (raw_key.get('metadata') or {}).get('KeyMetadata') or {}
+        key['creation_date'] = metadata.get('CreationDate')
+        state = metadata.get('KeyState')
+        key['key_enabled'] = (state == 'Enabled') if state is not None else None
+        key['key_state'] = state
+        for source, target in (
+            ('Description', 'description'), ('Origin', 'origin'),
+            ('KeyManager', 'key_manager')
+        ):
+            value = metadata.get(source)
+            key[target] = value.strip() or None if isinstance(value, str) else value
 
-        # Handle keys who don't have these keys - seen in the wild, unsure why
-        if 'origin' not in key_dict.keys() or 'key_manager' not in key_dict.keys():
-            key_dict['rotation_enabled'] = None
-        # Only call this on customer managed CMKs, otherwise the AWS set policies might disallow access and it's always
-        # enabled anyway
-        elif key_dict['origin'] == 'AWS_KMS' and key_dict['key_manager'] == 'CUSTOMER':
-            rotation_status = await self.facade.kms.get_key_rotation_status(self.region, key_dict['id'])
-            if rotation_status:
-                key_dict['rotation_enabled'] = rotation_status.get('KeyRotationEnabled', None)
-            else:
-                key_dict['rotation_enabled'] = None
-        else:
-            key_dict['rotation_enabled'] = True
+        key['key_usage'] = metadata.get('KeyUsage')
+        key['key_spec'] = metadata.get('KeySpec', metadata.get('CustomerMasterKeySpec'))
+        key['multi_region'] = metadata.get('MultiRegion')
+        key['multi_region_key_type'] = (
+            (metadata.get('MultiRegionConfiguration') or {}).get('MultiRegionKeyType')
+        )
 
-        key_dict['aliases'] = []
-        for raw_alias in raw_key.get('aliases', []):
-            key_dict['aliases'].append(self._parse_alias(raw_alias))
+        # Only symmetric encryption with AWS_KMS origin supports AWS-managed
+        # automatic rotation. Do not mistake ineligible keys for rotated keys.
+        eligible = (
+            key['key_spec'] == 'SYMMETRIC_DEFAULT'
+            and key['key_usage'] == 'ENCRYPT_DECRYPT'
+            and key['origin'] == 'AWS_KMS'
+        )
+        if metadata:
+            if key['key_manager'] == 'AWS' and eligible:
+                key['rotation_enabled'] = True
+                key['rotation_status'] = 'aws_managed'
+            elif key['key_manager'] == 'CUSTOMER' and eligible:
+                result = await self.facade.kms.get_key_rotation_status(
+                    self.region, key['id']
+                )
+                if isinstance(result, dict) and isinstance(
+                    result.get('KeyRotationEnabled'), bool
+                ):
+                    key['rotation_enabled'] = result['KeyRotationEnabled']
+                    key['rotation_status'] = 'enabled' if result[
+                        'KeyRotationEnabled'] else 'disabled'
+                    key['rotation_period_days'] = result.get('RotationPeriodInDays')
+                    key['next_rotation_date'] = result.get('NextRotationDate')
+                else:
+                    key['rotation_status'] = 'unavailable'
+            elif key['key_manager'] == 'CUSTOMER' and not eligible:
+                key['rotation_status'] = 'not_supported'
+            elif key['key_manager'] == 'AWS':
+                key['rotation_status'] = 'not_supported'
 
-        return key_dict['id'], key_dict
+        key['aliases'] = [
+            self._parse_alias(alias) for alias in (raw_key.get('aliases') or [])
+            if isinstance(alias, dict) and alias.get('AliasArn')
+            and alias.get('AliasName')
+        ]
+        return key['id'], key
 
     def _parse_alias(self, raw_alias):
         alias_dict = {
