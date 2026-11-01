@@ -3,22 +3,25 @@
  **********************/
 
 Handlebars.registerHelper('displayPolicy', function (blob) {
-    var policy = '{<br/>'
-    for (let attr in blob) {
+    // This helper is used as markup by legacy templates. Escape all supplied
+    // policy attributes/values but retain only locally-authored formatting.
+    if (!blob || typeof blob !== 'object') return '{}'
+    var escape = Handlebars.Utils.escapeExpression
+    var output = '{<br/>'
+    Object.keys(blob).forEach(function (attr) {
         if (attr === 'Statement') {
-            policy += '&nbsp;&nbsp;"Statement": [<br/>'
-            for (let sid in blob['Statement']) {
-                policy += '<span id="foobar">' + JSON.stringify(blob['Statement'][sid], null, 2) + '</span>,\n'
-            }
-            policy += '  ]'
+            output += '&nbsp;&nbsp;"Statement": [<br/>'
+            var statements = Array.isArray(blob.Statement) ? blob.Statement : [blob.Statement]
+            statements.forEach(function (statement) {
+                output += '<span>' + escape(JSON.stringify(statement, null, 2)) + '</span>,<br/>'
+            })
+            output += ']'
         } else {
-            policy += '  "' + attr + '": ' + JSON.stringify(blob[attr], null, 2)
+            output += escape(JSON.stringify(attr)) + ': ' + escape(JSON.stringify(blob[attr], null, 2))
         }
-        policy += ',\n'
-    }
-
-    policy += '}'
-    return policy
+        output += ',<br/>'
+    })
+    return output + '}'
 })
 
 Handlebars.registerHelper('add_policy_path', function () {
@@ -172,7 +175,7 @@ var recursiveCount = function (input, entities) {
     if (entities.length > 0) {
         var entity = entities.shift()
         for (let i in input[entity]) {
-            counter = counter + recursiveCount(input[entity][i], eval(JSON.stringify(entities)))
+            counter = counter + recursiveCount(input[entity][i], entities.slice())
         }
     } else {
         counter = counter + 1
@@ -332,7 +335,9 @@ Handlebars.registerHelper('concatWith', function (str1, str2, sep) {
 })
 
 Handlebars.registerHelper('jsonStringify', function () {
-    let body = arguments[0]
+    // Rendering must not remove metadata needed by later filters/exports.
+    let source = arguments[0] || {}
+    let body = Object.assign({}, source)
     delete body['description']
     delete body['args']
     return JSON.stringify(body, null, 4)
@@ -466,7 +471,7 @@ Handlebars.registerHelper('get_rule', function (ruleFilename, attribute) {
     if (attribute === 'service') {
         return ruleFilename.split('-')[0]
     } else {
-        let rule = runResults['rule_definitions'][ruleFilename]
+        let rule = Object.assign({}, runResults['rule_definitions'][ruleFilename])
         // Clean up some ruleset generator artifacts
         let attributeCleanup = ['file_name', 'file_path', 'rule_dirs', 'rule_types', 'rules_data_path', 'string_definition']
         for (let ac in attributeCleanup) {
