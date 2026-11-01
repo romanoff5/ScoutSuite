@@ -1,9 +1,8 @@
 {
-    "description": "Bucket without Default Encryption Enabled",
-    "rationale": "Amazon S3 default encryption provides a way to set the default encryption behavior for an S3 bucket. This will ensure data-at-rest is encrypted",
+    "description": "S3 Bucket Encryption Baseline Not Observed",
+    "rationale": "Amazon S3 encrypts all new objects with SSE-S3 by default since 2023. Missing customer-configured encryption does not mean unencrypted data. This rule only flags confirmed disabled encryption, while denied, malformed, and historical reports without evidence remain incomplete.",
     "references": [
-        "https://docs.aws.amazon.com/AmazonS3/latest/dev/security-best-practices.html",
-        "https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html"
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/default-encryption-faq.html"
     ],
     "dashboard_name": "Buckets",
     "path": "s3.buckets.id",
@@ -13,7 +12,13 @@
             "s3.buckets.id.default_encryption_enabled",
             "false",
             ""
+        ],
+        [
+            "s3.buckets.id.encryption_evidence",
+            "equal",
+            "api"
         ]
     ],
-    "id_suffix": "default_encryption_enabled"
+    "id_suffix": "default_encryption_enabled",
+    "evidence_policy": "s3-new-write-encryption-v1"
 }
