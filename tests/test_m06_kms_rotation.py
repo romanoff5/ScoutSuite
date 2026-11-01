@@ -84,3 +84,12 @@ class TestKMSRotation(TestCase):
         self.assertEqual(missing['aliases'], [])
         self.assertIsNone(missing['rotation_enabled'])
         call.assert_not_awaited()
+
+    def test_missing_eligibility_metadata_is_unknown_not_unsupported(self):
+        key, call = self._parse({
+            'KeyState': 'Enabled', 'KeyManager': 'CUSTOMER',
+            'Origin': 'AWS_KMS'
+        })
+        self.assertEqual(key['rotation_status'], 'unknown')
+        self.assertIsNone(key['rotation_enabled'])
+        call.assert_not_awaited()
