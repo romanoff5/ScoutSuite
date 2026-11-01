@@ -11,6 +11,9 @@ var defaultPort = 8000
  * @returns {string}
  */
 function requestDb (query, pageSize, pageIndex) {
+  if (typeof window.scoutViewerSession !== 'string' || window.scoutViewerSession.length < 32) {
+    throw new Error('Start the local ScoutSuite SQLite viewer to authorize this report')
+  }
   // TODO: Add the option of using a different port
   let url = 'http://127.0.0.1:' + defaultPort + '/api/'
   let response = ''
@@ -30,10 +33,14 @@ function requestDb (query, pageSize, pageIndex) {
     url: url,
     async: false,
     dataType: 'json',
+    headers: { 'X-Scout-Viewer-Token': window.scoutViewerSession },
     success: function (result) {
       response = result
     } })
 
+  if (!response || !Object.prototype.hasOwnProperty.call(response, 'data')) {
+    throw new Error('Local ScoutSuite viewer request failed')
+  }
   return response.data
 }
 
