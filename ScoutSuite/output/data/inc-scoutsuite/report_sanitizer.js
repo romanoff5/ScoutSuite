@@ -13,7 +13,7 @@
     ]);
     const DANGEROUS_TAGS = new Set([
         'script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet',
-        'base', 'meta', 'link', 'svg', 'math', 'template', 'noscript'
+        'base', 'meta', 'link', 'style', 'svg', 'math', 'template', 'noscript'
     ]);
     const URL_ATTRIBUTES = new Set([
         'href', 'src', 'xlink:href', 'poster', 'action', 'formaction'
@@ -134,7 +134,17 @@
         document.addEventListener('click', function (event) {
             const link = event.target && event.target.closest &&
                 event.target.closest('[data-scout-action]');
-            if (!link) return;
+            if (!link) {
+                const copy = event.target && event.target.closest &&
+                    event.target.closest('[data-scout-copy-code]');
+                if (copy) {
+                    event.preventDefault();
+                    const id = copy.getAttribute('data-scout-copy-code');
+                    if (typeof id === 'string' && id.length <= 2048 &&
+                            typeof scope.copyCode === 'function') scope.copyCode(id);
+                }
+                return;
+            }
             event.preventDefault();
             event.stopPropagation();
             const name = link.getAttribute('data-scout-action');
