@@ -68,7 +68,14 @@ def run_function_concurrently(function):
 
     ctx = get_current_run_context()
     executor = ctx.executor if ctx is not None else None
-    return asyncio.get_running_loop().run_in_executor(executor, function)
+    future = asyncio.get_running_loop().run_in_executor(executor, function)
+    return ctx.track_future(future) if ctx is not None else future
+
+
+def _create_tracked_task(coroutine):
+    task = asyncio.ensure_future(coroutine)
+    context = get_current_run_context()
+    return context.track_future(task) if context is not None else task
 
 
 async def get_and_set_concurrently(get_and_set_funcs: [], entities: [], **kwargs):
@@ -90,9 +97,8 @@ async def get_and_set_concurrently(get_and_set_funcs: [], entities: [], **kwargs
         return
 
     tasks = {
-        asyncio.ensure_future(
-            get_and_set_func(entity, **kwargs)
-        ) for entity in entities for get_and_set_func in get_and_set_funcs
+        _create_tracked_task(get_and_set_func(entity, **kwargs))
+        for entity in entities for get_and_set_func in get_and_set_funcs
     }
     await asyncio.wait(tasks)
 
@@ -117,9 +123,7 @@ async def map_concurrently(coroutine, entities, **kwargs):
     results = []
 
     tasks = {
-        asyncio.ensure_future(
-            coroutine(entity, **kwargs)
-        ) for entity in entities
+        _create_tracked_task(coroutine(entity, **kwargs)) for entity in entities
     }
 
     for task in asyncio.as_completed(tasks):

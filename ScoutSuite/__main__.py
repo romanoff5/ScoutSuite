@@ -203,7 +203,7 @@ async def run_async(provider: str,
             programmatic_execution=programmatic_execution
         )
     finally:
-        context.cleanup()
+        await context.aclose()
 
 
 async def _run_sync(provider: str,
@@ -276,7 +276,8 @@ async def _run_sync(provider: str,
         max_rate=max_rate
     )
     
-    with context.lifecycle():
+    context.setup()
+    try:
         try:
             return await _run_impl(
                 context=context,
@@ -296,7 +297,7 @@ async def _run_sync(provider: str,
                 username=username, password=password,
                 service_account=service_account,
                 project_id=project_id,
-            folder_id=folder_id,
+                folder_id=folder_id,
                 organization_id=organization_id,
                 all_projects=all_projects,
                 access_key_id=access_key_id,
@@ -337,6 +338,8 @@ async def _run_sync(provider: str,
         except (KeyboardInterrupt, SystemExit):
             print_info('Exiting')
             return 130
+    finally:
+        await context.aclose()
 
 
 async def _run_impl(context: RunContext,
