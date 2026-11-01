@@ -3,19 +3,22 @@ from asyncio import Lock
 from botocore.exceptions import ClientError
 from ScoutSuite.core.console import print_exception, print_warning
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
-from ScoutSuite.providers.aws.utils import get_aws_account_id
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.utils import ec2_classic
 from ScoutSuite.providers.utils import run_concurrently, get_and_set_concurrently
 
 
 class RDSFacade(AWSBaseFacade):
-    _regional_instances_cache_locks = {}
-    _instances_cache = {}
-    _regional_snapshots_cache_locks = {}
-    _snapshots_cache = {}
-    _regional_subnet_groups_cache_locks = {}
-    _subnet_groups_cache = {}
+    def __init__(self, session=None):
+        super().__init__(session)
+        # Never reuse a regional inventory between different AWS credentials
+        # or across event loops, even when the region names match.
+        self._regional_instances_cache_locks = {}
+        self._instances_cache = {}
+        self._regional_snapshots_cache_locks = {}
+        self._snapshots_cache = {}
+        self._regional_subnet_groups_cache_locks = {}
+        self._subnet_groups_cache = {}
 
     async def get_instances(self, region: str, vpc: str):
         try:
@@ -45,7 +48,6 @@ class RDSFacade(AWSBaseFacade):
 
     async def _get_and_set_instance_tags(self, instance: {}, region: str):
         client = AWSFacadeUtils.get_client('rds', self.session, region)
-        account_id = get_aws_account_id(self.session)
         try:
             instance_tagset = await run_concurrently(lambda: client.list_tags_for_resource(
                 ResourceName=instance['DBInstanceArn']))
@@ -54,7 +56,7 @@ class RDSFacade(AWSBaseFacade):
             if e.response['Error']['Code'] != 'NoSuchTagSet':
                 print_exception('Failed to get db instance tags for {}: {}'.format(instance['DBInstanceIdentifier'], e))
         except Exception as e:
-            if 'DBInstanceNotFound' in e:
+            if 'DBInstanceNotFound' in str(e):
                 print_warning('Failed to get db instance tags for {}: {}'.format(instance['DBInstanceIdentifier'], e))
             else:
                 print_exception('Failed to get db instance tags for {}: {}'.format(instance['DBInstanceIdentifier'], e))
@@ -67,8 +69,9 @@ class RDSFacade(AWSBaseFacade):
             try:
                 clusters = await run_concurrently(
                     lambda: client.describe_db_clusters(DBClusterIdentifier=cluster_id))
-                cluster = clusters['DBClusters'][0]
-                instance['MultiAZ'] = cluster['MultiAZ']
+                cluster_list = clusters.get('DBClusters') or []
+                if cluster_list and 'MultiAZ' in cluster_list[0]:
+                    instance['MultiAZ'] = cluster_list[0]['MultiAZ']
             except Exception as e:
                 print_exception(f'Failed to describe RDS clusters: {e}')
 
@@ -116,7 +119,7 @@ class RDSFacade(AWSBaseFacade):
             snapshot['Attributes'] =\
                 attributes['DBSnapshotAttributes'] if 'DBSnapshotAttributes' in attributes else {}
         except Exception as e:
-            if 'DBSnapshotNotFound' in e:
+            if 'DBSnapshotNotFound' in str(e):
                 print_warning(f'Failed to describe RDS snapshot attributes: {e}')
             else:
                 print_exception(f'Failed to describe RDS snapshot attributes: {e}')
