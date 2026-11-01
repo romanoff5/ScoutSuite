@@ -1,8 +1,9 @@
 {
-    "description": "Deprecated Certificate Authority Assigned to RDS Instance",
-    "rationale": "Amazon Web Services is deprecating the RDS Certificate Authority created in 2015 (rds-ca-2015). Any endpoints using TLS to protect RDS communications will fail after March 5th, 2020.",
+    "description": "Deprecated RDS Certificate Authority (CA) Assigned to Instance",
+    "rationale": "RDS instances using legacy CA identifiers (rds-ca-2015 or rds-ca-2019) require certificate lifecycle review and migration planning. Expiration dates vary by region; the rule flags deprecated identifiers, not a verified instance-specific expiration date. Unknown or unavailable CA identifiers are incomplete evidence, not a passing result.",
     "references": [
-        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL-certificate-rotation.html"
+        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL-certificate-rotation.html",
+        "https://aws.amazon.com/blogs/aws/rotate-your-ssl-tls-certificates-now-amazon-rds-and-aurora-expire-in-2024/"
     ],
     "dashboard_name": "Instances",
     "path": "rds.regions.id.vpcs.id.instances.id",
@@ -12,9 +13,11 @@
             "rds.regions.id.vpcs.id.instances.id.CACertificateIdentifier",
             "containAtLeastOneOf",
             [
-                "rds-ca-2015"
+                "rds-ca-2015",
+                "rds-ca-2019"
             ]
         ]
     ],
-    "id_suffix": "CACertificateIdentifier"
+    "id_suffix": "CACertificateIdentifier",
+    "evidence_policy": "rds-ca-lifecycle-v1"
 }
