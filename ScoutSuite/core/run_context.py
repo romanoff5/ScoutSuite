@@ -9,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar, Token
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+import logging
+import threading
 from typing import Any, Optional, Set
 
 from asyncio_throttle import Throttler
@@ -48,6 +50,8 @@ class RunContext:
     _owns_loop: bool = field(default=False, init=False, repr=False)
     _token: Optional[Token] = field(default=None, init=False, repr=False)
     _children: Set[asyncio.Future] = field(default_factory=set, init=False, repr=False)
+    _clients: dict = field(default_factory=dict, init=False, repr=False)
+    _client_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     
     def __post_init__(self):
         """Initialize the run context components."""
@@ -108,6 +112,33 @@ class RunContext:
         future.add_done_callback(self._children.discard)
         return future
 
+    def get_cached_client(self, session, service, region, factory):
+        """Cache SDK clients within one assessment and session identity.
+
+        Locking prevents duplicate construction during concurrent collector calls.
+        Keeping the session reference prevents identity reuse before cleanup.
+        """
+        key = (id(session), service, region)
+        with self._client_lock:
+            if key not in self._clients:
+                self._clients[key] = (session, factory())
+            return self._clients[key][1]
+
+    def close_clients(self) -> None:
+        """Close each SDK client once, including on exceptional shutdown."""
+        with self._client_lock:
+            clients = list(self._clients.values())
+            self._clients.clear()
+        for _session, client in clients:
+            close = getattr(client, 'close', None)
+            if callable(close):
+                try:
+                    close()
+                except Exception as exc:
+                    logging.getLogger('scout').warning(
+                        'Unable to close SDK client (%s)', type(exc).__name__
+                    )
+
     def cancel_all_tasks(self) -> None:
         """Cancel this assessment's tracked work, not the caller's other tasks."""
         for future in tuple(self._children):
@@ -136,6 +167,7 @@ class RunContext:
                 executor, self._executor = self._executor, None
                 # Workers may be waiting for callbacks scheduled on this loop.
                 await asyncio.to_thread(executor.shutdown, wait=True, cancel_futures=True)
+            await asyncio.to_thread(self.close_clients)
         finally:
             self._release_loop()
 
@@ -151,6 +183,7 @@ class RunContext:
             else:
                 wait = False
             executor.shutdown(wait=wait, cancel_futures=True)
+        self.close_clients()
         self._release_loop()
 
     def run_until_complete(self, coro) -> Any:

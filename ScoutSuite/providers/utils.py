@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+from contextvars import copy_context
 import re
 from weakref import WeakKeyDictionary
 
@@ -68,7 +69,8 @@ def run_function_concurrently(function):
 
     ctx = get_current_run_context()
     executor = ctx.executor if ctx is not None else None
-    future = asyncio.get_running_loop().run_in_executor(executor, function)
+    execution_context = copy_context()
+    future = asyncio.get_running_loop().run_in_executor(executor, execution_context.run, function)
     return ctx.track_future(future) if ctx is not None else future
 
 

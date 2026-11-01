@@ -3,10 +3,11 @@ from botocore.exceptions import ClientError
 
 from ScoutSuite.core.conditions import print_exception
 from ScoutSuite.providers.utils import run_concurrently
+from ScoutSuite.core.run_context import get_current_run_context
 
 
 class AWSFacadeUtils:
-    _clients = {}
+    # No process-global client cache: credentials are isolated by RunContext.
 
     @staticmethod
     async def get_all_pages(service: str, region: str, session: boto3.session.Session, paginator_name: str,
@@ -89,9 +90,13 @@ class AWSFacadeUtils:
         """
 
         try:
-            return AWSFacadeUtils._clients.setdefault(
-                (service, region),
-                session.client(service, region_name=region) if region else session.client(service))
+            def create():
+                return session.client(service, region_name=region) if region else session.client(service)
+
+            context = get_current_run_context()
+            if context is None:
+                return create()
+            return context.get_cached_client(session, service, region, create)
         except Exception as e:
             print_exception(f'Failed to create client for the {service} service: {e}')
             return None
