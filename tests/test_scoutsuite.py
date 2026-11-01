@@ -2,7 +2,7 @@
 
 import io
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ScoutSuite import __main__ as main
 
@@ -20,11 +20,16 @@ class TestScoutSuiteClass(unittest.TestCase):
         auth.assert_not_called()
 
     def test_scout_suite_default_run(self):
-        # Check actual CLI defaults without invoking the production run/credential chain.
-        with patch('sys.argv', ['scout', 'aws']), patch.object(main, 'run', return_value=0) as run:
+        # The CLI awaits _run_sync, not the legacy public run() wrapper.
+        # Mock the actual async boundary to verify parsing without credential discovery.
+        with patch('sys.argv', ['scout', 'aws']), \
+             patch.object(main, '_run_sync', new_callable=AsyncMock) as run, \
+             patch.object(main, 'get_authentication_strategy') as authenticate:
+            run.return_value = 0
             self.assertEqual(main.run_from_cli(), 0)
-        run.assert_called_once()
-        self.assertEqual(run.call_args.kwargs['provider'], 'aws')
-        self.assertIsNone(run.call_args.kwargs['report_dir'])  # Output layer supplies its default directory.
-        self.assertFalse(run.call_args.kwargs['programmatic_execution'])
-        self.assertFalse(run.call_args.kwargs['fetch_local'])
+        run.assert_awaited_once()
+        authenticate.assert_not_called()
+        self.assertEqual(run.await_args.kwargs['provider'], 'aws')
+        self.assertIsNone(run.await_args.kwargs['report_dir'])  # Output layer supplies its default directory.
+        self.assertFalse(run.await_args.kwargs['programmatic_execution'])
+        self.assertFalse(run.await_args.kwargs['fetch_local'])
