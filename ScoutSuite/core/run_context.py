@@ -50,6 +50,8 @@ class RunContext:
     _owns_loop: bool = field(default=False, init=False, repr=False)
     _token: Optional[Token] = field(default=None, init=False, repr=False)
     _children: Set[asyncio.Future] = field(default_factory=set, init=False, repr=False)
+    errors: list = field(default_factory=list, init=False, repr=False)
+    collection_issues: list = field(default_factory=list, init=False, repr=False)
     _clients: dict = field(default_factory=dict, init=False, repr=False)
     _client_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     
@@ -103,6 +105,35 @@ class RunContext:
             self.loop  # create a private loop for sync RunContext clients
         self._token = _active_context.set(self)
         return self
+
+    def record_collection_issue(self, status: str, scope: str, reason_code: str) -> None:
+        """Record sanitized, structured evidence of incomplete collection."""
+        import re
+        if status not in ('denied', 'unsupported', 'failed', 'partial'):
+            raise ValueError('Invalid collection issue status')
+        for value in (scope, reason_code):
+            if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,64}', value):
+                raise ValueError('Unsafe collection issue metadata')
+        issue = {'status': status, 'scope': scope, 'reason_code': reason_code}
+        if issue not in self.collection_issues:
+            self.collection_issues.append(issue)
+
+    def collection_summary(self, checked_items: int = 0) -> dict:
+        """Additive report metadata; zero checks never imply verified compliance."""
+        issues = list(self.collection_issues)
+        if self.errors and not issues:
+            issues.append({'status': 'partial', 'scope': 'assessment',
+                           'reason_code': 'UnclassifiedError'})
+        complete = not issues
+        return {
+            'version': 1,
+            'status': 'success' if complete else 'partial',
+            'complete': complete,
+            'checked_items': checked_items,
+            'evidence_evaluated': checked_items > 0,
+            'compliance_verified': False,
+            'issues': issues,
+        }
 
     def track_future(self, future: asyncio.Future) -> asyncio.Future:
         """Record only future/task work started by this assessment."""

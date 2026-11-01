@@ -103,11 +103,14 @@ def print_exception(exception, additional_details=None):
     else:
         logger.error(str)
 
-    ERRORS_LIST.append({'file': file_name,
-                        'line': line_number,
-                        'exception': f'{exception}',
-                        'traceback': f'{traceback_exc}',
-                        'additional_details': additional_details})
+    from ScoutSuite.core.run_context import get_current_run_context
+    context = get_current_run_context()
+    target = context.errors if context is not None else ERRORS_LIST
+    target.append({'file': file_name,
+                   'line': line_number,
+                   'exception': f'{exception}',
+                   'traceback': f'{traceback_exc}',
+                   'additional_details': additional_details})
 
 
 ########################################

@@ -1,4 +1,5 @@
 from ScoutSuite.core.console import print_debug, print_exception
+from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.utils import manage_dictionary
 
 from ScoutSuite.core.utils import recurse
@@ -69,9 +70,25 @@ class ProcessingEngine:
                         rule.references if hasattr(rule, 'references') else None
                 except Exception as e:
                     print_exception(f'Failed to process rule defined in {rule.filename}: {e}')
-                    # Fallback if process rule failed to ensure report creation and data dump still happen
-                    cloud_provider.services[service][self.ruleset.rule_type][rule.key]['checked_items'] = 0
-                    cloud_provider.services[service][self.ruleset.rule_type][rule.key]['flagged_items'] = 0
+                    # Never encode a failed evaluation as an empty compliant result.
+                    finding = cloud_provider.services[service][self.ruleset.rule_type][rule.key]
+                    finding['items'] = []
+                    finding['checked_items'] = 0
+                    finding['flagged_items'] = 0
+                    finding['assessment_status'] = 'incomplete'
+                    context = get_current_run_context()
+                    if context is not None:
+                        context.record_collection_issue('failed', service, 'RuleEvaluation')
+                else:
+                    context = get_current_run_context()
+                    issues = context.collection_issues if context is not None else (
+                        getattr(cloud_provider, 'collection_status', {}) or {}
+                    ).get('issues', [])
+                    if self.ruleset.rule_type == 'findings' and any(
+                        issue['scope'] in (service, 'assessment') for issue in issues
+                    ):
+                        cloud_provider.services[service][self.ruleset.rule_type][rule.key][
+                            'assessment_status'] = 'incomplete'
 
     @staticmethod
     def _filter_rules(rules, services):

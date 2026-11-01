@@ -9,6 +9,7 @@ from ScoutSuite import DEFAULT_INCLUDES_DIRECTORY
 from ScoutSuite import DEFAULT_REPORT_DIRECTORY, DEFAULT_REPORT_RESULTS_DIRECTORY, DEFAULT_INCLUDES_DIRECTORY
 from ScoutSuite import ERRORS_LIST
 from ScoutSuite.core.console import print_info, print_exception
+from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.output.result_encoder import JavaScriptEncoder, SqlLiteEncoder
 from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
 
@@ -97,8 +98,10 @@ class ScoutReport(HTMLReport):
         self.prepare_html_report_dir()
         self.encoder.save_to_file(config, 'RESULTS', force_write, debug)
         self.exceptions_encoder.save_to_file(exceptions, 'EXCEPTIONS', force_write, debug)
-        if ERRORS_LIST:
-            self.exceptions_encoder.save_to_file(ERRORS_LIST, 'ERRORS', force_write, debug=True)
+        context = get_current_run_context()
+        errors = context.errors if context is not None else ERRORS_LIST
+        if errors:
+            self.exceptions_encoder.save_to_file(errors, 'ERRORS', force_write, debug=True)
         return self.create_html_report(force_write)
 
     def create_html_report(self, force_write):

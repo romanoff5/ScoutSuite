@@ -486,7 +486,7 @@ async def _run_impl(context: RunContext,
         if not hasattr(cloud_provider, 'partition') or not cloud_provider.partition:
             cloud_provider.partition = 'aws'
 
-    # M04/M09: status propagation to findings and reports remains out of scope.
+    # M04: status metadata is additive and does not change legacy result fields.
     # Create a new report
     try:
         report_name = report_name if report_name else cloud_provider.get_report_name()
@@ -600,6 +600,19 @@ async def _run_impl(context: RunContext,
     else:
         exceptions = {}
 
+    # Expose collection integrity in saved RESULTS, including successful empty runs.
+    if not fetch_local or not isinstance(getattr(cloud_provider, 'collection_status', None), dict):
+        cloud_provider.collection_status = context.collection_summary()
+    elif context.collection_issues or context.errors:
+        previous = cloud_provider.collection_status.get('issues', [])
+        current = context.collection_summary()
+        current['issues'] = previous + [
+            issue for issue in current['issues'] if issue not in previous
+        ]
+        current['complete'] = not current['issues']
+        current['status'] = 'success' if current['complete'] else 'partial'
+        cloud_provider.collection_status = current
+
     # Finalize
     try:
         print_info('Running post-processing engine')
@@ -613,6 +626,10 @@ async def _run_impl(context: RunContext,
     except Exception as e:
         print_exception('Failure while running post-processing engine: {}'.format(e))
         return 108
+
+    # Post-processing can also emit errors; reflect those before serialization.
+    if context.collection_issues or context.errors:
+        cloud_provider.collection_status = context.collection_summary()
 
     # Save config and create HTML report
     try:
@@ -630,7 +647,8 @@ async def _run_impl(context: RunContext,
         except Exception as e:
             print_exception('Failed to open browser: {}'.format(e))
 
-    if ERRORS_LIST:
+    errors = context.errors if context._token is not None else ERRORS_LIST
+    if errors:
         return 200
     else:
         return 0
