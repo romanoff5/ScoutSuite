@@ -642,7 +642,50 @@ def classify_ssm_missing_patches(node):
     return 'unknown'
 
 
+
+def classify_m10q_ec2_inspector(instance):
+    """Missing from a complete Inspector listing is an evidence gap, not ineligibility."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    evidence = instance.get('m10q_inspector')
+    if not isinstance(evidence, dict):
+        return 'unknown'
+    state = evidence.get('state')
+    if state == 'not_reported':
+        return 'insecure'
+    if state == 'active_observed':
+        return 'secure'  # Active coverage record, not a completed scan.
+    if state == 'not_applicable':
+        return 'not_applicable'
+    # Inactive records have their own Inspector rule. Do not double-count.
+    return 'unknown'
+
+
+def classify_m10q_ecr_image_scanning(repository):
+    """Config and Inspector enrollment never prove a particular image was scanned."""
+    if not isinstance(repository, dict):
+        return 'unknown'
+    if repository.get('m10q_repository_scan_gap_candidate') is True:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_m10q_s3_backup(bucket):
+    """A recovery point and past job do not prove an ongoing backup schedule."""
+    if not isinstance(bucket, dict):
+        return 'unknown'
+    evidence = bucket.get('m10q_backup')
+    if not isinstance(evidence, dict):
+        return 'unknown'
+    if evidence.get('state') in ('not_reported', 'partial_evidence'):
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'm10q-ec2-inspector-coverage-v1': classify_m10q_ec2_inspector,
+    'm10q-ecr-image-scan-evidence-v1': classify_m10q_ecr_image_scanning,
+    'm10q-s3-backup-evidence-v1': classify_m10q_s3_backup,
     'ssm-unmanaged-ec2-v1': classify_ssm_unmanaged,
     'ssm-offline-agent-v1': classify_ssm_offline,
     'ssm-scan-unverified-v1': classify_ssm_scan_unverified,

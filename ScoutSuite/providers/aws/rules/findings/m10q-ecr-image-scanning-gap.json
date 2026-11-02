@@ -1,0 +1,20 @@
+{
+    "description": "ECR repository has neither observed active Inspector coverage nor enabling registry scan configuration",
+    "rationale": "Inspector reports absent/inactive enrollment while the repository is not matched by enhanced scanning rules or BASIC scanOnPush is false. This is a candidate gap in scanning enrollment. Neither Inspector ACTIVE nor scanOnPush alone verifies that any particular image was scanned; image-level scan results were not collected.",
+    "remediation": "Enable and validate Inspector enhanced scanning or an appropriate ECR basic scanning policy; inspect actual image scan statuses and last scans separately.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-scanning.html"
+    ],
+    "dashboard_name": "ECR private repositories",
+    "path": "ecr.regions.id.repositories.id",
+    "conditions": [
+        "and",
+        [
+            "m10q_repository_scan_gap_candidate",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "M10QECRScanCoverage",
+    "evidence_policy": "m10q-ecr-image-scan-evidence-v1"
+}

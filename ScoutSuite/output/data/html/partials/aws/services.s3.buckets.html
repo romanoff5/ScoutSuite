@@ -67,7 +67,20 @@
             </div>
           </div>
         {{/if}}
-    </script>
+    
+        <!-- M10-Q: all cross-service evidence is Handlebars-escaped and offline-safe. -->
+        <div class="list-group-item">
+            <h4>Cross-service coverage (M10-Q)</h4>
+            <p>AWS Backup evidence: {{m10q_backup.state}}</p>
+            <p>Canonical bucket ARN: <samp>{{m10q_backup.canonical_bucket_arn}}</samp></p>
+            <p>Region: {{m10q_backup.region}}</p>
+            <p>Ongoing schedule verified: {{m10q_backup.ongoing_schedule_verified}}</p>
+            <p>Latest completed backup job: {{m10q_backup.last_completed_job_at}}</p>
+            {{#each m10q_backup.completed_job_ids}}<p>Completed job: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_backup.recovery_point_arns}}<p>Recovery point resource: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_backup.reasons}}<p>Reason: {{this}}</p>{{/each}}
+        </div>
+</script>
     <script>
       Handlebars.registerPartial("services.s3.buckets", $("#services\\.s3\\.buckets\\.partial").html());
     </script>

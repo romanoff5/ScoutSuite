@@ -1,0 +1,20 @@
+{
+    "description": "EC2 instance not reported in independently complete Inspector2 coverage inventory",
+    "rationale": "EC2 instance was observed, but its own-account identifier did not appear in a complete Inspector2 coverage listing in the same region. It may be ineligible, newly created or covered outside this observation; this is not proof that the instance is unscanned.",
+    "remediation": "Verify Inspector2 EC2 enrollment, instance eligibility, scan account/region and current coverage; investigate unsupported or missing scan registrations.",
+    "references": [
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListCoverage.html"
+    ],
+    "dashboard_name": "EC2 instances",
+    "path": "ec2.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "m10q_inspector_not_reported",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "M10QInspectorNotReported",
+    "evidence_policy": "m10q-ec2-inspector-coverage-v1"
+}

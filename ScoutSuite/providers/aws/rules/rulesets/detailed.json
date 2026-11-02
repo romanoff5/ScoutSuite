@@ -1458,6 +1458,24 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "m10q-ec2-not-reported-by-inspector2.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "m10q-ecr-image-scanning-gap.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "m10q-s3-backup-evidence-gap.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

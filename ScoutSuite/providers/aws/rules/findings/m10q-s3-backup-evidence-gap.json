@@ -1,0 +1,20 @@
+{
+    "description": "S3 bucket has no corroborated AWS Backup recovery point and completed job",
+    "rationale": "The corresponding AWS Backup region was fully enumerated and did not report a matching protected resource or completed backup job, or only one evidence type was observed. This is an AWS Backup evidence gap, not proof that other backup mechanisms are absent. Historical jobs and recovery points do not prove schedule continuity.",
+    "remediation": "Inspect AWS Backup plan selections, tag-based scope, recovery points and successful recent jobs; verify restoration and account/region scope or document alternate backup controls.",
+    "references": [
+        "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html"
+    ],
+    "dashboard_name": "S3 buckets",
+    "path": "s3.buckets.id",
+    "conditions": [
+        "and",
+        [
+            "m10q_backup_evidence_gap",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "M10QS3BackupEvidence",
+    "evidence_policy": "m10q-s3-backup-evidence-v1"
+}
