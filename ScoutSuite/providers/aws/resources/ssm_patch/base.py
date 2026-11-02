@@ -98,6 +98,12 @@ class SSMPatchPublic(Regions):
                          or node.get('patch_snapshot_fresh') is False))
                 node['agent_connection_lost'] = (
                     node.get('agent_status') == 'ConnectionLost')
+                node['critical_patches_present'] = (
+                    isinstance(node.get('critical_noncompliant_count'), int)
+                    and node['critical_noncompliant_count'] > 0)
+                node['security_patches_present'] = (
+                    isinstance(node.get('missing_security_patch_count'), int)
+                    and node['missing_security_patch_count'] > 0)
             by_ec2 = {value['instance_id']: value for value in nodes.values()}
             for item in instances.values():
                 registered = item['instance_id'] in by_ec2
