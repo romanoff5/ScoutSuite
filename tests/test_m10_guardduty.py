@@ -13,7 +13,7 @@ from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import classify_guardduty_detector
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
-from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade, MAX_PAGES
+from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.provider import AWSProvider
 from ScoutSuite.providers.aws.resources.guardduty.base import GuardDutyPublic
