@@ -13,8 +13,7 @@ from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import classify_securityhub_standard
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
-from ScoutSuite.providers.aws.facade.securityhub import (
-    SecurityHubPublicFacade, MAX_PAGES, MAX_STANDARDS)
+from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.provider import AWSProvider
 from ScoutSuite.providers.aws.resources.securityhub.base import SecurityHubPublic
