@@ -195,7 +195,7 @@ class AWSFacade(AWSBaseFacade):
         self.securityhub = SecurityHubPublicFacade(self.session)
         self.wafv2 = WAFv2PublicFacade(self.session, self.owner_id)
         self.backup = BackupPublicFacade(self.session, self.owner_id)
-        self.identitycenter = IdentityCenterFacade(self.session)
+        self.identitycenter = IdentityCenterFacade(self.session, self.owner_id)
         self.organizations = OrganizationsFacade(self.session, self.partition)
 
         # Instantiate facades for proprietary services
