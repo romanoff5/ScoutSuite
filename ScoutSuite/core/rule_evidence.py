@@ -104,10 +104,27 @@ def _rds_ca_catalog():
 
 
 def classify_rds_deletion_protection(instance):
-    """AWS DB instance DeletionProtection, not backup or snapshot coverage."""
+    """Only standalone DB instances; cluster members need DBCluster evidence."""
     if not isinstance(instance, dict):
         return 'unknown'
+    membership = instance.get('is_cluster_member')
+    if membership is True:
+        return 'not_applicable'
+    if membership is not False:
+        return 'unknown'
     value = instance.get('DeletionProtection')
+    if value is True:
+        return 'secure'
+    if value is False:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_rds_cluster_deletion_protection(cluster):
+    """Aurora and Multi-AZ DB clusters, counted once per DBClusterIdentifier."""
+    if not isinstance(cluster, dict):
+        return 'unknown'
+    value = cluster.get('DeletionProtection')
     if value is True:
         return 'secure'
     if value is False:
@@ -868,6 +885,7 @@ CLASSIFIERS = {
     'cis71-s3-bpa-v1': classify_s3_block_public_access,
     'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
     'cis71-rds-deletion-protection-v1': classify_rds_deletion_protection,
+    'cis71-rds-cluster-deletion-protection-v1': classify_rds_cluster_deletion_protection,
     'cis71-efs-encryption-v1': classify_efs_encryption,
     'macie-session-v1': classify_macie_session,
     'macie-no-classification-v1': classify_macie_configuration,
