@@ -10,14 +10,26 @@ from ScoutSuite.providers.utils import run_concurrently
 
 class CloudTrailFacade(AWSBaseFacade):
     async def get_trails(self, region):
+        if not hasattr(self, 'trail_inventory_status'):
+            self.trail_inventory_status = {}
+        self.trail_inventory_status[region] = 'unknown'
         client = AWSFacadeUtils.get_client('cloudtrail', self.session, region)
+        if client is None:
+            self.trail_inventory_status[region] = 'failed'
+            self._record_collection_failure(RuntimeError('client'), 'DescribeTrails')
+            return []
         try:
             trails = await run_concurrently(
                 lambda: client.describe_trails()['trailList'])
         except Exception as e:
+            self._record_collection_failure(e, 'DescribeTrails')
+            self.trail_inventory_status[region] = 'denied' if (
+                isinstance(e, ClientError) and e.response.get('Error', {}).get('Code')
+                in ('AccessDenied', 'AccessDeniedException', 'UnauthorizedOperation')) else 'failed'
             print_exception(f'Failed to describe CloudTrail trail: {e}')
             trails = []
         else:
+            self.trail_inventory_status[region] = 'complete'
             await get_and_set_concurrently(
                 [self._get_and_set_status, self._get_and_set_selectors], trails, region=region)
         finally:
