@@ -1,8 +1,8 @@
 {
     "schema_version": 1,
     "profile_id": "cis-aws-foundations-partial",
-    "profile_version": "2026.11.0",
-    "about": "Opt-in PARTIAL candidate crosswalk to CIS AWS Foundations Benchmark v7.1.0 (2026-10-02). This is not a CIS-certified assessment or complete benchmark coverage. Manual and unsupported controls remain unassessed. Historical CIS 1.2.0 ruleset is unchanged.",
+    "profile_version": "2026.11.1",
+    "about": "Opt-in PARTIAL evidence crosswalk to CIS AWS Foundations v7.1.0. Mapping identifiers do not prove the full benchmark control or actual compliance; manual and unsupported controls are explicitly unassessed. Excludes the customer scan archive and retains the historical CIS 1.2.0 ruleset.",
     "benchmark": {
         "id": "cis-aws-foundations",
         "version": "7.1.0",
@@ -77,6 +77,138 @@
                 "control_id": "6.7",
                 "coverage": "candidate"
             }
+        ],
+        "iam-root-account-no-hardware-mfa.json": [
+            {
+                "control_id": "2.6",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-user-without-mfa.json": [
+            {
+                "control_id": "2.10",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-unused-credentials-not-disabled.json": [
+            {
+                "control_id": "2.11",
+                "coverage": "candidate"
+            }
+        ],
+        "iam-user-no-key-rotation.json": [
+            {
+                "control_id": "2.12",
+                "coverage": "candidate"
+            }
+        ],
+        "s3-bucket-allowing-cleartext.json": [
+            {
+                "control_id": "3.1.1",
+                "coverage": "candidate"
+            }
+        ],
+        "s3-bucket-no-mfa-delete.json": [
+            {
+                "control_id": "3.1.2",
+                "coverage": "candidate"
+            }
+        ],
+        "s3-bucket-no-default-encryption.json": [
+            {
+                "control_id": "3.1.5",
+                "coverage": "candidate"
+            }
+        ],
+        "rds-instance-storage-not-encrypted.json": [
+            {
+                "control_id": "3.2.1",
+                "coverage": "candidate"
+            }
+        ],
+        "rds-instance-no-minor-upgrade.json": [
+            {
+                "control_id": "3.2.2",
+                "coverage": "candidate"
+            }
+        ],
+        "rds-instance-publicly-accessible.json": [
+            {
+                "control_id": "3.2.3",
+                "coverage": "candidate"
+            }
+        ],
+        "rds-instance-single-az.json": [
+            {
+                "control_id": "3.2.4",
+                "coverage": "candidate"
+            }
+        ],
+        "rds-instance-deletion-protection-disabled.json": [
+            {
+                "control_id": "3.2.5",
+                "coverage": "candidate"
+            }
+        ],
+        "efs-filesystem-not-encrypted.json": [
+            {
+                "control_id": "3.3.1",
+                "coverage": "candidate"
+            }
+        ],
+        "cloudtrail-not-configured.json": [
+            {
+                "control_id": "4.1",
+                "coverage": "candidate"
+            }
+        ],
+        "elb-no-access-logs.json": [
+            {
+                "control_id": "4.10",
+                "coverage": "candidate"
+            }
+        ],
+        "elbv2-no-access-logs.json": [
+            {
+                "control_id": "4.10",
+                "coverage": "candidate"
+            }
+        ],
+        "ec2-ebs-default-encryption-disabled.json": [
+            {
+                "control_id": "6.1.1",
+                "coverage": "candidate"
+            }
+        ],
+        "ec2-ebs-volume-not-encrypted.json": [
+            {
+                "control_id": "6.1.1",
+                "coverage": "candidate"
+            }
+        ],
+        "bedrock-invocation-logging-review.json": [
+            {
+                "control_id": "7.4.2",
+                "coverage": "candidate"
+            }
+        ],
+        "s3-bucket-public-access-block-incomplete.json": [
+            {
+                "control_id": "3.1.4",
+                "coverage": "candidate"
+            }
+        ],
+        "securityhub-region-not-subscribed.json": [
+            {
+                "control_id": "5.16",
+                "coverage": "candidate"
+            }
+        ],
+        "rds-cluster-deletion-protection-disabled.json": [
+            {
+                "control_id": "3.2.5",
+                "coverage": "candidate"
+            }
         ]
     },
     "rules": {
@@ -144,6 +276,145 @@
             }
         ],
         "ec2-instance-imdsv1-enabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "iam-root-account-no-hardware-mfa.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "iam-user-without-mfa.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "iam-unused-credentials-not-disabled.json": [
+            {
+                "enabled": true,
+                "level": "danger",
+                "args": [
+                    "45"
+                ]
+            }
+        ],
+        "iam-user-no-key-rotation.json": [
+            {
+                "enabled": true,
+                "level": "danger",
+                "args": [
+                    "Active",
+                    "90"
+                ]
+            }
+        ],
+        "s3-bucket-allowing-cleartext.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "s3-bucket-no-mfa-delete.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-bucket-no-default-encryption.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-instance-storage-not-encrypted.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "rds-instance-no-minor-upgrade.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-instance-publicly-accessible.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "rds-instance-single-az.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-instance-deletion-protection-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "efs-filesystem-not-encrypted.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "cloudtrail-not-configured.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "elb-no-access-logs.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "elbv2-no-access-logs.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-ebs-default-encryption-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-ebs-volume-not-encrypted.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "bedrock-invocation-logging-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-bucket-public-access-block-incomplete.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "securityhub-region-not-subscribed.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-cluster-deletion-protection-disabled.json": [
             {
                 "enabled": true,
                 "level": "warning"

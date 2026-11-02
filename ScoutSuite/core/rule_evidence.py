@@ -103,6 +103,47 @@ def _rds_ca_catalog():
     return frozenset(current), frozenset(deprecated)
 
 
+def classify_rds_deletion_protection(instance):
+    """Only standalone DB instances; cluster members need DBCluster evidence."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    membership = instance.get('is_cluster_member')
+    if membership is True:
+        return 'not_applicable'
+    if membership is not False:
+        return 'unknown'
+    value = instance.get('DeletionProtection')
+    if value is True:
+        return 'secure'
+    if value is False:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_rds_cluster_deletion_protection(cluster):
+    """Aurora and Multi-AZ DB clusters, counted once per DBClusterIdentifier."""
+    if not isinstance(cluster, dict):
+        return 'unknown'
+    value = cluster.get('DeletionProtection')
+    if value is True:
+        return 'secure'
+    if value is False:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_efs_encryption(filesystem):
+    """AWS EFS DescribeFileSystems Encrypted state; missing is not clean."""
+    if not isinstance(filesystem, dict):
+        return 'unknown'
+    value = filesystem.get('Encrypted')
+    if value is True:
+        return 'secure'
+    if value is False:
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_rds_ca_lifecycle(instance):
     """Current, deprecated or unknown CA; never invent validity for new names."""
     if not isinstance(instance, dict):
@@ -167,6 +208,30 @@ def classify_s3_encryption(bucket):
     # A positively observed disabled configuration could be insecure, but
     # absence of an explicit configuration is SSE-S3 since January 2023.
     if enabled is False and evidence == 'api':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_s3_block_public_access(bucket):
+    """Evaluate effective S3 BPA across the four flags, never infer no public access."""
+    if not isinstance(bucket, dict):
+        return 'unknown'
+    state = bucket.get('effective_bpa_review')
+    if state == 'complete':
+        return 'secure'
+    if state == 'missing':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_securityhub_subscription(region):
+    """Known subscription or explicit AWS ResourceNotFound, not a permissions guess."""
+    if not isinstance(region, dict):
+        return 'unknown'
+    status = region.get('hub_subscription_status')
+    if status == 'enabled':
+        return 'secure'
+    if status == 'not_subscribed':
         return 'insecure'
     return 'unknown'
 
@@ -817,6 +882,11 @@ def _classify_scoped_review(resource, field):
 
 
 CLASSIFIERS = {
+    'cis71-s3-bpa-v1': classify_s3_block_public_access,
+    'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
+    'cis71-rds-deletion-protection-v1': classify_rds_deletion_protection,
+    'cis71-rds-cluster-deletion-protection-v1': classify_rds_cluster_deletion_protection,
+    'cis71-efs-encryption-v1': classify_efs_encryption,
     'macie-session-v1': classify_macie_session,
     'macie-no-classification-v1': classify_macie_configuration,
     'macie-bucket-coverage-v1': classify_macie_bucket,

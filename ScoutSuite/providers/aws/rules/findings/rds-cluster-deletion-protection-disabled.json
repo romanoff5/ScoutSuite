@@ -1,0 +1,20 @@
+{
+    "description": "RDS DB cluster deletion protection is disabled",
+    "rationale": "An Aurora or Multi-AZ DB cluster reports DeletionProtection=false. This is assessed once per cluster, not once per member DB instance. Cluster protection prevents deletion of the cluster storage volume, but does not prevent removing an individual Aurora DB instance; missing DescribeDBClusters evidence is UNKNOWN.",
+    "remediation": "Review the cluster's operational purpose and enable DeletionProtection where required. Verify backups, restore procedures and application change approvals independently.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_DeleteCluster.html"
+    ],
+    "dashboard_name": "Clusters",
+    "path": "rds.regions.id.clusters.id",
+    "conditions": [
+        "and",
+        [
+            "DeletionProtection",
+            "false",
+            ""
+        ]
+    ],
+    "evidence_policy": "cis71-rds-cluster-deletion-protection-v1",
+    "id_suffix": "DeletionProtection"
+}

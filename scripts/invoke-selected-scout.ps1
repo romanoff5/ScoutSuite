@@ -10,14 +10,15 @@ $selection = Join-Path $ToolkitRoot '.scout-scanner-selection.json'
 $mode = 'stable'
 if (Test-Path -LiteralPath $selection -PathType Leaf) {
     $configuration = Get-Content -LiteralPath $selection -Raw | ConvertFrom-Json
-    if ($configuration.schema -ne 1 -or $configuration.mode -notin @('stable', 'fork', 'forkrc2', 'forkrc1')) {
+    if ($configuration.schema -ne 1 -or $configuration.mode -notin @('stable', 'fork', 'forkrc3', 'forkrc2', 'forkrc1')) {
         throw 'Invalid scanner selection config; refusing implicit fallback'
     }
     $mode = $configuration.mode
 }
 $venvName = switch ($mode) {
     'stable' { '.venv-scout' }
-    'fork' { '.venv-scout-fork-rc3' }
+    'fork' { '.venv-scout-fork-rc4' }
+    'forkrc3' { '.venv-scout-fork-rc3' }
     'forkrc2' { '.venv-scout-fork-rc2' }
     'forkrc1' { '.venv-scout-fork' }
 }
@@ -30,7 +31,8 @@ if ($mode -ne 'stable') {
     }
     $record = Get-Content -LiteralPath $provenance -Raw | ConvertFrom-Json
     $expectedVersion = switch ($mode) {
-        'fork' { '5.14.0+romanoff5.m10rc3' }
+        'fork' { '5.14.0+romanoff5.m10rc4' }
+        'forkrc3' { '5.14.0+romanoff5.m10rc3' }
         'forkrc2' { '5.14.0+romanoff5.m10rc2' }
         'forkrc1' { '5.14.0+romanoff5.m10rc1' }
     }
@@ -39,7 +41,7 @@ if ($mode -ne 'stable') {
         $record.wheel_sha256 -notmatch '^[0-9a-f]{64}$') {
         throw 'Untrusted fork provenance; refusing launch'
     }
-    if ($mode -in @('fork', 'forkrc2')) {
+    if ($mode -in @('fork', 'forkrc3', 'forkrc2')) {
         if ($record.scout_exe_sha256 -notmatch '^[0-9a-f]{64}$' -or
             $record.constraints_sha256 -notmatch '^[0-9a-f]{64}$') {
             throw 'Fork integrity evidence missing'

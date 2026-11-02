@@ -791,6 +791,10 @@
         "subnet_groups": {
           "cols": 2,
           "path": "services.rds.regions.id.vpcs.id.subnet_groups"
+        },
+        "clusters": {
+          "cols": 2,
+          "path": "services.rds.regions.id.clusters"
         }
       },
       "summaries": {

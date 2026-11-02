@@ -1705,6 +1705,36 @@
                 "enabled": true,
                 "level": "danger"
             }
+        ],
+        "rds-instance-deletion-protection-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "efs-filesystem-not-encrypted.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "s3-bucket-public-access-block-incomplete.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "securityhub-region-not-subscribed.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-cluster-deletion-protection-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

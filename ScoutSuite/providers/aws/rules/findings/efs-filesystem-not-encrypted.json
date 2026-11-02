@@ -1,0 +1,20 @@
+{
+    "description": "EFS file system encryption at rest is disabled",
+    "rationale": "The EFS file system reports Encrypted=false. The rule evaluates encryption at rest only; it does not verify mount-target access, TLS in transit, key policies or the confidentiality of stored files.",
+    "remediation": "Review the file system's encryption requirements and migrate data to an encrypted EFS file system when necessary; verify key management and client access separately.",
+    "references": [
+        "https://docs.aws.amazon.com/efs/latest/ug/encryption-at-rest.html"
+    ],
+    "dashboard_name": "File systems",
+    "path": "efs.regions.id.filesystems.id",
+    "conditions": [
+        "and",
+        [
+            "Encrypted",
+            "false",
+            ""
+        ]
+    ],
+    "evidence_policy": "cis71-efs-encryption-v1",
+    "id_suffix": "Encrypted"
+}
