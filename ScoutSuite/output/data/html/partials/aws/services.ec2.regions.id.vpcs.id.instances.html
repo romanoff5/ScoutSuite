@@ -61,7 +61,17 @@
             {{/if}}
         </div>
         {{/if}}
-    </script>
+    
+        <!-- M10-Q: all cross-service evidence is Handlebars-escaped and offline-safe. -->
+        <div class="list-group-item">
+            <h4>Cross-service coverage (M10-Q)</h4>
+            <p>Inspector enrollment: {{m10q_inspector.state}}</p>
+            <p>Coverage source: {{m10q_inspector.source}}</p>
+            <p>Independent scan success proven: {{m10q_inspector.independent_scan_execution_verified}}</p>
+            {{#each m10q_inspector.coverage_record_ids}}<p>Coverage record: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_inspector.reasons}}<p>Reason: {{this}}</p>{{/each}}
+        </div>
+</script>
     <script>
       Handlebars.registerPartial("services.ec2.regions.id.vpcs.id.instances", $("#services\\.ec2\\.regions\\.id\\.vpcs\\.id\\.instances\\.partial").html());
     </script>
