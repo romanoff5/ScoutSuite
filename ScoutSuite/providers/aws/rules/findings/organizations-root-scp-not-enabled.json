@@ -1,0 +1,20 @@
+{
+    "description": "AWS Organizations root has no enabled service control policy type",
+    "rationale": "An ALL-feature organization root with an explicitly disabled or absent SERVICE_CONTROL_POLICY type does not enforce SCP guardrails for that root. This does not inspect attached policies or effective account permissions. Unknown/partial root data is not scored as secure.",
+    "remediation": "Review whether SCP guardrails are required, enable SERVICE_CONTROL_POLICY on the affected root, then review policy attachment and inheritance separately.",
+    "references": [
+        "https://docs.aws.amazon.com/organizations/latest/APIReference/API_ListRoots.html"
+    ],
+    "dashboard_name": "Roots",
+    "path": "organizations.roots.id",
+    "conditions": [
+        "and",
+        [
+            "scp_enabled",
+            "false",
+            ""
+        ]
+    ],
+    "id_suffix": "SCPNotEnabled",
+    "evidence_policy": "organizations-root-scp-v1"
+}
