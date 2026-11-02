@@ -68,6 +68,7 @@
             <p>Inspector enrollment: {{m10q_inspector.state}}</p>
             <p>Coverage source: {{m10q_inspector.source}}</p>
             <p>Independent scan success proven: {{m10q_inspector.independent_scan_execution_verified}}</p>
+            <p>Note: stopped instance eligibility and disabled Inspector account states are treated as unknown.</p>
             {{#each m10q_inspector.coverage_record_ids}}<p>Coverage record: <samp>{{this}}</samp></p>{{/each}}
             {{#each m10q_inspector.reasons}}<p>Reason: {{this}}</p>{{/each}}
         </div>
