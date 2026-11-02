@@ -33,6 +33,12 @@
     </ul>{{/each}}
     <h4>Protection evidence and observed execution</h4>
     <p>Correlation completeness: {{correlation_status}}</p>
+    <p>Tag/ARN selection evaluation: {{selection_evaluation_status}}</p>
+    <p>Selection scope: {{selection_evidence_scope}}</p>
+    {{#each tag_condition_evaluated_resource_arns}}
+      <p>Resource with verified tag evidence: <samp>{{this}}</samp></p>{{/each}}
+    {{#each selection_unresolved_resource_arns}}
+      <p>Selection could not be verified: <samp>{{this}}</samp></p>{{/each}}
     <p>{{correlation_note}}</p>
     {{#each matching_protected_resource_arns}}
       <p>Selected ARN with reported recovery point: <samp>{{this}}</samp></p>{{/each}}
