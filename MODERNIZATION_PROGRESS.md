@@ -31,6 +31,15 @@
   older Azure/GCP SDKs): 707 passed before the change; the 4 failures are
   environmental (three M11 Azure/GCP SDK contract tests and one Windows
   `WinError 1314` symlink-privilege test), matching the RC5 note.
+  After the change: 711 passed with the same 4 environmental failures;
+  flake8 and `git diff --check` passed; the 4 new tests fail without the fix.
+- Implementation commit `409b07577c1b5e8de0e3ec8bb75c1a5e6bf63c15`; branch
+  `fix/rc6-backup-gap-deferred-jobs` pushed at
+  `cc188fcc65427123d5919b4066eee2396f3be2f9`, whose
+  [Offline CI run](https://github.com/romanoff5/ScoutSuite/actions/runs/41523057391)
+  passed all four Windows/Ubuntu Python 3.11/3.14 jobs. Remote `master` was
+  fast-forwarded and verified at the same SHA. No PR, upstream push, release,
+  live AWS scan or change to the installed scanner toolkit was made.
 
 ## RC6 release preparation (2026-11-02)
 
