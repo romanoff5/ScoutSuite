@@ -242,6 +242,9 @@ def reconcile_cloudtrail_organization_coverage(services, selected_services, scan
         and not summary['accounts_with_config_gaps']
         and not summary['accounts_unknown'])
     # Scoped to the existing AWS report, not a new pseudo service.
+    for org in (organizations.get('organizations') or {}).values():
+        if isinstance(org, dict):
+            org['m10r_cloudtrail_summary'] = summary
     organizations['m10r_cloudtrail_summary'] = summary
     cloudtrail['m10r_organization_coverage'] = summary
     return summary
