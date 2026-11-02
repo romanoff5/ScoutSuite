@@ -48,6 +48,9 @@ replace a hardcoded path to scout.exe.
 
 ## Authorized AWS read-only preflight
 
+Only authorized, explicitly scoped assessment operations may access the
+client account; these steps do not grant cloud access to CI or the installer.
+
 1. Validate the expected client account using
    `aws sts get-caller-identity --profile <audit-profile>` and a
    separately approved cross-account IAM role. Do not log credentials.
