@@ -342,3 +342,33 @@ finding payload requests, or changes to configured collection caps.
 ## M10-J — AWS WAFv2 regional and CloudFront Web ACL inventories (2026-11-02)
 
 Adds the public `wafv2` service to the default AWS scan, with bounded read-only `ListWebACLs`, `GetWebACL` and `GetLoggingConfiguration`. Regional Web ACLs are collected for selected Regions and CLOUDFRONT scope only in `us-east-1`. Preserves full ARN/ID/name, priority-ordered rule names and type summaries, logging destinations, scope and default action without retaining raw rule statements/request bodies. Empty ALLOW ACLs not managed by Firewall Manager are flagged; missing/ambiguous management, details, logging and API responses remain partial/unknown. CloudFront scope is not claimed if `us-east-1` is not scanned. See `docs/modernization/M10_WAFV2.md`. No AWS writes or Azure/GCP modernization.
+
+## Task 13 / M10-K — AWS Backup vault and backup plan inventory (2026-11-02)
+
+- New default AWS Backup public API vertical slice (no special opt-in): regional
+  `ListBackupVaults` + `DescribeBackupVault`, and `ListBackupPlans` +
+  `GetBackupPlan`. `--skip-services backup` remains available.
+- Resource paths: `services.backup.regions.<region>.vaults.<id>` and
+  `services.backup.regions.<region>.plans.<id>`. Preserve full vault/plan ARN,
+  backup plan schedules and copy/retention rules, KMS key, lock state, vault
+  retention bounds, timestamps and recovery-point count. The HTML viewer
+  escapes untrusted values; no backup contents, secret values, selections
+  or recovery point payloads are collected.
+- `backup-vault-lock-disabled` warns only on `Locked=false`. Unknown/absent
+  state does not become a verified pass. Pagination, malformed data, token
+  cycles, deduplication, permissions and failed details record collection
+  issues rather than implying completeness.
+- Branch: `modernization/m10k-aws-backup-vaults-plans-20261102`.
+  Implementation commit, branch head and fast-forwarded `origin/master`:
+  `297a7cd461f386cef2bcf2ebc47339e4736b39df`.
+- Offline CI [run #41417744603](https://github.com/romanoff5/ScoutSuite/actions/runs/41417744603)
+  passed on Ubuntu 24.04 / Python 3.11.18 and Windows 2022 /
+  Python 3.11.9, including build, lint, guarded tests, XSS/browser and
+  packaging tests, plus Linux SQLite HTTP integration. Synthetic AWS
+  response structures independently validated with botocore Stubber.
+- No live AWS account or customer environment assessed. No CIS compliance
+  certification inferred. Scope exclusions and rollback are documented in
+  `docs/modernization/M10_BACKUP.md`.
+- Follow-ups: backup selections/assignment coverage, vault access policies,
+  vault tags, recovery-point resilience, backup audit evidence and restore
+  test coverage. These were not evaluated by M10-K.
