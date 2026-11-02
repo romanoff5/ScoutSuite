@@ -18,6 +18,11 @@ Version: 5.14.0+romanoff5.m10rc3
   counts. Prints only rule keys and aggregate counts, never account IDs,
   ARNs, resource names or raw report payloads. Optional
   `--fail-on-discrepancy` returns exit code 3 on inconsistency.
+- Corrects the CloudTrail trail-absence finding's misleading rationale:
+  recent API management events can still appear in Event History without
+  an independently configured durable trail. The original rule ID and
+  detection condition are unchanged; organization-wide visibility still
+  requires separate evidence.
 - Adds synthetic regression tests reproducing the real ECR false negative,
   clean/enhanced/unknown rule states and safe offline diagnostics.
 - Retains all RC2 runtime stability, operational AWS evidence fail-closed
