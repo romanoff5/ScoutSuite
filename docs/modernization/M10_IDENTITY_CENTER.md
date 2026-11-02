@@ -27,7 +27,8 @@ that no organization-wide IAM Identity Center deployment exists.
 
 ## Diagnostic/report data
 
-Full instance, permission set, account and identity store IDs; user/group and direct\nmembership ARNs, identity revisions, membership IDs; instance name,
+Full instance, permission set, account and identity store IDs; user/group and direct
+membership ARNs, identity revisions, membership IDs; instance name,
 status/reason, creation date, permission-set name/description/session length,
 AWS-managed policy ARNs, customer-managed policy references, inline-policy
 presence, permissions boundary, provisioned account IDs, assignment identities,
