@@ -65,7 +65,7 @@ class StorageAccountsFacade:
         # Time format used by Azure API:
         time_format = "%Y-%m-%dT%H:%M:%S.%f"
         # Azure API uses UTC time, we need to use the same to avoid bad requests:
-        utc_now = datetime.datetime.utcnow()
+        utc_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         # Activity logs are only archived for a period of 90 days max (requesting a timespan of more than that ends up
         # with a bad request):
         timespan = datetime.timedelta(90)
