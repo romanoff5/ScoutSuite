@@ -1,0 +1,1 @@
+"""Public GuardDuty inventory resources."""
