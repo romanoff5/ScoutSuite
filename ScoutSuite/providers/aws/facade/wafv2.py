@@ -4,6 +4,7 @@ from botocore.exceptions import ClientError
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
+from ScoutSuite.providers.aws.facade.wafv2_associations import discover_associations
 from ScoutSuite.providers.utils import run_concurrently
 
 MAX_PAGES = 20
@@ -157,7 +158,10 @@ class WAFv2PublicFacade(AWSBaseFacade):
                         self.failure('GetLoggingConfiguration', error, partial=True)
                 except Exception as error:
                     self.failure('GetLoggingConfiguration', error, partial=True)
+                associations = await discover_associations(
+                    self, client, region, scope, arn)
                 collected.append({
+                    **associations,
                     'name': name, 'id': identifier, 'arn': arn, 'scope': scope,
                     'region': region, 'default_action': web_acl.get('DefaultAction'),
                     'rules': rules, 'managed_by_firewall_manager':

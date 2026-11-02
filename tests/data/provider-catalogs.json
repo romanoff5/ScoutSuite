@@ -252,7 +252,8 @@
       "vpc-subnet-with-bad-acls.json",
       "vpc-subnet-with-default-acls.json",
       "vpc-subnet-without-flow-log.json",
-      "wafv2-web-acl-empty-allow.json"
+      "wafv2-web-acl-empty-allow.json",
+      "wafv2-web-acl-unassociated.json"
     ],
     "templates": [
       "partials/aws/left_menu_for_region.html",
