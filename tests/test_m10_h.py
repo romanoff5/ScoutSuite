@@ -216,8 +216,10 @@ def test_three_evidence_classifiers_in_rule_engine(tmp_path):
 
 
 def test_default_aws_selection_and_safe_report_templates():
-    config = lambda credentials: SimpleNamespace(credentials=credentials, iam={}, ecr={}, ecs={},
-                                                   eks={}, s3={}, inspector2={})
+    config = lambda credentials: SimpleNamespace(
+        credentials=credentials, iam={}, ecr={}, ecs={}, eks={}, s3={},
+        inspector2={}, organizations={}, accessanalyzer={},
+        securityhub={}, guardduty={})
     credentials = SimpleNamespace(session=object())
     with patch('ScoutSuite.providers.aws.provider.AWSServicesConfig', config), \
          patch('ScoutSuite.providers.aws.provider.get_partition_name', return_value='aws'), \
