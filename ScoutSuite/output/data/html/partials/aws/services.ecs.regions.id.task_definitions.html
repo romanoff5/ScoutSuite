@@ -1,0 +1,35 @@
+<!-- ECS task definitions: never display environment variable values. -->
+<script id="services.ecs.regions.id.task_definitions.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <p>Task definition ARN: <samp>{{task_definition_arn}}</samp></p>
+    <p>Family: {{family}}; Revision: {{revision}}; Status: {{status}}</p>
+    <p>Task role: <samp>{{task_role_arn}}</samp></p>
+    <p>Execution role: <samp>{{execution_role_arn}}</samp></p>
+    <p>Registered by: <samp>{{registered_by}}</samp>; Registered at: {{registered_at}}</p>
+    <p>Privileged container present: {{has_privileged_container}}</p>
+    <p>Privilege evidence complete: {{privilege_observation_complete}}</p>
+    {{#each containers}}
+      <h4>Container: {{name}}</h4>
+      <p>Image: <samp>{{image}}</samp>; Privileged: {{privileged}}</p>
+      <p>Read-only root filesystem: {{readonly_root_filesystem}}; User: {{user}}</p>
+      <h5>Environment variable names only</h5>
+      {{#each environment_variable_names}}<p>{{this}}</p>{{/each}}
+      <h5>Secret references (never resolved)</h5>
+      {{#each secret_references}}
+        <p>{{name}}: <samp>{{value_from}}</samp></p>
+      {{/each}}
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ecs.regions.id.task_definitions",
+    $("#services\\.ecs\\.regions\\.id\\.task_definitions\\.partial").html());
+</script>
+<script id="single_ecs_task_definition-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ecs.regions.id.task_definitions' }}
+</script>
+<script>
+  var single_ecs_task_definition_template = Handlebars.compile(
+    $("#single_ecs_task_definition-template").html());
+</script>

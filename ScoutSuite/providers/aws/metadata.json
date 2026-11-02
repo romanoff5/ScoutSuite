@@ -395,6 +395,10 @@
                 "repositories": {
                     "cols": 2,
                     "path": "services.ecr.regions.id.repositories"
+                },
+                "registry_scanning": {
+                    "cols": 2,
+                    "path": "services.ecr.regions.id.registry_scanning"
                 }
             }
         },
@@ -407,6 +411,10 @@
                 "clusters": {
                     "cols": 2,
                     "path": "services.ecs.regions.id.clusters"
+                },
+                "task_definitions": {
+                    "cols": 2,
+                    "path": "services.ecs.regions.id.task_definitions"
                 }
             }
         },

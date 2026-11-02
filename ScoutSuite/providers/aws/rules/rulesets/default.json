@@ -1483,6 +1483,24 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ecr-registry-not-enhanced-scanning.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ecs-task-definition-privileged.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "eks-control-plane-audit-logging-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

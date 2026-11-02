@@ -295,3 +295,13 @@ cloud writes or live AWS assessments. Azure/GCP unchanged.
 - Source branch `modernization/m10e-inspector2-coverage-org-20261102` CI [#41375445434](https://github.com/romanoff5/ScoutSuite/actions/runs/41375445434): Windows/Ubuntu **420 passed**, 34 subtests each, lint/packaging successful. Corrected opt-in test regression and retained exact rule catalog guards.
 - Consolidated parallel ECR/ECS/EKS master changes with a two-parent, history-preserving integration merge `4689268733f86ce52f1c499c5be8c52bebf58d62`. [Integrated CI #41375625757](https://github.com/romanoff5/ScoutSuite/actions/runs/41375625757): Windows Python 3.11.9 and Ubuntu Python 3.11.18 — **441 passed, 34 subtests passed**, 206 warnings each; lint, packaging, offline and browser security gates passed. Fast-forward merged and verified remote master.
 - Limitations: no live AWS/organization validation. AWS service-level eligibility, undiscovered resources, nonassociated organization accounts, partition/Region drift, exceptionally large inventories and racing API snapshots still require independent confirmation. Rollback via ordinary revert commits; selecting no `inspector2` avoids new Inspector2 API actions.
+
+## M10-H — default ECR/ECS/EKS and deeper controls (2026-11-02)
+
+ECR, ECS and EKS are part of the ordinary AWS service selection. Other
+experimental M10 services remain opt-in. ECR now collects registry scanning
+configuration; ECS enumerates up to 1,000 ACTIVE task definition revisions
+with a strictly sanitized report (no environment values or logging tokens);
+EKS evaluates `audit` control-plane logging from DescribeCluster.
+Collection failures stay explicit, and no resource modification is used.
+See M10_ECR.md, M10_ECS.md and M10_EKS.md for scope and limits.

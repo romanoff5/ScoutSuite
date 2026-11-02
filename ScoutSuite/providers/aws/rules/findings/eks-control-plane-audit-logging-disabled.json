@@ -1,0 +1,20 @@
+{
+    "description": "Amazon EKS control-plane audit logging is explicitly disabled",
+    "rationale": "The EKS DescribeCluster response explicitly reports audit control-plane logging disabled. Audit events are therefore not exported through this setting; log ingestion and retention require separate checks.",
+    "remediation": "Enable audit control-plane logging for the affected EKS cluster; verify CloudWatch Logs retention and any required forwarding to the SIEM.",
+    "references": [
+        "https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html"
+    ],
+    "dashboard_name": "Clusters",
+    "path": "eks.regions.id.clusters.id",
+    "conditions": [
+        "and",
+        [
+            "audit_logging_disabled",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "AuditLoggingDisabled",
+    "evidence_policy": "eks-control-plane-audit-v1"
+}

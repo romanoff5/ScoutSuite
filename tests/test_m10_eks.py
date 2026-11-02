@@ -233,7 +233,7 @@ def test_optin_and_escaped_template():
          patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value=ACCOUNT):
         original = AWSProvider(credentials=creds)
         chosen = AWSProvider(credentials=creds, services=['eks'])
-    assert 'eks' not in original.service_list
+    assert 'eks' in original.service_list
     assert chosen.service_list == ['eks']
     metadata = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text(encoding='utf-8'))
     assert metadata['containers']['eks']['resources']['clusters']['path'] == (

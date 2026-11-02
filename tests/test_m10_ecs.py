@@ -75,7 +75,8 @@ def test_stubber_two_pages_describe_and_resource_normalization():
             assert result[0]['clusterArn'] == arn(1)
             src = SimpleNamespace(
                 build_region_list=AsyncMock(return_value=[REGION]),
-                ecs=SimpleNamespace(get_clusters=AsyncMock(return_value=result)))
+                ecs=SimpleNamespace(get_clusters=AsyncMock(return_value=result),
+                get_task_definitions=AsyncMock(return_value=[])))
             resources = ECSPublic(src)
             await resources.fetch_all(regions=[REGION])
             assert resources['regions_count'] == 1

@@ -12,10 +12,15 @@
       <li>Role ARN: <samp>{{cluster_role_arn}}</samp></li>
       <li>Public endpoint: {{public_endpoint_access}}</li>
       <li>Private endpoint: {{private_endpoint_access}}</li>
+      <li>Control-plane audit logging enabled: {{audit_logging_enabled}}</li>
       <li>Unrestricted public endpoint: {{public_endpoint_unrestricted}}</li>
     </ul>
     <h4>Allowed public CIDRs</h4>
     {{#each public_access_cidrs}}<p><samp>{{this}}</samp></p>{{/each}}
+    <h4>Control-plane log types</h4>
+    {{#each logging.clusterLogging}}
+      <p>Enabled: {{enabled}}; Types: {{#each types}}{{this}} {{/each}}</p>
+    {{/each}}
     <h4>Tags</h4>
     {{#each tags}}<p>{{@key}}: {{this}}</p>{{/each}}
   </div>

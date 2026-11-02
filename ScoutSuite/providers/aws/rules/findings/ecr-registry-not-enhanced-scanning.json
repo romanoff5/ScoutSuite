@@ -1,0 +1,20 @@
+{
+    "description": "ECR registry does not use Enhanced Scanning",
+    "rationale": "The registry explicitly uses BASIC scanning rather than ENHANCED continuous Inspector-backed vulnerability scanning. This does not prove images are unscanned: BASIC supports push-time and manual scans and individual repository filter coverage requires additional interpretation.",
+    "remediation": "Review organizational vulnerability-scanning requirements and consider enabling registry ENHANCED scanning with relevant repository filters and scan frequency. Validate Amazon Inspector cost and repository eligibility.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-scanning-enhanced.html"
+    ],
+    "dashboard_name": "Registry scanning",
+    "path": "ecr.regions.id.registry_scanning.id",
+    "conditions": [
+        "and",
+        [
+            "basic_scanning",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "NotEnhanced",
+    "evidence_policy": "ecr-registry-scanning-v1"
+}

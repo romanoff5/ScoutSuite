@@ -320,6 +320,39 @@ def classify_securityhub_standard(standard):
     return 'unknown'
 
 
+def classify_ecr_registry_scanning(registry):
+    if not isinstance(registry, dict):
+        return 'unknown'
+    if registry.get('scan_type') == 'ENHANCED':
+        return 'secure'
+    if registry.get('scan_type') == 'BASIC':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_ecs_task_privilege(task):
+    if not isinstance(task, dict):
+        return 'unknown'
+    if task.get('has_privileged_container') is True:
+        return 'insecure'
+    if task.get('privilege_observation_complete') is not True:
+        return 'unknown'
+    if task.get('has_privileged_container') is False:
+        return 'secure'
+    return 'unknown'
+
+
+def classify_eks_control_plane_audit(cluster):
+    if not isinstance(cluster, dict):
+        return 'unknown'
+    status = cluster.get('audit_logging_enabled')
+    if status is True:
+        return 'secure'
+    if status is False:
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_eks_api_endpoint(cluster):
     """Public endpoint exposure requires explicit CIDR evidence."""
     if not isinstance(cluster, dict):
@@ -451,6 +484,9 @@ CLASSIFIERS = {
     'ecr-tag-mutability-v1': classify_ecr_tag_mutability,
     'ecs-container-insights-v1': classify_ecs_container_insights,
     'eks-api-endpoint-v1': classify_eks_api_endpoint,
+    'ecr-registry-scanning-v1': classify_ecr_registry_scanning,
+    'ecs-task-privileged-v1': classify_ecs_task_privilege,
+    'eks-control-plane-audit-v1': classify_eks_control_plane_audit,
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,

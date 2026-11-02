@@ -1,7 +1,6 @@
 # M10-F — public ECS regional cluster metadata (opt-in)
 
-The explicit `--services ecs` activates the public collector; legacy default
-service behavior remains unchanged. A separately installed proprietary ECS
+ECS runs in the standard AWS scan without requiring `--services`. A separately installed proprietary ECS
 extension retains historical precedence. Azure/GCP are not modernized.
 
 API permissions: `ecs:ListClusters`, `ecs:DescribeClusters`. Region discovery
@@ -26,3 +25,17 @@ or organization-level ECS deployment coverage.
 Validate Botocore model/Stubber, pagination/limit errors, rule evidence,
 HTML escaping, packaging and full offline Windows/Ubuntu preservation
 before master merge. No live AWS scan or CIS compliance claim.
+
+## M10-H active task definition extension
+
+New `ecs:ListTaskDefinitions` (`ACTIVE`, newest-first; up to 10 pages of 100)
+and `ecs:DescribeTaskDefinition` (up to 1,000 revisions per selected
+Region). The inventory is of **registered active revisions**, not proof of
+what is deployed. The new warning flags explicitly privileged containers.
+
+The report retains task definition ARN, family, revision, task and execution
+roles, container names/images, runtime mode, privilege and read-only FS
+settings, safe log driver metadata, environment **names**, and secret
+references. It never stores environment values, raw task-definition
+configuration, logging option values or secret contents. API errors,
+partial pagination, foreign ARNs and malformed definitions remain partial.

@@ -53,9 +53,9 @@ class AWSProvider(BaseProvider):
 
         super().__init__(report_dir, timestamp,
                                           services, skipped_services, result_format)
-        # M10 services require explicit opt-in. Preserve legacy default scans.
+        # Other M10 services remain opt-in; ECR/ECS/EKS run in normal AWS scans.
         if not services:
-            for new_service in ('accessanalyzer', 'guardduty', 'securityhub', 'organizations', 'inspector2', 'ecr', 'ecs', 'eks'):
+            for new_service in ('accessanalyzer', 'guardduty', 'securityhub', 'organizations', 'inspector2'):
                 if new_service in self.service_list:
                     self.service_list.remove(new_service)
 

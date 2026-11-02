@@ -10,6 +10,8 @@ from ScoutSuite.providers.utils import run_concurrently
 
 
 PAGE_SIZE = 100
+TASK_DEFINITION_PAGES = 10
+MAX_TASK_DEFINITIONS = PAGE_SIZE * TASK_DEFINITION_PAGES
 MAX_PAGES = 50
 MAX_CLUSTERS = PAGE_SIZE * MAX_PAGES
 INCLUDE = ['CONFIGURATIONS', 'SETTINGS', 'STATISTICS', 'TAGS']
@@ -36,6 +38,70 @@ class ECSPublicFacade(AWSBaseFacade):
         else:
             state = 'failed'
         self.issue('partial' if partial else state, operation + state.capitalize())
+
+    async def get_task_definitions(self, region):
+        """Read bounded ACTIVE registered revisions; no runtime task or secret API."""
+        if (not isinstance(self.owner_id, str)
+                or re.fullmatch(r'[0-9]{12}', self.owner_id) is None):
+            self.issue('failed', 'InvalidAccountId')
+            return []
+        client = AWSFacadeUtils.get_client('ecs', self.session, region)
+        if client is None:
+            self.issue('failed', 'TaskDefinitionsClientConstruction')
+            return []
+        arns, seen, tokens = [], set(), set()
+        token = None
+        for _ in range(TASK_DEFINITION_PAGES):
+            params = {'status': 'ACTIVE', 'sort': 'DESC', 'maxResults': PAGE_SIZE}
+            if token is not None:
+                params['nextToken'] = token
+            try:
+                page = await run_concurrently(
+                    lambda params=params: client.list_task_definitions(**params))
+            except Exception as error:
+                self.error('ListTaskDefinitions', error, bool(arns))
+                break
+            rows = page.get('taskDefinitionArns') if isinstance(page, dict) else None
+            if not isinstance(rows, list) or len(rows) > PAGE_SIZE:
+                self.issue('partial' if arns else 'failed', 'MalformedTaskDefinitionList')
+                break
+            for arn in rows:
+                parts = arn.split(':', 5) if isinstance(arn, str) else []
+                if (len(parts) != 6 or parts[2] != 'ecs'
+                        or parts[3] != region or parts[4] != self.owner_id
+                        or not parts[5].startswith('task-definition/')):
+                    self.issue('partial', 'InvalidTaskDefinitionArn')
+                    continue
+                if arn in seen:
+                    self.issue('partial', 'DuplicateTaskDefinition')
+                    continue
+                seen.add(arn)
+                arns.append(arn)
+            following = page.get('nextToken')
+            if following is None or following == '':
+                break
+            if (not isinstance(following, str) or len(following) > 4096
+                    or following in tokens):
+                self.issue('partial', 'InvalidTaskDefinitionPagination')
+                break
+            tokens.add(following)
+            token = following
+        else:
+            self.issue('partial', 'TaskDefinitionPageLimit')
+        results = []
+        for arn in arns[:MAX_TASK_DEFINITIONS]:
+            try:
+                response = await run_concurrently(
+                    lambda arn=arn: client.describe_task_definition(taskDefinition=arn))
+            except Exception as error:
+                self.error('DescribeTaskDefinition', error, True)
+                continue
+            row = response.get('taskDefinition') if isinstance(response, dict) else None
+            if not isinstance(row, dict) or row.get('taskDefinitionArn') != arn:
+                self.issue('partial', 'UnexpectedTaskDefinitionDetail')
+                continue
+            results.append(row)
+        return results
 
     async def get_clusters(self, region):
         if (not isinstance(self.owner_id, str)

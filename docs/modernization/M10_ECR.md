@@ -1,7 +1,6 @@
 # M10-E — Public ECR private-repository inventory (opt-in)
 
-Select `--services ecr` explicitly. Core default service selection is
-unchanged. Public ECR support is available without the optional private
+ECR is included in the ordinary AWS scan without `--services`. Public ECR support is available without the optional private
 provider modules. When a separately installed proprietary ECR extension
 exists, it retains its historical precedence.
 
@@ -43,3 +42,12 @@ before merging. No live AWS scan is claimed.
 
 Revert this service slice to roll back. Omit `--services ecr` to avoid
 new collection API calls.
+
+## M10-H registry-scanning extension
+
+An additional read-only `ecr:GetRegistryScanningConfiguration` request is
+made once per selected Region. The report stores the exact registry ID,
+`BASIC`/`ENHANCED` scan type and all returned repository-filter patterns
+and scanning frequency values. A confirmed `BASIC` scan type creates a
+scoped **not enhanced** recommendation, not a claim that images are unscanned.
+Failures or missing configuration remain unknown/partial.

@@ -27,6 +27,42 @@ class ECRPublicFacade(AWSBaseFacade):
         if context is not None:
             context.record_collection_issue(status, 'ecr', reason)
 
+    async def get_registry_scanning(self, region):
+        """Registry-level scanning policy. An unavailable policy is unknown."""
+        if (not isinstance(self.owner_id, str)
+                or re.fullmatch(r'[0-9]{12}', self.owner_id) is None):
+            self.issue('failed', 'InvalidAccountId')
+            return None
+        client = AWSFacadeUtils.get_client('ecr', self.session, region)
+        if client is None:
+            self.issue('partial', 'RegistryScanningClientUnavailable')
+            return None
+        try:
+            response = await run_concurrently(client.get_registry_scanning_configuration)
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code', '')
+            reason = 'Denied' if code in DENIED else (
+                'Unsupported' if code in UNSUPPORTED else 'Error')
+            self.issue('partial', 'GetRegistryScanning' + reason)
+            return None
+        except Exception:
+            self.issue('partial', 'GetRegistryScanningError')
+            return None
+        if not isinstance(response, dict) or response.get('registryId') != self.owner_id:
+            self.issue('partial', 'MalformedRegistryScanning')
+            return None
+        config = response.get('scanningConfiguration')
+        if not isinstance(config, dict):
+            self.issue('partial', 'MissingRegistryScanning')
+            return None
+        scan_type = config.get('scanType')
+        rules = config.get('rules', [])
+        if (scan_type not in ('BASIC', 'ENHANCED') or not isinstance(rules, list)
+                or len(rules) > 100 or any(not isinstance(rule, dict) for rule in rules)):
+            self.issue('partial', 'MalformedRegistryScanning')
+            return None
+        return {'registry_id': self.owner_id, 'scan_type': scan_type, 'rules': rules}
+
     async def get_repositories(self, region):
         """Enumerate only current registry; never infer completeness on failure."""
         if (not isinstance(self.owner_id, str)

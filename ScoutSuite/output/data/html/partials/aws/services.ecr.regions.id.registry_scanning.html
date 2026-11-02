@@ -1,0 +1,27 @@
+<!-- M10-H ECR private registry scanning: escaped values only. -->
+<script id="services.ecr.regions.id.registry_scanning.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <p>Registry: <samp>{{registry_id}}</samp></p>
+    <p>Region: {{region}}</p>
+    <p>Scan type: {{scan_type}}</p>
+    <h4>Registry scan rules</h4>
+    {{#each rules}}
+      <p>Frequency: {{scanFrequency}}</p>
+      {{#each repositoryFilters}}
+        <p>Filter type: {{filterType}}; Repository pattern: <samp>{{filter}}</samp></p>
+      {{/each}}
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ecr.regions.id.registry_scanning",
+    $("#services\\.ecr\\.regions\\.id\\.registry_scanning\\.partial").html());
+</script>
+<script id="single_ecr_registry_scanning-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ecr.regions.id.registry_scanning' }}
+</script>
+<script>
+  var single_ecr_registry_scanning_template = Handlebars.compile(
+    $("#single_ecr_registry_scanning-template").html());
+</script>

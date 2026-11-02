@@ -74,7 +74,8 @@ def test_two_pages_boto_stubber_with_region_normalization():
             assert rows[1]['imageTagMutability'] == 'MUTABLE'
             source = SimpleNamespace(
                 build_region_list=AsyncMock(return_value=[REGION]),
-                ecr=SimpleNamespace(get_repositories=AsyncMock(return_value=rows)))
+                ecr=SimpleNamespace(get_repositories=AsyncMock(return_value=rows),
+                get_registry_scanning=AsyncMock(return_value=None)))
             resources = ECRPublic(source)
             await resources.fetch_all(regions=[REGION])
             assert resources['regions_count'] == 1

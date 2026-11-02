@@ -1,0 +1,20 @@
+{
+    "description": "Active ECS task definition contains a privileged container",
+    "rationale": "At least one container in a registered ACTIVE task definition explicitly enables privileged mode. This gives the container elevated host access if that revision is deployed. Registered does not necessarily mean currently running.",
+    "remediation": "Remove privileged=true where not strictly required. Review the referenced task definition ARN, container name, runtime and deployment usage; apply least privilege.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html"
+    ],
+    "dashboard_name": "Task definitions",
+    "path": "ecs.regions.id.task_definitions.id",
+    "conditions": [
+        "and",
+        [
+            "has_privileged_container",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Privileged",
+    "evidence_policy": "ecs-task-privileged-v1"
+}

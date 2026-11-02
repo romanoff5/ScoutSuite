@@ -43,6 +43,16 @@ class Clusters(AWSResources):
         created = raw.get('createdAt')
         if hasattr(created, 'isoformat'):
             created = created.isoformat()
+        logging = raw.get('logging')
+        entries = logging.get('clusterLogging') if isinstance(logging, dict) else None
+        audit_values = [
+            entry.get('enabled') for entry in entries
+            if isinstance(entry, dict) and isinstance(entry.get('types'), list)
+            and 'audit' in entry['types']
+        ] if isinstance(entries, list) else []
+        audit_enabled = (
+            audit_values[0] if len(audit_values) == 1
+            and isinstance(audit_values[0], bool) else None)
         key = get_non_provider_id(arn)
         return key, {
             'id': key, 'name': name, 'cluster_arn': arn, 'region': self.region,
@@ -56,6 +66,8 @@ class Clusters(AWSResources):
             'public_endpoint_unrestricted': unrestricted,
             'resources_vpc_config': vpc,
             'logging': raw.get('logging') or {},
+            'audit_logging_enabled': audit_enabled,
+            'audit_logging_disabled': audit_enabled is False,
             'encryption_config': raw.get('encryptionConfig') or [],
             'access_config': raw.get('accessConfig') or {},
             'upgrade_policy': raw.get('upgradePolicy') or {},

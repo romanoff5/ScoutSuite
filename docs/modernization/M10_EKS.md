@@ -1,7 +1,7 @@
 # M10-G — EKS regional cluster inventory (opt-in)
 
-`--services eks` enables this public read-only slice. The previous default
-scan and optional private-provider integration are preserved. No calls to
+EKS is included in the standard AWS scan without `--services`. The optional
+private-provider integration is preserved. No calls to
 Kubernetes API or task/Pod data are made. AWS/Azure/GCP preservation required.
 
 AWS actions: `eks:ListClusters`, `eks:DescribeCluster`, plus pre-existing
@@ -27,3 +27,12 @@ logging, node groups or workload vulnerabilities.
 The contract requires synthetic Botocore Stubber, pagination/error, evidence
 and report tests, installed wheel/sdist, offline Windows and Ubuntu CI.
 No live AWS scan or CIS compliance scoring. Revert the slice to roll back.
+
+## M10-H control-plane audit logging
+
+Existing `eks:DescribeCluster` response includes
+`logging.clusterLogging`. A single explicit `audit` observation with
+`enabled=false` is a warning; `enabled=true` is a pass only for this
+configuration check. Missing, malformed or conflicting audit settings
+remain unknown. This does not verify CloudWatch retention, SIEM forwarding,
+or log delivery.
