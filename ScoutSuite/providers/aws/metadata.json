@@ -144,6 +144,26 @@
         }
     },
     "network": {
+        "networkfirewall": {
+            "resources": {
+                "regions": {
+                    "cols": 2,
+                    "path": "services.networkfirewall.regions"
+                },
+                "firewalls": {
+                    "cols": 2,
+                    "path": "services.networkfirewall.regions.id.firewalls"
+                },
+                "policies": {
+                    "cols": 2,
+                    "path": "services.networkfirewall.regions.id.policies"
+                },
+                "rule_groups": {
+                    "cols": 2,
+                    "path": "services.networkfirewall.regions.id.rule_groups"
+                }
+            }
+        },
         "vpc": {
             "resources": {
                 "network_acls": {
