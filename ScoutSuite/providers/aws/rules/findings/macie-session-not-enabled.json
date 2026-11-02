@@ -1,6 +1,6 @@
 {
     "description": "Amazon Macie is not enabled or is paused in a verified AWS Region",
-    "rationale": "Only explicit GetMacieSession NOT_ENABLED/PAUSED results trigger this finding. AccessDenied and other API failures are unknown, not disabled.",
+    "rationale": "Only explicit GetMacieSession ResourceNotFoundException, AccessDeniedException with exact 'Macie is not enabled' service-state message, or PAUSED session trigger this finding. Generic IAM AccessDenied, unknown errors, and incomplete collection remain UNKNOWN, not disabled.",
     "remediation": "Enable or resume Macie if required by the account's classification policy; validate organization/region coverage.",
     "references": [
         "https://docs.aws.amazon.com/macie/latest/APIReference/sessions.html"
