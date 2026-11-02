@@ -1,91 +1,46 @@
-# ScoutSuite RC5 — Ridgepay install, non-mutating preflight and rollback
+# ScoutSuite RC6 — side-by-side install and read-only acceptance
 
-RC1–RC4 published GitHub releases are immutable. RC5 retains the candidate
-CIS AWS Foundations v7.1.0 rules and fixes Security Hub absent-subscription,
-RDS incomplete-inventory/cache poisoning, malformed cluster membership and
-non-finite WAF metrics, reviewed against RC3 private field
-evidence. Requirements: Windows 11, PowerShell 7, Python 3.11.
+Requires Windows 11, PowerShell 7 and Python 3.11. Use published `fork-v5.14.0-m10-rc6` only after successful exact-master CI and release publication. RC6 changes only `.venv-scout-fork-rc6`; Stable .venv-scout untouched.
 
-## Install RC5 side by side
-
-From an updated trusted local clone of `romanoff5/ScoutSuite`:
+## Install RC6
 
 ```powershell
 git checkout master
 git pull --ff-only origin master
-$toolkit = Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-fork.ps1 `
-  -FromRelease -ReleaseTag fork-v5.14.0-m10-rc5 -ToolkitRoot $toolkit
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 `
-  -Mode Fork -ToolkitRoot $toolkit
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\invoke-selected-scout.ps1 `
-  -ToolkitRoot $toolkit aws --help
+$toolkit = Join-Path $HOME 'Documents\\Security Tools\\aws-audit-newclient-starter'
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\install-fork.ps1 -FromRelease -ReleaseTag fork-v5.14.0-m10-rc6 -ToolkitRoot $toolkit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\select-scanner.ps1 -Mode Fork -ToolkitRoot $toolkit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\invoke-selected-scout.ps1 -ToolkitRoot $toolkit aws --help
 ```
 
-The installer verifies release SHA256SUMS, pinned wheel, manifest and
-runtime-py311 constraints, version, `pip check` and CLI help, and writes
-`fork-install.json` with package/executable provenance. Release assets use
-a distinct RC5 tag; the existing `.venv-scout-fork-rc4` and previous environments remain untouched.
-Checksums co-hosted on GitHub do not establish third-party signatures.
+Installer verifies SHA256SUMS, manifest, exact wheel/constraints hashes, installed package version, `pip check`, CLI help and records `fork-install.json`. Co-hosted checksums are not independent signatures. A failed install removes only its new RC6 directory.
 
-The explicit rollback targets are:
-- `Fork`: new RC5, `.venv-scout-fork-rc5`
-- `ForkRc4`: prior RC4, `.venv-scout-fork-rc4`
-- `ForkRc3`: prior RC3, `.venv-scout-fork-rc3`
-- `ForkRc2`: prior RC2, `.venv-scout-fork-rc2`
-- `ForkRc1`: prior RC1/hotfix, `.venv-scout-fork`
-- `Stable`: existing stable, `.venv-scout`
+## Rollback
 
-Example rollback without uninstalling or modifying existing reports:
+| Mode | Environment | Note |
+| --- | --- | --- |
+| `Fork` | `.venv-scout-fork-rc6` | Latest RC6 candidate |
+| `ForkRc5` | `.venv-scout-fork-rc5` | Published RC5 has known RDS defect; historical use only |
+| `ForkRc4` | `.venv-scout-fork-rc4` | Prior candidate |
+| `ForkRc3` | `.venv-scout-fork-rc3` | Prior field baseline |
+| `ForkRc2` | `.venv-scout-fork-rc2` | Earlier candidate |
+| `ForkRc1` | `.venv-scout-fork` | RC1/hotfix |
+| `Stable` | `.venv-scout` | Unmodified stable |
 
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 `
-  -Mode ForkRc4 -ToolkitRoot $toolkit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\select-scanner.ps1 -Mode ForkRc3 -ToolkitRoot $toolkit
 ```
 
-The launcher validates matching provenance, scanner version and
-executable SHA256 for RC5/RC4/RC3/RC2. The separate external Ridgepay
-launcher must be explicitly configured to invoke
-`scripts/invoke-selected-scout.ps1`; the selector does not magically
-replace a hardcoded path to scout.exe.
+Selector does not change any external launcher hardcoded to an executable; selected invoker checks provenance and executable hashes before startup.
 
-## Authorized AWS read-only preflight
+## Authorized non-mutating AWS preflight and field run
 
-Only authorized, explicitly scoped assessment operations may access the
-client account; these steps do not grant cloud access to CI or the installer.
+No real client AWS scanning is performed by CI or installer. Check authorization, account and Region explicitly. Example under the existing assessed profile:
 
-1. Validate the expected client account using
-   `aws sts get-caller-identity --profile <audit-profile>` and a
-   separately approved cross-account IAM role. Do not log credentials.
-2. Run an approved single-Region AWS scan with `--no-browser`
-   into a unique private output directory. Do not interpret exit 0 as
-   complete collection.
-3. Compare collected service/Region coverage, API exceptions, all
-   `collection_status.issues`, evidence statuses and resolved findings.
-4. Verify RDS instance vs DB cluster deletion protection separately.
-   RC3 evidence showed Aurora member instances; RC5 assesses the DB
-   cluster once via `rds:DescribeDBClusters`. Missing access is
-   partial/UNKNOWN, never a clean pass.
-5. Run the offline consistency audit against local RESULTS:
-   ```powershell
-   python -B .\tools\audit_scan_evidence.py `
-     "C:\private\path\scoutsuite_results.js" --fail-on-discrepancy
-   ```
-   It performs no cloud calls and outputs only aggregate rule identifiers
-   and counts, not account IDs, ARNs or resource identifiers.
-6. For CIS v7.1.0 candidate crosswalks, optionally use
-   `--ruleset cis-foundations-7.1.0-partial` in a separate approved
-   scan or local assessment, while remembering that 94 control IDs
-   include manual/partial/unimplemented items. Do not compute CIS
-   compliance percentage from the candidate profile.
+```powershell
+aws sts get-caller-identity --profile newclient-scanners
+$report = Join-Path $toolkit 'reports\\scout-fork\\rc6-manual'
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\invoke-selected-scout.ps1 -ToolkitRoot $toolkit aws --profile newclient-scanners --regions eu-central-1 --no-browser --report-dir $report --report-name rc6-aws
+```
 
-The remaining 40 collection issues in the RC3 Ridgepay scan were
-predominantly Organizations/Identity Center/Macie/Backup/SSM/Bedrock,
-Security Hub/Inspector and S3 permissions/incomplete evidence. They
-are not remedied by installing RC5. A verified ECR BASIC registry
-configuration with zero repositories is an informational observation,
-not proof of unscanned images.
-
-No real client AWS scanning is performed by CI or installer. No
-credential files or private client evidence are bundled into wheel.
-Stable .venv-scout untouched.
+Record exit code, RDS snapshot counts, collector issue identities (RC5 hotfix had 41), incomplete/UNKNOWN status, service coverage, new and lost rule-resource findings, and report consistency via `tools/audit_scan_evidence.py --fail-on-discrepancy`. Exit 0 does not establish completeness; `--strict-completeness` optionally returns 201 when evidence is incomplete. Never publish raw client evidence to GitHub.

@@ -1,3 +1,10 @@
+## RC6 release preparation (2026-11-02)
+
+- RC6 derives from master `0955f56e65665c6eb54f14f37267a4b1eb3466ae`; RDS cache hotfix and conditional M10 collection are already merged. No customer evidence or credentials are included.
+- The new version installs in `.venv-scout-fork-rc6`; RC5 through RC1 and Stable remain selectable without overwriting previous environments.
+- Release gates: offline CI across Python 3.11/3.14 on Windows/Ubuntu; installed distribution, PowerShell integrity and report tests; immutable exact-master release and SHA256SUMS. Fresh authorized field acceptance is separate.
+- RC5 published wheel failed with code 200 due to RDS snapshot cache. Local hotfix completed with two snapshots and 41 collection issues. RC6 must be scanned anew to verify collection/error and finding deltas; unknown evidence never becomes PASS merely because an API is conditionally deferred.
+
 ## RC5 corrective release — 2026-11-02
 
 - Security Hub `DescribeHub ResourceNotFoundException` is confirmed negative subscription evidence, not an invalid `not_applicable` collection issue; regression runs under an active `RunContext`.
