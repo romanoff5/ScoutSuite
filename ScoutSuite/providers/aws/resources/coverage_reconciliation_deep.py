@@ -172,17 +172,19 @@ def reconcile_s3_advanced(services, selected, account_id):
             location_bucket = _bucket_from_scope(loc.get('LocationScope')) if loc else None
             scope_bucket = _bucket_from_scope(grant.get('GrantScope'))
             bucket_name = scope_bucket or location_bucket
-            ev = _link_reference(grant, bucket_name, standard, listing_status,
-                                 owner=None, account_id=account_id, kind='access_grant')
+            if scope_bucket is not None and location_bucket is not None and (
+                    scope_bucket != location_bucket):
+                ev = {'status': 'unknown', 'target_bucket': None,
+                      'reasons': ['grant_scope_conflicts_with_location']}
+                grant['m10q_bucket_target'] = ev
+                grant['m10q_bucket_target_not_reported'] = False
+            else:
+                ev = _link_reference(grant, bucket_name, standard, listing_status,
+                                     owner=None, account_id=account_id, kind='access_grant')
             ev['location_linked'] = loc is not None
             ev['location_scope'] = loc.get('LocationScope') if loc else None
             ev['grant_scope'] = grant.get('GrantScope')
             ev['permission'] = grant.get('Permission')
-            if scope_bucket is not None and location_bucket is not None and (
-                    scope_bucket != location_bucket):
-                ev['status'] = 'unknown'
-                ev['reasons'] = ['grant_scope_conflicts_with_location']
-                grant['m10q_bucket_target_not_reported'] = False
     for point in _values(advanced.get('multi_region_access_points')):
         if not isinstance(point, dict):
             continue
@@ -240,15 +242,18 @@ def _selection_for(arn, plan):
         if not isinstance(selection, dict):
             conditional = True
             continue
-        if selection.get('ListOfTags') or selection.get('Conditions'):
+        has_conditions = bool(selection.get('ListOfTags') or selection.get('Conditions'))
+        if has_conditions:
             conditional = True
         includes = selection.get('Resources')
         excludes = selection.get('NotResources')
         if not isinstance(includes, list) or not isinstance(excludes, list):
             conditional = True
             continue
-        if any(isinstance(p, str) and fnmatchcase(arn, p) for p in includes) and not any(
-                isinstance(p, str) and fnmatchcase(arn, p) for p in excludes):
+        if (not has_conditions
+                and any(isinstance(p, str) and fnmatchcase(arn, p) for p in includes)
+                and not any(isinstance(p, str) and fnmatchcase(arn, p)
+                            for p in excludes)):
             found = True
     return 'explicitly_selected' if found else 'conditional_unknown' if conditional else 'not_explicitly_selected'
 
@@ -409,7 +414,10 @@ def enrich_inspector_and_waf(services, selected, account_id):
                 targets['traffic_routing_through_waf_verified'] = False
                 targets['inspection_applied_to_requests_verified'] = False
                 if targets.get('state') == 'independent_target_observed':
-                    targets['state'] = 'target_exists_attachment_not_independently_verified'
+                    # Independently observed target *existence*, not ALB->WAF
+                    # attachment nor proof that any request is inspected.
+                    targets['independent_target_existence_confirmed'] = True
+                    targets['association_evidence_source'] = 'wafv2_associations_only'
                     changes['waf_association_target_conflicts'] += 1
     return changes
 
