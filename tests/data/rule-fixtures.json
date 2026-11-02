@@ -369,6 +369,8 @@
       "logs-no-alarm-signin-without-mfa.json",
       "logs-no-alarm-unauthorized-api-calls.json",
       "logs-no-alarm-vpc-changes.json",
+      "organizations-features-not-enabled.json",
+      "organizations-root-scp-not-enabled.json",
       "rds-instance-backup-disabled.json",
       "rds-instance-ca-certificate-deprecated.json",
       "rds-instance-no-minor-upgrade.json",
