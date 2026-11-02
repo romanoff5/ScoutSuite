@@ -91,18 +91,18 @@ class Inspector2Facade(AWSBaseFacade):
             resources = {}
         resource_states = {}
         for name in SCAN_TYPES:
-            state = resources.get(name)
-            if state is None:
+            resource_state = resources.get(name)
+            if resource_state is None:
                 resource_states[name] = None
                 if name in REQUIRED_SCAN_TYPES:
                     self._issue('partial', 'MissingRequiredScanType')
                 continue
-            if not isinstance(state, dict):
+            if not isinstance(resource_state, dict):
                 resource_states[name] = None
                 self._issue('partial', 'MalformedScanType')
                 continue
-            status = state.get('status')
-            if status not in VALID_SCAN_STATES:
+            status = resource_state.get('status')
+            if not isinstance(status, str) or status not in VALID_SCAN_STATES:
                 resource_states[name] = None
                 self._issue('partial', 'InvalidScanTypeStatus')
                 continue
