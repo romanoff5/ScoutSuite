@@ -13,3 +13,5 @@ global-exclude __pycache__ *.py[cod]
 include tools/fork_release.py
 recursive-include scripts *.ps1
 recursive-include docs/releases *.md
+
+include tools/audit_scan_evidence.py
