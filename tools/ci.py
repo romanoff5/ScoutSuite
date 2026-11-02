@@ -78,22 +78,12 @@ LEGACY_VENDOR_WARNING_BUDGET = {}
 
 
 def verify_warning_debt(warnings):
-    """Enforce zero first-party or unexpected warnings, without hiding vendor warnings."""
+    """Fail on any warning (including known vendor warnings); never suppress output."""
     if not isinstance(warnings, dict):
         raise AssertionError('Missing structured warning evidence')
-    unrecognized = sorted(set(warnings) - set(LEGACY_VENDOR_WARNING_BUDGET))
-    if unrecognized:
-        raise AssertionError('New or first-party warnings: ' + ', '.join(unrecognized))
-    exceeded = {
-        name: count for name, count in warnings.items()
-        if type(count) is not int or count < 0
-        or count > LEGACY_VENDOR_WARNING_BUDGET[name]
-    }
-    if exceeded:
-        raise AssertionError('Legacy warning budget exceeded: ' + ', '.join(sorted(exceeded)))
-    return {'observed': sum(warnings.values()),
-            'vendor_warning_budget': sum(LEGACY_VENDOR_WARNING_BUDGET.values()),
-            'first_party_warnings': 0}
+    if warnings:
+        raise AssertionError('Zero-warning gate violated: ' + ', '.join(sorted(warnings)))
+    return {'observed': 0, 'vendor_warning_budget': 0, 'first_party_warnings': 0}
 
 
 def verify_execution(junit, manifest):
