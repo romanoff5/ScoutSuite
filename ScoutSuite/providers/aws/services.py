@@ -9,6 +9,7 @@ from ScoutSuite.providers.aws.resources.securityhub.base import SecurityHubPubli
 from ScoutSuite.providers.aws.resources.wafv2.base import WAFv2Public
 from ScoutSuite.providers.aws.resources.backup.base import BackupPublic
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
+from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter
 from ScoutSuite.providers.aws.resources.acm.base import Certificates
 from ScoutSuite.providers.aws.resources.awslambda.base import Lambdas
 from ScoutSuite.providers.aws.resources.cloudformation.base import CloudFormation
@@ -136,6 +137,7 @@ class AWSServicesConfig(BaseServicesConfig):
         self.wafv2 = WAFv2Public(facade)
         self.backup = BackupPublic(facade)
         self.organizations = Organizations(facade)
+        self.identitycenter = IdentityCenter(facade)
 
         # Instantiate proprietary services
         try:
