@@ -41,6 +41,9 @@ class Hubs(AWSResources):
                 'status': status,
                 'unhealthy': status in ('FAILED', 'INCOMPLETE'),
                 'status_reason': item.get('status_reason'),
+                'status_reason_details': item.get('status_reason_details') or {},
+                'standards_controls_updatable': item.get('standards_controls_updatable'),
+                'provider': item.get('provider'),
                 'region': self.region,
             }
         hub_key = get_non_provider_id(arn)
