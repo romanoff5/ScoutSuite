@@ -208,3 +208,15 @@ findings; bounded pagination; explicit access/partial states; account emails exc
 See [M10-C scope and rollback](docs/modernization/M10_ORGANIZATIONS.md).
 M10 remains partially delivered (Organizations does not include policy contents,
 OU hierarchy, effective SCP evaluation, or organization-wide proof).
+
+
+## M10-D — Amazon Inspector2 (2026-11-02)
+
+- Opt-in AWS `inspector2` collector added to `AWSServicesConfig`, `AWSFacade` and metadata; does not modify default service scan, Azure or GCP collectors.
+- Read-only `BatchGetAccountStatus` (current account) and account-filtered `ListCoverage` (up to 5 pages/500 entries per Region), run-scoped concurrency and explicit partial/denied/unsupported/error handling. No vulnerability findings, delegated organization queries, customer data or AWS writes.
+- Status and coverage stored at `services.inspector2.regions.<region>.accounts/coverage.<id>` with existing report schema; escaped Handlebars partials and two evidence-aware rules. Unknown/transitional and incomplete collections do not become verified PASS. No benchmark certification implied.
+- Synthetic botocore Stubber/API-model tests validate account status, resource IDs, pagination, errors, cross-account filtering, normalized data, rule evaluation and opt-in; invalid initial stubs fixed to match AWS required fields.
+- Source branch `modernization/m10d-inspector2-vertical-slice-20261102` at `d07eac6c6e7d453b8023be8e4237fb5b1099999c`, CI [#41370417910](https://github.com/romanoff5/ScoutSuite/actions/runs/41370417910) passed.
+- Reconciled parallel Security Hub and Organizations changes using a genuine two-parent merge in `integration/m10-inspector2-all-20261102`. CI [#41370950308](https://github.com/romanoff5/ScoutSuite/actions/runs/41370950308): Windows Python 3.11.9 and Ubuntu Python 3.11.18 — **394 passed, 34 subtests passed**, 206 warnings each, lint/packaging passed.
+- Fast-forward integrated `master` to `050926522c3b520794e8b9020ce6cd0d91c54e0f`, remote ref verified. No live AWS calls or customer scans. Next work: scoped coverage quality/organization-level assessment and robust region-specific behavior; avoid treating empty verified coverage as complete service enrollment.
+- Rollback: revert the merge through normal history-preserving commits; no AWS state or report migration involved.
