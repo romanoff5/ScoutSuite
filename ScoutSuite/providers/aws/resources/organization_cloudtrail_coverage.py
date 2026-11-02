@@ -120,14 +120,12 @@ def _coverage_for_region(region, states, trails, inventory_complete, account_reg
         return evidence
     enabled = {r for r, s in states.items() if s in _ENABLED}
     unknown = False
-    reasons = []
     for trail in trails:
         applies, reason = _candidate(trail, region, enabled)
         if applies is True:
             evidence['trail_arns'].append(trail.get('arn') or trail.get('TrailARN'))
         elif applies is None:
             unknown = True
-        reasons.append(reason)
     if evidence['trail_arns'] and account_region_complete:
         evidence['configuration_state'] = 'configured'
         evidence['reason'] = 'organization_trail_configuration_only'
