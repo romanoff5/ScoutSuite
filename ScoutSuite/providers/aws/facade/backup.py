@@ -300,3 +300,137 @@ class BackupPublicFacade(AWSBaseFacade):
                 result.complete = False
             result.append(record)
         return result
+
+    async def get_resource_tags(self, region, arns):
+        """Verified current tags for observed ARNs, not a complete resource census.
+
+        GetResources excludes never-tagged and unsupported resources. Missing rows
+        must remain unknown, never be interpreted as an empty tag set.
+        """
+        unique = sorted({arn for arn in arns if isinstance(arn, str) and arn.startswith('arn:')})
+        result = {'tags': {}, 'status': 'complete', 'requested_arns': len(unique)}
+        if not unique:
+            return result
+        client = AWSFacadeUtils.get_client('resourcegroupstaggingapi', self.session, region)
+        if client is None:
+            self.issue('partial', 'ResourceTagsClientUnavailable')
+            result['status'] = 'partial'
+            return result
+        try:
+            for index in range(0, len(unique), 100):
+                batch = unique[index:index + 100]
+                try:
+                    page = await run_concurrently(
+                        lambda batch=batch: client.get_resources(ResourceARNList=batch))
+                except Exception as error:
+                    self.failure('GetResourceTags', error, partial=True)
+                    result['status'] = 'partial'
+                    continue
+                rows = page.get('ResourceTagMappingList') if isinstance(page, dict) else None
+                if not isinstance(rows, list):
+                    result['status'] = 'partial'
+                    self.issue('partial', 'MalformedResourceTagsPage')
+                    continue
+                requested = set(batch)
+                for row in rows:
+                    if not isinstance(row, dict) or row.get('ResourceARN') not in requested:
+                        result['status'] = 'partial'
+                        self.issue('partial', 'MalformedResourceTagIdentity')
+                        continue
+                    arn, tags = row['ResourceARN'], row.get('Tags')
+                    if (arn in result['tags'] or not isinstance(tags, list)
+                            or any(not isinstance(tag, dict)
+                                   or not isinstance(tag.get('Key'), str)
+                                   or not isinstance(tag.get('Value'), str) for tag in tags)):
+                        result['status'] = 'partial'
+                        self.issue('partial', 'MalformedResourceTags')
+                        continue
+                    result['tags'][arn] = {tag['Key']: tag['Value'] for tag in tags}
+                # GetResources with ResourceARNList has no pagination parameters.
+                if page.get('PaginationToken'):
+                    result['status'] = 'partial'
+                    self.issue('partial', 'UnexpectedResourceTagPagination')
+        finally:
+            close = getattr(client, 'close', None)
+            if callable(close):
+                close()
+        result['verified_arns'] = len(result['tags'])
+        result['unknown_arns'] = [arn for arn in unique if arn not in result['tags']]
+        return result
+
+    async def get_tagged_resource_candidates(self, region, tag_keys):
+        """Enumerate tagged candidates, including resources without recovery points.
+
+        TagFilters are server-side *superset* filters; exact selection logic is
+        evaluated after retrieval. Untagged and unsupported resources remain
+        outside the tagging API inventory.
+        """
+        keys = sorted({key for key in tag_keys if isinstance(key, str) and key})
+        result = {'tags': {}, 'status': 'complete', 'tag_keys': keys}
+        if not keys:
+            result['status'] = 'not_applicable'
+            return result
+        client = AWSFacadeUtils.get_client('resourcegroupstaggingapi', self.session, region)
+        if client is None:
+            self.issue('partial', 'CandidateResourceTagsClientUnavailable')
+            result['status'] = 'partial'
+            return result
+        try:
+            for key in keys:
+                token, seen = None, set()
+                for page_number in range(MAX_PAGES):
+                    params = {'TagFilters': [{'Key': key}], 'ResourcesPerPage': PAGE_SIZE}
+                    if token:
+                        params['PaginationToken'] = token
+                    try:
+                        response = await run_concurrently(
+                            lambda params=params: client.get_resources(**params))
+                    except Exception as error:
+                        self.failure('ListTaggedResourceCandidates', error, partial=True)
+                        result['status'] = 'partial'
+                        break
+                    rows = response.get('ResourceTagMappingList') if isinstance(response, dict) else None
+                    if not isinstance(rows, list) or len(rows) > PAGE_SIZE:
+                        self.issue('partial', 'MalformedTaggedCandidatePage')
+                        result['status'] = 'partial'
+                        break
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            result['status'] = 'partial'
+                            continue
+                        arn, tags = row.get('ResourceARN'), row.get('Tags')
+                        if (not isinstance(arn, str) or not arn.startswith('arn:')
+                                or not isinstance(tags, list)
+                                or any(not isinstance(x, dict)
+                                       or not isinstance(x.get('Key'), str)
+                                       or not isinstance(x.get('Value'), str) for x in tags)):
+                            self.issue('partial', 'MalformedTaggedCandidate')
+                            result['status'] = 'partial'
+                            continue
+                        if arn not in result['tags'] and len(result['tags']) >= MAX_ITEMS:
+                            self.issue('partial', 'TaggedCandidateItemLimit')
+                            result['status'] = 'partial'
+                            return result
+                        normalized = {x['Key']: x['Value'] for x in tags}
+                        if arn in result['tags'] and result['tags'][arn] != normalized:
+                            self.issue('partial', 'InconsistentTaggedCandidate')
+                            result['status'] = 'partial'
+                        result['tags'][arn] = normalized
+                    next_token = response.get('PaginationToken')
+                    if not next_token:
+                        break
+                    if not isinstance(next_token, str) or next_token in seen:
+                        self.issue('partial', 'TaggedCandidateInvalidToken')
+                        result['status'] = 'partial'
+                        break
+                    seen.add(next_token)
+                    token = next_token
+                else:
+                    self.issue('partial', 'TaggedCandidatePageLimit')
+                    result['status'] = 'partial'
+        finally:
+            close = getattr(client, 'close', None)
+            if callable(close):
+                close()
+        result['candidate_count'] = len(result['tags'])
+        return result

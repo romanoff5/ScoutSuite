@@ -12,6 +12,14 @@
     <p>Administrative candidate: {{admin_candidate}}; Broad permissions: {{broad_permissions_candidate}}</p>
     <p>Cross-account administrative candidate: {{cross_account_admin_candidate}}</p>
     <p>Organization coverage: {{organization_coverage_status}}; Effective permissions verified: {{effective_permissions_verified}}</p>
+    <p>Effective permission evidence: {{effective_permissions_status}}; SCP context: {{scp_context_status}}</p>
+    <h4>SCP account / OU / root inheritance</h4>
+    {{#each scp_context.ancestor_path}}<p><samp>{{this}}</samp></p>{{/each}}
+    {{#each scp_context.attached_policies_by_target}}
+      <p>Attached at <samp>{{@key}}</samp>:</p>
+      {{#each this}}<p>{{name}} / <samp>{{id}}</samp> / <samp>{{arn}}</samp></p>{{/each}}
+    {{/each}}
+    <p>SCPs can constrain assignments; these are candidate permissions, not proven effective access.</p>
     <h4>User e-mails / group member e-mails</h4>
     {{#each emails}}<p><samp>{{this}}</samp></p>{{/each}}
     <h4>Group member user IDs</h4>

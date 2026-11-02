@@ -154,6 +154,12 @@ class IdentityCenter(Regions):
             ctx = get_current_run_context()
             if ctx is not None:
                 ctx.record_collection_issue('partial', 'identitycenter', 'OrganizationManagementScopeUnverified')
+        scp = {'accounts': {}, 'collection_status': 'not_collected'}
+        if admin_verified and hasattr(self.facade.organizations, 'get_scp_context'):
+            scp = await self.facade.organizations.get_scp_context(
+                organization.get('accounts', []), organization.get('roots', []))
+        self['organization_coverage']['scp_context_collection_status'] = scp.get(
+            'collection_status', 'not_collected')
         cross = defaultdict(set)
         user_cross = defaultdict(set)
         unknown_accounts = set()
@@ -218,7 +224,19 @@ class IdentityCenter(Regions):
                         assignment['admin_account_ids'] = sorted(linked_accounts)
                         assignment['organization_coverage_status'] = (
                             self['organization_coverage']['status'])
+                        # SCP evidence constrains candidate privileges; it does not
+                        # grant permissions or prove runtime authorization.
+                        assignment['scp_context'] = scp.get('accounts', {}).get(
+                            assignment['account_id'], {
+                                'collection_status': 'not_collected',
+                                'effective_permissions_verified': False})
+                        assignment['scp_context_status'] = assignment['scp_context'].get(
+                            'collection_status', 'partial')
                         assignment['effective_permissions_verified'] = False
+                        assignment['effective_permissions_status'] = (
+                            'not_verified_scp_context_available'
+                            if assignment['scp_context_status'] == 'complete'
+                            else 'not_verified_scp_context_incomplete')
                 region_complete = region_complete and instance['collection_complete']
             # Non-successful ListInstances must be observed even with zero rows.
             state = getattr(self.facade.identitycenter, 'region_statuses', {}).get(region['id'], {})

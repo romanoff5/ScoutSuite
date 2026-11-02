@@ -103,3 +103,13 @@ class Organizations(AWSResources):
                             for account in collected.get('accounts', [])}
         self['accounts_count'] = len(self['accounts'])
         self['collection'] = dict(collected['collection'])
+        if hasattr(self.facade.organizations, 'get_scp_context'):
+            scp = await self.facade.organizations.get_scp_context(
+                collected.get('accounts', []), collected.get('roots', []))
+            self['scp_context_collection_status'] = scp.get('collection_status', 'partial')
+            for account_id, account in self['accounts'].items():
+                account['scp_context'] = scp.get('accounts', {}).get(
+                    account_id, {'collection_status': 'partial',
+                                 'effective_permissions_verified': False})
+        else:
+            self['scp_context_collection_status'] = 'not_collected'
