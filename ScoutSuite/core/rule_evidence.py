@@ -195,6 +195,30 @@ def classify_s3_encryption(bucket):
     return 'unknown'
 
 
+def classify_s3_block_public_access(bucket):
+    """Evaluate effective S3 BPA across the four flags, never infer no public access."""
+    if not isinstance(bucket, dict):
+        return 'unknown'
+    state = bucket.get('effective_bpa_review')
+    if state == 'complete':
+        return 'secure'
+    if state == 'missing':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_securityhub_subscription(region):
+    """Known subscription or explicit AWS ResourceNotFound, not a permissions guess."""
+    if not isinstance(region, dict):
+        return 'unknown'
+    status = region.get('hub_subscription_status')
+    if status == 'enabled':
+        return 'secure'
+    if status == 'not_subscribed':
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_s3_secure_transport(bucket):
     if not isinstance(bucket, dict):
         return 'unknown'
@@ -841,6 +865,8 @@ def _classify_scoped_review(resource, field):
 
 
 CLASSIFIERS = {
+    'cis71-s3-bpa-v1': classify_s3_block_public_access,
+    'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
     'cis71-rds-deletion-protection-v1': classify_rds_deletion_protection,
     'cis71-efs-encryption-v1': classify_efs_encryption,
     'macie-session-v1': classify_macie_session,
