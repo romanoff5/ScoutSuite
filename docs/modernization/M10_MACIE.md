@@ -1,0 +1,47 @@
+# M10-P — Amazon Macie (default AWS scan)
+
+Read-only AWS Macie service posture, jobs and S3 bucket coverage, with no
+sensitive information retrieval. The `macie` service is included in default
+AWS scans; `--skip-services macie` disables it.
+
+## Regional AWS API surface
+- `macie2:GetMacieSession`: verified ENABLED, PAUSED or not-enabled (404);
+  AccessDenied/other failures are UNKNOWN, not a clean passing inventory.
+- `macie2:GetAutomatedDiscoveryConfiguration` and
+  `macie2:GetClassificationScope`: automated discovery and bucket exclusions.
+- `macie2:ListClassificationJobs` and
+  `macie2:DescribeClassificationJob`: job IDs/ARNs, schedules, status, errors,
+  last execution, statistics, bucket definitions and dynamic criteria.
+- `macie2:DescribeBuckets`: bucket/account/region identity, automated
+  monitoring, job coverage, last activity timestamps, classifiable count and
+  error codes/messages.
+
+No `GetFindings`, `GetSensitiveDataOccurrences`, `GetResourceProfile`,
+S3 `GetObject`, classification-result retrieval, object keys, samples, or
+sensitive data are accessed or stored. Full diagnostic identifiers remain
+in JSON/SQLite and HTML fields are escaped.
+
+Both list APIs use 100 items/page with 500 pages / 50,000 items safety
+limits; broken tokens, invalid records, SDK errors and denied access produce
+explicit collection issues. Account/region coverage is incomplete whenever
+any required source is denied or incomplete. Macie inventory is *not*
+necessarily equivalent to a full independent S3 inventory.
+
+`RECENT_ACTIVITY` means a timestamp within 45 days, **not successful
+classification**. `STALE_ACTIVITY` and `NO_RECENT_ACTIVITY_EVIDENCE` are
+review flags only; a brand-new bucket or a one-time job is not automatically
+a compliance failure. The 45-day threshold is a configurable code constant
+(review heuristic), not an AWS requirement. One-time jobs are excluded
+from stale recurring-job checks. `jobDetails.isMonitoredByJob` and automatic
+discovery monitoring are configuration/coverage signals, not guarantees that
+objects were examined or that no sensitive data is present.
+
+Jobs with an explicit `lastRunErrorStatus.code=ERROR`, `CANCELLED`,
+`PAUSED` or `USER_PAUSED` status are reported for review. Explicit
+`NO_MONITORING_CONFIGURED` bucket state is also a review condition when
+both discovery is disabled and job monitoring flags are false.
+
+A separate regional warning identifies an ENABLED Macie session where
+both automated discovery is verified DISABLED and the **complete**
+classification-job inventory contains zero jobs. Unknown/denied job lists
+never trigger this rule.

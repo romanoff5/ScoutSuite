@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Macie enabled but no classification jobs or automated discovery configured",
+    "rationale": "The Macie session is explicitly ENABLED, automated sensitive data discovery is explicitly DISABLED, and a completed classification-job inventory is empty. The region has no observed configured classification mechanism, which does not prove absence of S3 data or organization-wide compliance.",
+    "remediation": "Enable automated sensitive data discovery or configure appropriate classification jobs and verify bucket/account scope, IAM/KMS access and successful execution.",
+    "references": [
+        "https://docs.aws.amazon.com/macie/latest/user/discovery-asdd-how-it-works.html"
+    ],
+    "dashboard_name": "Macie regions",
+    "path": "macie.regions.id",
+    "conditions": [
+        "and",
+        [
+            "no_classification_configured",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "NoClassificationConfigured",
+    "evidence_policy": "macie-no-classification-v1"
+}

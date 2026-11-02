@@ -1,0 +1,25 @@
+<!-- Macie bucket metadata only; no object keys, findings or raw HTML. -->
+<script id="services.macie.regions.id.buckets.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>Bucket ARN: <samp>{{bucket_arn}}</samp></li><li>Account: {{account_id}}</li>
+<li>Region: {{region}}</li><li>Coverage: {{coverage_status}}</li>
+<li>Review required: {{review_required}}</li>
+<li>Automated monitoring: {{auto_monitoring_status}}</li>
+<li>Defined in classification job: {{job_defined}}</li>
+<li>Periodically monitored by job: {{job_monitored}}</li>
+<li>Last job ID: {{last_job_id}}</li>
+<li>Last job run / age days: {{last_job_run_at}} / {{last_job_age_days}}</li>
+<li>Last automated discovery / age days: {{last_automated_discovery_at}} / {{last_automated_age_days}}</li>
+<li>Last Macie inventory refresh: {{last_inventory_update}}</li>
+<li>Classifiable objects: {{classifiable_object_count}}; total objects: {{object_count}}</li>
+<li>Error code: {{error_code}}</li><li>Error message: {{error_message}}</li>
+</ul><p>Recent activity does not prove successful scanning or absence of sensitive data.</p></div>
+</script>
+<script>Handlebars.registerPartial("services.macie.regions.id.buckets",
+ $("#services\\.macie\\.regions\\.id\\.buckets\\.partial").html());</script>
+<script id="single_macie_buckets-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.macie.regions.id.buckets' }}
+</script>
+<script>var single_macie_buckets_template =
+ Handlebars.compile($("#single_macie_buckets-template").html());</script>

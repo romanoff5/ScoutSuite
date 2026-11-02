@@ -1603,6 +1603,36 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "macie-session-not-enabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "macie-bucket-coverage-issue.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "macie-job-stale.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "macie-job-execution-issue.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "macie-no-classification-configured.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

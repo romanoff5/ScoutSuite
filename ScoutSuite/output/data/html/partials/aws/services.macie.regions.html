@@ -1,0 +1,27 @@
+<!-- Macie M10-P: HTML escaped, no sensitive findings. -->
+<script id="services.macie.regions.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>Region: {{region}}</li><li>Macie status: {{session_status}}</li>
+<li>Macie verified: {{session_verified}}</li>
+<li>Service role: <samp>{{service_role}}</samp></li>
+<li>Session created / updated: {{session_created_at}} / {{session_updated_at}}</li>
+<li>Automated discovery: {{automated_discovery_status}}</li>
+<li>Automated discovery verified: {{automated_discovery_verified}}</li>
+<li>Automated discovery last config update: {{automated_discovery_updated_at}}</li>
+<li>Classification scope ID: {{classification_scope_id}}</li>
+<li>Auto enable org members: {{auto_enable_org_members}}</li>
+<li>Excluded buckets: {{#each excluded_bucket_names}}<samp>{{this}} </samp>{{/each}}</li>
+<li>No classification configured (review): {{no_classification_configured}}</li>
+<li>Classification jobs: {{jobs_count}} (complete: {{jobs_complete}})</li>
+<li>Discovered S3 buckets: {{buckets_count}} (complete: {{buckets_complete}})</li>
+<li>Coverage assessment status: {{coverage_assessment_status}}</li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.macie.regions",
+ $("#services\\.macie\\.regions\\.partial").html());</script>
+<script id="single_macie_regions-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.macie.regions' }}
+</script>
+<script>var single_macie_regions_template =
+ Handlebars.compile($("#single_macie_regions-template").html());</script>

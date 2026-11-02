@@ -1,0 +1,26 @@
+<!-- Macie jobs: configuration and errors only. -->
+<script id="services.macie.regions.id.jobs.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>Job ID: <samp>{{job_id}}</samp></li><li>Job ARN: <samp>{{job_arn}}</samp></li>
+<li>Region: {{region}}</li><li>Status: {{status}}</li><li>Type: {{type}}</li>
+<li>Created: {{created_at}}</li><li>Last execution: {{last_run_at}}</li>
+<li>Last run age (days): {{last_run_age_days}}</li><li>Last run error: {{last_run_error}}</li>
+<li>Number of runs: {{number_of_runs}}</li>
+<li>Execution issue requiring review: {{execution_issue}}</li><li>Stale scheduled job: {{stale}}</li>
+<li>Schedule: {{#if schedule.dailySchedule}}Daily{{/if}}
+{{#if schedule.weeklySchedule}}Weekly {{schedule.weeklySchedule.dayOfWeek}}{{/if}}
+{{#if schedule.monthlySchedule}}Monthly {{schedule.monthlySchedule.dayOfMonth}}{{/if}}</li>
+{{#each bucket_definitions}}
+<li>Target account: {{accountId}}; target buckets:
+ {{#each buckets}}<samp>{{this}} </samp>{{/each}}
+</li>{{/each}}
+</ul><p>Tag-based or dynamic bucket criteria are retained in structured JSON/SQLite evidence.</p></div>
+</script>
+<script>Handlebars.registerPartial("services.macie.regions.id.jobs",
+ $("#services\\.macie\\.regions\\.id\\.jobs\\.partial").html());</script>
+<script id="single_macie_jobs-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.macie.regions.id.jobs' }}
+</script>
+<script>var single_macie_jobs_template =
+ Handlebars.compile($("#single_macie_jobs-template").html());</script>
