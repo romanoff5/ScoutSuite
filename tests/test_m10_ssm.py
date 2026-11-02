@@ -38,6 +38,7 @@ def state(**overrides):
 
 def node(**overrides):
     data = {'ssm_managed': True, 'ping_status': 'Online',
+            'last_ping_at': NOW.isoformat(),
             'patch_state': state(), 'patch_state_observed': True,
             'last_successful_scan_at': NOW.isoformat(),
             'successful_scan_confirmed': True}
