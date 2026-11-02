@@ -1,4 +1,4 @@
-from google.cloud import kms
+from google.cloud import kms_v1
 from google.api_core.gapic_v1.client_info import ClientInfo
 
 from ScoutSuite.core.console import print_exception
@@ -13,7 +13,7 @@ class KMSFacade(GCPBaseFacade):
         # This facade is currently using both libraries as the Cloud Client library doesn't support locations
         # Cloud Client
         client_info = ClientInfo(user_agent=get_user_agent())
-        self.cloud_client = kms.KeyManagementServiceClient(client_info=client_info)
+        self.cloud_client = kms_v1.KeyManagementServiceClient(client_info=client_info)
         super().__init__('cloudkms', 'v1')  # API Client
 
     async def get_locations(self, project_id: str):
@@ -34,9 +34,9 @@ class KMSFacade(GCPBaseFacade):
             locations = await self.get_locations(project_id)
             key_rings = {}
             for l in locations:
-                parent = self.cloud_client.location_path(project_id, l['locationId'])
+                parent = f"projects/{project_id}/locations/{l['locationId']}"
                 key_rings[l['locationId']] = await run_concurrently(
-                    lambda: list(self.cloud_client.list_key_rings(parent)))
+                    lambda: list(self.cloud_client.list_key_rings(request={'parent': parent})))
             return key_rings
         except Exception as e:
             if 'Billing is disabled for project' not in str(e):
@@ -46,7 +46,7 @@ class KMSFacade(GCPBaseFacade):
     async def list_keys(self, project_id: str, location: str, keyring_name: str):
 
         try:
-            parent = self.cloud_client.key_ring_path(project_id, location, keyring_name)
+            parent = f'projects/{project_id}/locations/{location}/keyRings/{keyring_name}'
             kms_client = self._get_client()
             cryptokeys = kms_client.projects().locations().keyRings().cryptoKeys()
             request = cryptokeys.list(parent=parent)
@@ -58,7 +58,7 @@ class KMSFacade(GCPBaseFacade):
     async def keys_iam_policy(self, project_id: str, location: str, keyring_name: str, key_name: str):
 
         try:
-            parent = self.cloud_client.crypto_key_path(project_id, location, keyring_name, key_name)
+            parent = f'projects/{project_id}/locations/{location}/keyRings/{keyring_name}/cryptoKeys/{key_name}'
             kms_client = self._get_client()
             cryptokeys = kms_client.projects().locations().keyRings().cryptoKeys()
             request = cryptokeys.getIamPolicy(resource=parent)
