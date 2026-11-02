@@ -168,7 +168,7 @@ class Inspector2Facade(Inspector2OrganizationMixin, AWSBaseFacade):
                 self._issue('partial' if collected else 'failed', 'MalformedCoveragePage')
                 return self._finish_coverage(region, collected, pages, 'partial' if collected else 'failed')
             if len(rows) > PAGE_SIZE:
-                self._issue('partial', 'CoveragePageLimit')
+                self._issue('partial', 'CoverageLimit')
                 return self._finish_coverage(region, collected, pages, 'partial')
             for raw in rows:
                 if len(collected) >= MAX_COVERED_RESOURCES:
