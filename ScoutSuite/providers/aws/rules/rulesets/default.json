@@ -1441,6 +1441,18 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "inspector2-account-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "inspector2-coverage-inactive.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

@@ -358,7 +358,34 @@ def classify_organizations_scp(root):
     return 'unknown'
 
 
+
+def classify_inspector2_account(account):
+    """An incomplete or transitional Inspector2 state is never a verified pass."""
+    if not isinstance(account, dict):
+        return 'unknown'
+    state = account.get('status')
+    if state == 'ENABLED':
+        return 'secure'
+    if state in ('DISABLED', 'SUSPENDED'):
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_inspector2_coverage(resource):
+    """Only confirmed INACTIVE scan records are flagged."""
+    if not isinstance(resource, dict):
+        return 'unknown'
+    status = resource.get('scan_status')
+    if status == 'ACTIVE':
+        return 'secure'
+    if status == 'INACTIVE':
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'inspector2-account-state-v1': classify_inspector2_account,
+    'inspector2-coverage-state-v1': classify_inspector2_coverage,
     'organizations-features-v1': classify_organizations_features,
     'organizations-root-scp-v1': classify_organizations_scp,
     'guardduty-detector-state-v1': classify_guardduty_detector,

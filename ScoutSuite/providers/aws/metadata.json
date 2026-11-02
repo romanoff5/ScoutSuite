@@ -519,6 +519,18 @@
                     "path": "services.secretsmanager.regions.id.secrets"
                 }
             }
+        },
+        "inspector2": {
+            "resources": {
+                "accounts": {
+                    "cols": 2,
+                    "path": "services.inspector2.regions.id.accounts"
+                },
+                "coverage": {
+                    "cols": 2,
+                    "path": "services.inspector2.regions.id.coverage"
+                }
+            }
         }
     },
     "database": {
