@@ -1,6 +1,7 @@
 """CI evidence must reject missing execution and incomplete fixtures."""
 
 import copy
+import json
 from threading import Barrier
 import xml.etree.ElementTree as ET
 
@@ -112,9 +113,9 @@ def test_wheelhouse_manifest_detects_corruption_and_incomplete_restore(tmp_path)
     assert not pipeline.wheelhouse_valid()
     wheel.write_bytes(b'synthetic wheel bytes')
     manifest = tmp_path / 'wheelhouse-manifest.json'
-    data = __import__('json').loads(manifest.read_text(encoding='utf-8'))
+    data = json.loads(manifest.read_text(encoding='utf-8'))
     data['inputs'] = 'outdated requirements fingerprint'
-    manifest.write_text(__import__('json').dumps(data), encoding='utf-8')
+    manifest.write_text(json.dumps(data), encoding='utf-8')
     assert not pipeline.wheelhouse_valid()
 
 
@@ -124,7 +125,7 @@ def test_pip_disables_eager_bytecode_compilation_only_for_installs(tmp_path):
     commands = []
     pipeline.run = lambda command: commands.append(command)
     pipeline.pip('test', 'install', '--no-index', 'synthetic==1.0')
-    assert commands[-1][3:5] == ['install', '--no-compile']
+    assert commands[-1][4:6] == ['install', '--no-compile']
     pipeline.pip('build', 'wheel', '--no-index', 'synthetic==1.0')
-    assert commands[-1][3] == 'wheel'
+    assert commands[-1][4] == 'wheel'
     assert '--no-compile' not in commands[-1]
