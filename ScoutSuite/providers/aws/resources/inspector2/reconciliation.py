@@ -85,6 +85,8 @@ def reconcile_inspector_inventory(services, selected_services):
                 for name, value in reconciled.items()
             }
 
+        if 'organizations' not in selected_services:
+            continue
         organization = data.get('organization', {})
         org_service = services.get('organizations')
         if not isinstance(organization, dict) or not isinstance(org_service, dict):
