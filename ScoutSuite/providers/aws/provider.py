@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from ScoutSuite.core.console import print_error, print_exception, print_warning, print_debug
 from ScoutSuite.providers.aws.services import AWSServicesConfig
 from ScoutSuite.providers.aws.resources.vpc.base import put_cidr_name
+from ScoutSuite.providers.aws.resources.inspector2.reconciliation import reconcile_inspector_inventory
 from ScoutSuite.providers.aws.utils import ec2_classic, get_aws_account_id, get_partition_name
 from ScoutSuite.providers.base.configs.browser import combine_paths, get_object_at, get_value_at
 from ScoutSuite.providers.base.provider import BaseProvider
@@ -119,6 +120,11 @@ class AWSProvider(BaseProvider):
             self._set_emr_vpc_ids()
 
         self._add_cidr_display_name(ip_ranges, ip_ranges_name_key)
+
+        # Reuse already-collected independent AWS inventories only when
+        # Inspector2 was explicitly selected; no additional SDK requests.
+        if 'inspector2' in self.service_list:
+            reconcile_inspector_inventory(self.services, self.service_list)
 
         super().preprocessing()
 
