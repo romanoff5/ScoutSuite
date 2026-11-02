@@ -12,6 +12,7 @@ from ScoutSuite.providers.aws.facade.wafv2 import WAFv2PublicFacade
 from ScoutSuite.providers.aws.facade.networkfirewall import NetworkFirewallFacade
 from ScoutSuite.providers.aws.facade.backup import BackupPublicFacade
 from ScoutSuite.providers.aws.facade.identitycenter import IdentityCenterFacade
+from ScoutSuite.providers.aws.facade.ssm_patch import SSMPatchFacade
 from ScoutSuite.providers.aws.facade.organizations import OrganizationsFacade
 from ScoutSuite.providers.aws.facade.awslambda import LambdaFacade
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
@@ -198,6 +199,7 @@ class AWSFacade(AWSBaseFacade):
         self.backup = BackupPublicFacade(self.session, self.owner_id)
         self.networkfirewall = NetworkFirewallFacade(self.session, self.owner_id)
         self.identitycenter = IdentityCenterFacade(self.session, self.owner_id)
+        self.ssm_patch = SSMPatchFacade(self.session)
         self.organizations = OrganizationsFacade(self.session, self.partition)
 
         # Instantiate facades for proprietary services
