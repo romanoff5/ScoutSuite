@@ -17,6 +17,19 @@ MAX_PAGES = 10000
 DENIED = {'AccessDenied', 'AccessDeniedException', 'UnauthorizedOperation'}
 UNSUPPORTED = {'UnknownOperationException', 'UnsupportedOperationException'}
 
+# A syntactically valid SDK response is not necessarily a usable security
+# inventory. Reject malformed records instead of counting them as clean.
+REQUIRED_ROWS = {
+    'Instances': ('InstanceArn', 'IdentityStoreId'),
+    'AttachedManagedPolicies': ('Name', 'Arn'),
+    'CustomerManagedPolicyReferences': ('Name',),
+    'AccountAssignments': ('AccountId', 'PermissionSetArn', 'PrincipalId', 'PrincipalType'),
+    'Users': ('UserId',),
+    'Groups': ('GroupId',),
+    'GroupMemberships': ('MembershipId', 'GroupId', 'MemberId'),
+}
+STRING_ROWS = {'PermissionSets', 'AccountIds'}
+
 
 class IdentityCenterFacade(AWSBaseFacade):
     def __init__(self, session, account_id):
@@ -68,6 +81,17 @@ class IdentityCenterFacade(AWSBaseFacade):
             if not isinstance(values, list):
                 self._issue('partial', operation + 'MalformedPage')
                 return rows, 'partial'
+            if key in STRING_ROWS:
+                valid = all(isinstance(row, str) and bool(row) for row in values)
+            elif key in REQUIRED_ROWS:
+                valid = all(isinstance(row, dict) and all(
+                    isinstance(row.get(field), (str, dict)) and bool(row[field])
+                    for field in REQUIRED_ROWS[key]) for row in values)
+            else:
+                valid = True
+            if not valid:
+                self._issue('partial', operation + 'MalformedRecords')
+                return rows, 'partial'
             rows.extend(values)
             following = response.get('NextToken')
             if following is None or following == '':
@@ -118,13 +142,18 @@ class IdentityCenterFacade(AWSBaseFacade):
                         self._issue('partial', 'InvalidOrDuplicate' + id_key)
                         continue
                     if kind == 'users':
-                        emails = [item.get('Value') for item in raw.get('Emails', [])
+                        email_records = raw.get('Emails') or []
+                        if not isinstance(email_records, list):
+                            data['collection']['users'] = 'partial'
+                            self._issue('partial', 'MalformedUserEmails')
+                            email_records = []
+                        emails = [item.get('Value') for item in email_records
                                   if isinstance(item, dict) and isinstance(item.get('Value'), str)]
                         data[kind][identifier] = {
                             'id': identifier, 'name': raw.get('DisplayName') or raw.get('UserName') or identifier,
                             'user_name': raw.get('UserName'), 'display_name': raw.get('DisplayName'),
                             'emails': emails, 'primary_email': next((
-                                item.get('Value') for item in raw.get('Emails', [])
+                                item.get('Value') for item in email_records
                                 if isinstance(item, dict) and item.get('Primary')
                                 and isinstance(item.get('Value'), str)), emails[0] if emails else None),
                             'external_ids': raw.get('ExternalIds', []), 'active': raw.get('Active'),
@@ -266,6 +295,16 @@ class IdentityCenterFacade(AWSBaseFacade):
                         except (ValueError, TypeError):
                             i_status = 'partial'
                             self._issue('partial', 'MalformedInlinePolicy')
+                    if (d_status == 'complete'
+                            and (not isinstance(details, dict)
+                                 or not isinstance(details.get('Name'), str)
+                                 or not details['Name'])):
+                        d_status = 'partial'
+                        self._issue('partial', 'MalformedPermissionSetDetails')
+                    if (b_status == 'complete' and boundary is not None
+                            and not isinstance(boundary, dict)):
+                        b_status = 'partial'
+                        self._issue('partial', 'MalformedPermissionsBoundary')
                     ps_details = details if isinstance(details, dict) else {}
                     statuses = {
                         'details': d_status, 'managed_policies': m_status,
