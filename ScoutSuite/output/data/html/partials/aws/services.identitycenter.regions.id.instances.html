@@ -40,14 +40,16 @@
         <li>Account: {{account_id}}</li>
         <li>Permission set: {{permission_set_name}} <samp>{{permission_set_arn}}</samp></li>
         <li>Principal: {{principal_type}} {{principal_name}} ({{principal_id}})</li>
-        <li>Username: {{principal_username}}; email: {{principal_email}}</li>
+        <li>Username: {{principal_username}}; primary email: {{principal_email}}</li>
+        {{#each principal_emails}}<li>Principal email: {{Value}} (primary: {{Primary}})</li>{{/each}}
         <li>Identity resolution: {{identity_resolution_status}}</li>
         <li>AWS-managed AdministratorAccess assigned: {{administrator_access_managed_policy}}</li>
         <li>Policy collection complete: {{policy_collection_complete}}</li>
         <li>Group membership complete: {{group_members_complete}}</li>
         {{#each group_members}}
           <li>Group member: {{name}} ({{principal_id}}) — {{username}} / {{email}}
-            ({{resolution_status}})</li>
+            ({{resolution_status}}), membership ID: {{membership_id}}</li>
+          {{#each emails}}<li>Group member email: {{Value}} (primary: {{Primary}})</li>{{/each}}
         {{/each}}
       </ul>
     {{/each}}
