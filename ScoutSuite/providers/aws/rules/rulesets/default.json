@@ -1502,6 +1502,12 @@
                 "level": "warning"
             }
         ],
+        "identitycenter-aws-admin-policy-assignment.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "backup-vault-lock-disabled.json": [
             {
                 "enabled": true,
@@ -1520,13 +1526,7 @@
                 "level": "warning"
             }
         ],
-        "networkfirewall-logging-disabled.json": [
-            {
-                "enabled": true,
-                "level": "warning"
-            }
-        ],
-        "networkfirewall-stateless-default-pass.json": [
+        "networkfirewall-broad-pass-rule.json": [
             {
                 "enabled": true,
                 "level": "danger"
@@ -1538,10 +1538,10 @@
                 "level": "warning"
             }
         ],
-        "networkfirewall-broad-pass-rule.json": [
+        "networkfirewall-logging-disabled.json": [
             {
                 "enabled": true,
-                "level": "danger"
+                "level": "warning"
             }
         ],
         "networkfirewall-no-route-references.json": [
@@ -1554,6 +1554,12 @@
             {
                 "enabled": true,
                 "level": "warning"
+            }
+        ],
+        "networkfirewall-stateless-default-pass.json": [
+            {
+                "enabled": true,
+                "level": "danger"
             }
         ]
     }

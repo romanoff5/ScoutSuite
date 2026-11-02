@@ -385,3 +385,39 @@ responses cannot be classified as unused. Full associated ARN and CF
 ID/domain/status retained for remediation. Added scoped unused-candidate
 finding and synthetic SDK/security/regression tests; no writes or live cloud
 calls. See `docs/modernization/M10_WAFV2.md`.
+
+## M10-L — IAM Identity Center assignments and principal evidence (2026-11-02)
+
+- Implemented default read-only regional `identitycenter` service (can be
+  selected with `--services identitycenter` and disabled with
+  `--skip-services identitycenter`). Queries visible SSO instances,
+  permission sets, attached AWS/customer-managed policy references,
+  inline-policy presence, permissions boundaries, provisioned accounts,
+  account assignments, principal identities and direct group memberships.
+- Preserves full instance/permission-set ARNs, AWS account IDs, identity-store
+  IDs, user/group IDs and ARNs, revisions, membership IDs/ARNs, user names,
+  all email addresses and attached policy references. No raw inline policy
+  contents, credentials or unrelated identity attributes are stored.
+- `identitycenter-aws-admin-policy-assignment` flags a positively observed
+  AWS-managed AdministratorAccess policy on an account assignment. Other
+  policies, SCPs and boundaries can affect effective rights: non-matching
+  assignments do **not** prove least-privilege. Denied/missing identities,
+  failed pages, permission metadata and group resolution produce
+  explicit incomplete/unknown evidence rather than false PASS.
+- Independent M10-L branch `modernization/m10l-identity-center-20261102`
+  validated with Ubuntu 24.04 / Python 3.11.18 and Windows 2022 /
+  Python 3.11.9 [Offline CI #41421966510](https://github.com/romanoff5/ScoutSuite/actions/runs/41421966510),
+  after AWS botocore model corrections (Identity Store UserArn/GroupArn,
+  Revision and MembershipArn). M10-J2 WAFv2 test identifiers also corrected.
+- Reconciled 26 parallel master commits (AWS Backup depth and M11 SDK
+  migrations) through a two-parent merge on
+  `integration/m10l-identity-center-all-20261102`. The combined CI
+  [#41422635182](https://github.com/romanoff5/ScoutSuite/actions/runs/41422635182)
+  passed on Ubuntu and Windows, including lint, guarded offline tests,
+  XSS/browser, packaging and Linux SQLite HTTP integration.
+- Remote `master` verified at integration commit
+  `f11f1d8777ec55e71f782a0c022489875d9852aa`. No upstream PR, live
+  AWS assessment, cloud writes or customer data processing. Next: optionally
+  analyze inline/customer-managed permissions and cross-account SCP context
+  in a separately tested slice; this initial rule is not an effective
+  permission evaluator.

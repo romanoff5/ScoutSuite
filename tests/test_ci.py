@@ -18,11 +18,11 @@ def execution():
     for module in ('test_offline', 'test_cli_assertions', 'test_characterization'):
         ET.SubElement(suite, 'testcase', classname='tests.' + module, name='synthetic')
     manifest = {'exitstatus': 0, 'cases': [{'fixture_status': 'valid', 'test_status': 'verified'}],
-                'warnings': {'azure/mgmt/sql/models/_models_py3.py:DeprecationWarning': 2}, 'untested': {'aws': ['untested']}}
+                'warnings': {}, 'untested': {'aws': ['untested']}}
     return suite, manifest
 
 
-def test_ci_accepts_executed_bodies_and_retains_warning_debt():
+def test_ci_accepts_executed_bodies_without_warnings():
     suite, manifest = execution()
     result = verify_execution(ET.tostring(suite), manifest)
     assert result['cli_bodies'] == 6
@@ -58,13 +58,13 @@ def test_ci_rejects_incomplete_fixture_evidence(field, value):
 
 
 
-def test_warning_debt_gate_retains_exact_pinned_vendor_warnings():
-    budget = dict(LEGACY_VENDOR_WARNING_BUDGET)
-    result = verify_warning_debt(budget)
-    assert result['observed'] == 156
-    assert result['vendor_warning_budget'] == 156
-    assert result['first_party_warnings'] == 0
-    assert verify_warning_debt({})['observed'] == 0
+def test_zero_warning_gate_rejects_historical_vendor_warning_budget():
+    assert LEGACY_VENDOR_WARNING_BUDGET == {}
+    result = verify_warning_debt({})
+    assert result == {'observed': 0, 'vendor_warning_budget': 0,
+                      'first_party_warnings': 0}
+    with pytest.raises(AssertionError, match='Zero-warning gate violated'):
+        verify_warning_debt({'azure/mgmt/sql/models/_models_py3.py:DeprecationWarning': 2})
 
 
 @pytest.mark.parametrize('warning', [
@@ -73,20 +73,20 @@ def test_warning_debt_gate_retains_exact_pinned_vendor_warnings():
     'google/cloud/kms_v1/new_generator.py:DeprecationWarning',
 ])
 def test_warning_debt_gate_rejects_new_or_first_party_warnings(warning):
-    with pytest.raises(AssertionError, match='New or first-party warnings'):
+    with pytest.raises(AssertionError, match='Zero-warning gate violated'):
         verify_warning_debt({warning: 1})
 
 
 @pytest.mark.parametrize('value', [3, -1, True, 'many'])
 def test_warning_debt_gate_rejects_over_budget_or_invalid_counts(value):
-    with pytest.raises(AssertionError, match='Legacy warning budget exceeded'):
+    with pytest.raises(AssertionError, match='Zero-warning gate violated'):
         verify_warning_debt({'azure/mgmt/sql/models/_models_py3.py:DeprecationWarning': value})
 
 
 def test_ci_rejects_new_warning_even_if_fixture_and_test_results_are_green():
     suite, manifest = execution()
     manifest['warnings'] = {'ScoutSuite/providers/utils.py:DeprecationWarning': 1}
-    with pytest.raises(AssertionError, match='New or first-party warnings'):
+    with pytest.raises(AssertionError, match='Zero-warning gate violated'):
         verify_execution(ET.tostring(suite), manifest)
 
 

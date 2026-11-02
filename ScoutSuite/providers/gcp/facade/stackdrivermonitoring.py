@@ -1,4 +1,4 @@
-from google.cloud import monitoring as stackdrivermonitoring
+from google.cloud import monitoring_v3 as stackdrivermonitoring
 from google.api_core.gapic_v1.client_info import ClientInfo
 
 from ScoutSuite.core.console import print_exception
@@ -22,8 +22,8 @@ class StackdriverMonitoringFacade:
     async def get_uptime_checks(self, project_id: str):
         try:
             client = self.get_uptime_client()
-            name = client.project_path(project_id)
-            return await run_concurrently(lambda: [r for r in client.list_uptime_check_configs(name)])
+            name = f'projects/{project_id}'
+            return await run_concurrently(lambda: [r for r in client.list_uptime_check_configs(request={'parent': name})])
         except Exception as e:
             if 'is not a workspace' not in getattr(e, 'message', '') and '404' not in str(e):
                 print_exception(f'Failed to retrieve uptime checks: {e}')
@@ -32,8 +32,8 @@ class StackdriverMonitoringFacade:
     async def get_alert_policies(self, project_id: str):
         try:
             client = self.get_alerts_client()
-            name = client.project_path(project_id)
-            return await run_concurrently(lambda: [r for r in client.list_alert_policies(name)])
+            name = f'projects/{project_id}'
+            return await run_concurrently(lambda: [r for r in client.list_alert_policies(request={'name': name})])
         except Exception as e:
             if 'is not a workspace' not in getattr(e, 'message', '') and '404' not in str(e):
                 print_exception(f'Failed to retrieve alert policies: {e}')

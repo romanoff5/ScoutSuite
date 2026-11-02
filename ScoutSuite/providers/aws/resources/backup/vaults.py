@@ -28,6 +28,8 @@ class Vaults(AWSResources):
                 'id': key, 'name': raw.get('name'), 'backup_vault_arn': arn,
                 'region': self.region, 'vault_type': raw.get('vault_type'),
                 'vault_state': raw.get('vault_state'),
+                'access_policy': raw.get('access_policy'),
+                'access_policy_status': raw.get('access_policy_status', 'unknown'),
                 'encryption_key_arn': raw.get('encryption_key_arn'),
                 'encryption_key_type': raw.get('encryption_key_type'),
                 'number_of_recovery_points': raw.get('number_of_recovery_points'),
