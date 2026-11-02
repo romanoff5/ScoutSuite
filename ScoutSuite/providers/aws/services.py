@@ -6,6 +6,7 @@ from ScoutSuite.providers.aws.resources.ecs_public.base import ECSPublic
 from ScoutSuite.providers.aws.resources.eks_public.base import EKSPublic
 from ScoutSuite.providers.aws.resources.inspector2.base import Inspector2
 from ScoutSuite.providers.aws.resources.securityhub.base import SecurityHubPublic
+from ScoutSuite.providers.aws.resources.wafv2.base import WAFv2Public
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
 from ScoutSuite.providers.aws.resources.acm.base import Certificates
 from ScoutSuite.providers.aws.resources.awslambda.base import Lambdas
@@ -131,6 +132,7 @@ class AWSServicesConfig(BaseServicesConfig):
         self.eks = EKSPublic(facade)
         self.inspector2 = Inspector2(facade)
         self.securityhub = SecurityHubPublic(facade)
+        self.wafv2 = WAFv2Public(facade)
         self.organizations = Organizations(facade)
 
         # Instantiate proprietary services

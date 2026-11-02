@@ -1,10 +1,10 @@
 # M10-D — Amazon Inspector2 read-only vertical slice
 
 Implementation: `modernization/m10d-inspector2-vertical-slice-20261102`.
-This is an **opt-in** inventory and status check, not a full Inspector service
-assessment and not a vulnerability scan. `--services inspector2` is required.
-Existing default services, Azure and GCP collectors, and old report IDs are
-unchanged.
+This is a read-only inventory and status check, not a full Inspector service
+assessment or vulnerability scan. It now runs during the ordinary AWS scan;
+use `--skip-services inspector2` to exclude it. Azure/GCP collectors and
+historical Inspector finding IDs remain unchanged.
 
 ## API and permission contract
 
@@ -39,7 +39,7 @@ existing run-scoped executor and throttler.
   existing M04/M08 evidence classifier contract. Partial, AccessDenied,
   unsupported, bad pagination and result caps are recorded as collection issues.
   The static default ruleset adds these definitions but never executes them
-  unless `inspector2` was explicitly selected.
+  unless `inspector2` is selected (now selected in ordinary AWS scans).
 
 ## Validation
 
@@ -101,8 +101,8 @@ behavior is incorporated with tests for SDK stub contract, missing
 EC2/ECR, optional UNKNOWN, failedAccounts, preserved data shapes,
 independent scan-type finding, existing coverage finding, and XSS-safe
 renderer. All five categories are potential scan capabilities rather
-than a guarantee of workload applicability. This remains opt-in,
-read-only and restricted to the current AWS account.
+than a guarantee of workload applicability. This is read-only and
+included by default, with permissions restricted to the documented scope.
 
 AWS source contracts:
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html
@@ -111,7 +111,7 @@ AWS source contracts:
 
 ## M10-E — scalable coverage and delegated-administrator visibility (2026-11-02)
 
-This opt-in enhancement retains the original `inspector2` service selection,
+This enhancement retains the `inspector2` service key,
 the three preexisting rule IDs and the same read-only SDK boundaries. It does
 not collect Inspector vulnerability findings or retrieve customer payloads.
 The changes are additive to versioned JSON/SQLite reports.
@@ -186,7 +186,7 @@ API docs:
 
 ### Optional independent inventory reconciliation
 
-When the user explicitly selects `inspector2` together with other AWS
+When an ordinary AWS scan selects `inspector2` together with other AWS
 services in **the same assessment**, M10-E also correlates already collected
 resource identifiers without issuing any extra AWS API requests:
 - `ec2`: EC2 instance IDs vs Inspector `AWS_EC2_INSTANCE` coverage.

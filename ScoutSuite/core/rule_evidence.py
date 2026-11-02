@@ -353,6 +353,26 @@ def classify_eks_control_plane_audit(cluster):
     return 'unknown'
 
 
+def classify_wafv2_empty_allow(web_acl):
+    """A verified empty, non-FMS Web ACL with ALLOW default cannot filter."""
+    if not isinstance(web_acl, dict):
+        return 'unknown'
+    action = web_acl.get('default_action')
+    count = web_acl.get('rule_count')
+    managed = web_acl.get('managed_by_firewall_manager')
+    before = web_acl.get('firewall_manager_pre_rules_count')
+    after = web_acl.get('firewall_manager_post_rules_count')
+    if action not in ('ALLOW', 'BLOCK') or not isinstance(count, int) or count < 0:
+        return 'unknown'
+    if managed is True or (before not in (None, 0)) or (after not in (None, 0)):
+        return 'unknown'
+    if managed is not False:
+        return 'unknown'
+    if action == 'ALLOW' and count == 0:
+        return 'insecure'
+    return 'secure'
+
+
 def classify_eks_api_endpoint(cluster):
     """Public endpoint exposure requires explicit CIDR evidence."""
     if not isinstance(cluster, dict):
@@ -487,6 +507,7 @@ CLASSIFIERS = {
     'ecr-registry-scanning-v1': classify_ecr_registry_scanning,
     'ecs-task-privileged-v1': classify_ecs_task_privilege,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,
+    'wafv2-empty-allow-v1': classify_wafv2_empty_allow,
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,

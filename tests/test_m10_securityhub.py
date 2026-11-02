@@ -224,7 +224,7 @@ def test_opt_in_metadata_template_and_aws_only_preservation():
          patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value='000000000000'):
         default = AWSProvider(credentials=credentials)
         selected = AWSProvider(credentials=credentials, services=['securityhub'])
-    assert 'securityhub' not in default.service_list
+    assert 'securityhub' in default.service_list
     assert selected.service_list == ['securityhub']
     metadata = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text(encoding='utf-8'))
     assert metadata['security']['securityhub']['resources']['hubs']['path'] == (
