@@ -319,8 +319,33 @@ def classify_guardduty_detector(detector):
         return 'insecure'
     return 'unknown'
 
+def classify_inspector2_account(account):
+    """An incomplete or transitional Inspector2 state is never a verified pass."""
+    if not isinstance(account, dict):
+        return 'unknown'
+    state = account.get('status')
+    if state == 'ENABLED':
+        return 'secure'
+    if state in ('DISABLED', 'SUSPENDED'):
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_inspector2_coverage(resource):
+    """Only confirmed INACTIVE scan records are flagged."""
+    if not isinstance(resource, dict):
+        return 'unknown'
+    status = resource.get('scan_status')
+    if status == 'ACTIVE':
+        return 'secure'
+    if status == 'INACTIVE':
+        return 'insecure'
+    return 'unknown'
+
 
 CLASSIFIERS = {
+    'inspector2-account-state-v1': classify_inspector2_account,
+    'inspector2-coverage-state-v1': classify_inspector2_coverage,
     'guardduty-detector-state-v1': classify_guardduty_detector,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
