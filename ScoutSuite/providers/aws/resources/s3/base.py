@@ -37,4 +37,15 @@ class S3(AWSCompositeResources):
             bucket['public_access_block_configuration'] = (
                 combine_public_access_blocks(account, original)
             )
+            pab = bucket['public_access_block_configuration']
+            flags = ('BlockPublicAcls', 'IgnorePublicAcls',
+                     'BlockPublicPolicy', 'RestrictPublicBuckets')
+            # A single observed false setting is a configuration gap.
+            # Unknown settings must not be treated as all public access blocked.
+            if any(pab.get(name) is False for name in flags):
+                bucket['effective_bpa_review'] = 'missing'
+            elif all(pab.get(name) is True for name in flags):
+                bucket['effective_bpa_review'] = 'complete'
+            else:
+                bucket['effective_bpa_review'] = 'unknown'
             annotate_bucket_exposure(bucket)
