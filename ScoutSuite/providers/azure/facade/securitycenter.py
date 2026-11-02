@@ -142,8 +142,7 @@ class SecurityCenterFacade:
                             results.append(control)
                     except Exception as e:
                         print_exception(f'Failed to retrieve compliance controls: {e}')
-            finally:
-                return results
+            return results
         except Exception as e:
             print_exception(f'Failed to retrieve regulatory compliance results: {e}')
             return []
