@@ -75,3 +75,24 @@ def test_non_evidence_rules_are_not_labeled_mismatches():
     assert summary['rules'] == 2
     assert summary['evaluated_policies'] == 1
     assert summary['discrepancy_count'] == 1
+
+
+def test_hostile_report_identifiers_and_status_values_are_never_echoed(tmp_path, capsys):
+    source = report()
+    abnormal = source['services'].pop('ecr')
+    source['services']['arn:aws:private:secret-identifier'] = abnormal
+    row = abnormal['findings'].pop('ecr-registry-not-enhanced-scanning')
+    abnormal['findings']['client-secret:irrelevant'] = row
+    row['evaluation_summary']['assessment_status'] = 'secret-status-must-not-echo'
+    source['report_schema_version'] = 'secret-schema-must-not-echo'
+    path = tmp_path / 'private-report.js'
+    path.write_text('scoutsuite_results = ' + json.dumps(source), encoding='utf-8')
+    assert module.main([str(path), '--fail-on-discrepancy']) == 3
+    output = capsys.readouterr().out
+    for secret in ('secret-identifier', 'client-secret', 'secret-status', 'secret-schema'):
+        assert secret not in output
+    result = json.loads(output)
+    assert result['discrepancies'][0]['rule'] == 'invalid_identifier'
+    assert result['discrepancies'][0]['service'] == 'invalid_identifier'
+    assert result['evaluation_status_counts']['unrecognized'] == 1
+    assert result['report_schema_version'] is None
