@@ -6,8 +6,34 @@
                     "cols": 2,
                     "path": "services.emr.regions.id.vpcs.id.clusters",
                     "callbacks": [
-                        [ "match_security_groups_and_resources_callback", {"status_path": ["Status", "State"], "sg_list_attribute_name": ["Ec2InstanceAttributes", "EmrManagedMasterSecurityGroup"], "sg_id_attribute_name": ""} ],
-                        [ "match_security_groups_and_resources_callback", {"status_path": ["Status", "State"], "sg_list_attribute_name": ["Ec2InstanceAttributes", "EmrManagedSlaveSecurityGroup"], "sg_id_attribute_name": ""} ]
+                        [
+                            "match_security_groups_and_resources_callback",
+                            {
+                                "status_path": [
+                                    "Status",
+                                    "State"
+                                ],
+                                "sg_list_attribute_name": [
+                                    "Ec2InstanceAttributes",
+                                    "EmrManagedMasterSecurityGroup"
+                                ],
+                                "sg_id_attribute_name": ""
+                            }
+                        ],
+                        [
+                            "match_security_groups_and_resources_callback",
+                            {
+                                "status_path": [
+                                    "Status",
+                                    "State"
+                                ],
+                                "sg_list_attribute_name": [
+                                    "Ec2InstanceAttributes",
+                                    "EmrManagedSlaveSecurityGroup"
+                                ],
+                                "sg_id_attribute_name": ""
+                            }
+                        ]
                     ]
                 }
             }
@@ -20,7 +46,10 @@
                     "cols": 2,
                     "path": "services.cloudformation.regions.id.stacks",
                     "callbacks": [
-                        [ "match_roles_and_cloudformation_stacks_callback", {} ]
+                        [
+                            "match_roles_and_cloudformation_stacks_callback",
+                            {}
+                        ]
                     ]
                 }
             }
@@ -63,11 +92,27 @@
                 }
             }
         },
-        "ssm" : {
+        "ssm": {
             "resources": {
                 "parameters": {
                     "cols": 2,
                     "path": "services.ssm.regions.id.parameters"
+                }
+            }
+        },
+        "organizations": {
+            "resources": {
+                "organizations": {
+                    "cols": 1,
+                    "path": "services.organizations.organizations"
+                },
+                "roots": {
+                    "cols": 2,
+                    "path": "services.organizations.roots"
+                },
+                "accounts": {
+                    "cols": 2,
+                    "path": "services.organizations.accounts"
                 }
             }
         }
@@ -89,7 +134,7 @@
                 }
             }
         },
-        "sqs" : {
+        "sqs": {
             "resources": {
                 "queues": {
                     "cols": 2,
@@ -105,8 +150,14 @@
                     "cols": 2,
                     "path": "services.vpc.regions.id.vpcs.id.network_acls",
                     "callbacks": [
-                        [ "match_network_acls_and_subnets_callback", {} ],
-                        [ "process_network_acls_callback", {} ]
+                        [
+                            "match_network_acls_and_subnets_callback",
+                            {}
+                        ],
+                        [
+                            "process_network_acls_callback",
+                            {}
+                        ]
                     ]
                 },
                 "vpcs": {
@@ -116,8 +167,14 @@
                 "flow_logs": {
                     "path": "services.vpc.regions.id.flow_logs",
                     "callbacks": [
-                        [ "sort_vpc_flow_logs_callback", {} ],
-                        [ "match_roles_and_vpc_flowlogs_callback", {} ]
+                        [
+                            "sort_vpc_flow_logs_callback",
+                            {}
+                        ],
+                        [
+                            "match_roles_and_vpc_flowlogs_callback",
+                            {}
+                        ]
                     ]
                 },
                 "subnets": {
@@ -127,7 +184,10 @@
                 "peering_connections": {
                     "path": "services.vpc.regions.id.peering_connections",
                     "callbacks": [
-                        [ "process_vpc_peering_connections_callback", {} ]
+                        [
+                            "process_vpc_peering_connections_callback",
+                            {}
+                        ]
                     ]
                 }
             }
@@ -181,7 +241,7 @@
                 "instances": {
                     "cols": 2,
                     "path": "services.ec2.regions.id.vpcs.id.instances",
-                    "callbacks": [  ]
+                    "callbacks": []
                 },
                 "security_groups": {
                     "cols": 2,
@@ -254,7 +314,7 @@
                         ],
                         [
                             "get_lb_attack_surface",
-                            { }
+                            {}
                         ]
                     ]
                 },
@@ -291,7 +351,7 @@
                         ],
                         [
                             "get_lb_attack_surface",
-                            { }
+                            {}
                         ]
                     ]
                 }
@@ -452,7 +512,7 @@
                 }
             }
         },
-        "secretsmanager" : {
+        "secretsmanager": {
             "resources": {
                 "secrets": {
                     "cols": 2,
@@ -467,7 +527,12 @@
                 "cols": 1,
                 "path": "service_groups.database.summaries.external_attack_surface",
                 "callbacks": [
-                    [ "merge", {"attribute": "external_attack_surface"} ]
+                    [
+                        "merge",
+                        {
+                            "attribute": "external_attack_surface"
+                        }
+                    ]
                 ]
             }
         },
@@ -491,8 +556,22 @@
                     "cols": 2,
                     "path": "services.elasticache.regions.id.vpcs.id.clusters",
                     "callbacks": [
-                        [ "match_security_groups_and_resources_callback", {"status_path": ["CacheClusterStatus"], "sg_list_attribute_name": ["SecurityGroups"], "sg_id_attribute_name": "SecurityGroupId"} ],
-                        [ "get_db_attack_surface", {} ]
+                        [
+                            "match_security_groups_and_resources_callback",
+                            {
+                                "status_path": [
+                                    "CacheClusterStatus"
+                                ],
+                                "sg_list_attribute_name": [
+                                    "SecurityGroups"
+                                ],
+                                "sg_id_attribute_name": "SecurityGroupId"
+                            }
+                        ],
+                        [
+                            "get_db_attack_surface",
+                            {}
+                        ]
                     ]
                 },
                 "parameter_groups": {
@@ -516,8 +595,22 @@
                     "cols": 2,
                     "path": "services.rds.regions.id.vpcs.id.instances",
                     "callbacks": [
-                        [ "match_security_groups_and_resources_callback", {"status_path": ["DBInstanceStatus"], "sg_list_attribute_name": ["VpcSecurityGroups"], "sg_id_attribute_name": "VpcSecurityGroupId"} ],
-                        [ "get_db_attack_surface", {} ]
+                        [
+                            "match_security_groups_and_resources_callback",
+                            {
+                                "status_path": [
+                                    "DBInstanceStatus"
+                                ],
+                                "sg_list_attribute_name": [
+                                    "VpcSecurityGroups"
+                                ],
+                                "sg_id_attribute_name": "VpcSecurityGroupId"
+                            }
+                        ],
+                        [
+                            "get_db_attack_surface",
+                            {}
+                        ]
                     ]
                 },
                 "security_groups": {
@@ -551,8 +644,22 @@
                     "cols": 2,
                     "path": "services.redshift.regions.id.vpcs.id.clusters",
                     "callbacks": [
-                        [ "match_security_groups_and_resources_callback", {"status_path": ["ClusterStatus"], "sg_list_attribute_name": ["VpcSecurityGroups"], "sg_id_attribute_name": "VpcSecurityGroupId"} ],
-                        [ "get_db_attack_surface", {} ]
+                        [
+                            "match_security_groups_and_resources_callback",
+                            {
+                                "status_path": [
+                                    "ClusterStatus"
+                                ],
+                                "sg_list_attribute_name": [
+                                    "VpcSecurityGroups"
+                                ],
+                                "sg_id_attribute_name": "VpcSecurityGroupId"
+                            }
+                        ],
+                        [
+                            "get_db_attack_surface",
+                            {}
+                        ]
                     ]
                 },
                 "parameter_groups": {
@@ -579,7 +686,17 @@
                 "file_systems": {
                     "path": "services.efs.regions.id.file_systems",
                     "callbacks": [
-                        [ "match_security_groups_and_resources_callback", {"status_path": ["LifeCycleState"], "sg_list_attribute_name": ["security_groups"]} ]
+                        [
+                            "match_security_groups_and_resources_callback",
+                            {
+                                "status_path": [
+                                    "LifeCycleState"
+                                ],
+                                "sg_list_attribute_name": [
+                                    "security_groups"
+                                ]
+                            }
+                        ]
                     ]
                 }
             }

@@ -1,0 +1,20 @@
+{
+    "description": "AWS Organizations operates in consolidated-billing-only mode",
+    "rationale": "Organizations in CONSOLIDATED_BILLING mode cannot use organization-level policy controls such as SCPs. This finding is based on explicitly observed DescribeOrganization.FeatureSet; denied or unsupported access is incomplete, not compliant.",
+    "remediation": "Evaluate enabling all AWS Organizations features and verify the organization-level policy controls, root states, and operational change-management requirements.",
+    "references": [
+        "https://docs.aws.amazon.com/organizations/latest/APIReference/API_DescribeOrganization.html"
+    ],
+    "dashboard_name": "Organizations",
+    "path": "organizations.organizations.id",
+    "conditions": [
+        "and",
+        [
+            "feature_set",
+            "equal",
+            "CONSOLIDATED_BILLING"
+        ]
+    ],
+    "id_suffix": "BillingOnly",
+    "evidence_policy": "organizations-features-v1"
+}
