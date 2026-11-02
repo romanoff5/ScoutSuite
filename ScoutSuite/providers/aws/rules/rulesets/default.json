@@ -1502,12 +1502,6 @@
                 "level": "warning"
             }
         ],
-        "identitycenter-aws-admin-policy-assignment.json": [
-            {
-                "enabled": true,
-                "level": "warning"
-            }
-        ],
         "backup-vault-lock-disabled.json": [
             {
                 "enabled": true,
@@ -1557,6 +1551,24 @@
             }
         ],
         "networkfirewall-stateless-default-pass.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "identitycenter-admin-assignment.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "identitycenter-broad-permissions.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "identitycenter-cross-account-admin.json": [
             {
                 "enabled": true,
                 "level": "danger"
