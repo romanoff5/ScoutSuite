@@ -6,6 +6,7 @@ from ScoutSuite.core.console import print_error, print_exception, print_warning,
 from ScoutSuite.providers.aws.services import AWSServicesConfig
 from ScoutSuite.providers.aws.resources.vpc.base import put_cidr_name
 from ScoutSuite.providers.aws.resources.inspector2.reconciliation import reconcile_inspector_inventory
+from ScoutSuite.providers.aws.resources.coverage_reconciliation import reconcile_m10q_coverage
 from ScoutSuite.providers.aws.utils import ec2_classic, get_aws_account_id, get_partition_name
 from ScoutSuite.providers.base.configs.browser import combine_paths, get_object_at, get_value_at
 from ScoutSuite.providers.base.provider import BaseProvider
@@ -120,6 +121,10 @@ class AWSProvider(BaseProvider):
 
         if 'inspector2' in self.service_list:
             reconcile_inspector_inventory(self.services, self.service_list)
+
+        # M10-Q: report-only correlation after every selected AWS collector
+        # finalized; never instantiate additional AWS SDK clients.
+        reconcile_m10q_coverage(self.services, self.service_list, self.account_id)
 
         super().preprocessing()
 
