@@ -40,6 +40,16 @@
       <p><samp>{{this}}</samp></p>
     {{/each}}
   </div>
+
+        <!-- M10-Q: all cross-service evidence is Handlebars-escaped and offline-safe. -->
+        <div class="list-group-item">
+            <h4>Cross-service coverage (M10-Q)</h4>
+            <p>Independent target observation: {{m10q_protected_targets.state}}</p>
+            <p>Actual request traffic independently verified: {{m10q_protected_targets.traffic_routing_through_waf_verified}}</p>
+            {{#each m10q_protected_targets.verified_resource_arns}}<p>Discovered target: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_protected_targets.waf_association_arns}}<p>WAF association ARN: <samp>{{this}}</samp></p>{{/each}}
+            <p>Scope: {{m10q_protected_targets.scope_note}}</p>
+        </div>
 </script>
 <script>
   Handlebars.registerPartial("services.wafv2.regions.id.web_acls",
