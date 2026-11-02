@@ -146,8 +146,7 @@ class EC2Facade(AWSBaseFacade):
             snapshots = []
         else:
             await get_and_set_concurrently([self._get_and_set_snapshot_attributes], snapshots, region=region)
-        finally:
-            return snapshots
+        return snapshots
 
     async def _get_and_set_snapshot_attributes(self, snapshot: {}, region: str):
         ec2_client = AWSFacadeUtils.get_client('ec2', self.session, region)
