@@ -24,6 +24,9 @@ Version: 5.14.0+romanoff5.m10rc2
   published release assets are mutated.
 
 ## Security and evidence boundaries
+
+No real client AWS scanning was performed. No container image is included.
+Azure/GCP SDK modernization remains deferred. Stable .venv-scout untouched.
 - This is a candidate for operational acceptance, **not** proof of a complete
   client assessment. None of the synthetic tests verify the actual AWS role,
   available permissions, service-region coverage, runtime throttling or successful
