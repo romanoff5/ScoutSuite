@@ -1,0 +1,24 @@
+<!-- M10-R Bedrock: metadata only; escaped Handlebars -->
+<script id="services.bedrock.regions.id.agents.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>agent_id: <samp>{{agent_id}}</samp></li>
+<li>name: <samp>{{name}}</samp></li>
+<li>status: <samp>{{status}}</samp></li>
+<li>agent_role_arn: <samp>{{agent_role_arn}}</samp></li>
+<li>kms_key_arn: <samp>{{kms_key_arn}}</samp></li>
+<li>guardrail_identifier: <samp>{{guardrail_identifier}}</samp></li>
+<li>guardrail_version: <samp>{{guardrail_version}}</samp></li>
+<li>detail_verified: <samp>{{detail_verified}}</samp></li>
+<li>no_explicit_guardrail_review: <samp>{{no_explicit_guardrail_review}}</samp></li>
+<li>aliases_complete: <samp>{{aliases_complete}}</samp></li>
+<li>action_groups_complete: <samp>{{action_groups_complete}}</samp></li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.bedrock.regions.id.agents",
+ $("#services\\.bedrock\\.regions\\.id\\.agents\\.partial").html());</script>
+<script id="single_bedrock_agents-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.bedrock.regions.id.agents' }}
+</script>
+<script>var single_bedrock_agents_template =
+ Handlebars.compile($("#single_bedrock_agents-template").html());</script>

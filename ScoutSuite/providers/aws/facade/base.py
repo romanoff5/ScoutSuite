@@ -12,6 +12,7 @@ from ScoutSuite.providers.aws.facade.wafv2 import WAFv2PublicFacade
 from ScoutSuite.providers.aws.facade.networkfirewall import NetworkFirewallFacade
 from ScoutSuite.providers.aws.facade.ssm_public import SSMPublicFacade
 from ScoutSuite.providers.aws.facade.backup import BackupPublicFacade
+from ScoutSuite.providers.aws.facade.bedrock import BedrockFacade
 from ScoutSuite.providers.aws.facade.macie import MacieFacade
 from ScoutSuite.providers.aws.facade.identitycenter import IdentityCenterFacade
 from ScoutSuite.providers.aws.facade.organizations import OrganizationsFacade
@@ -196,6 +197,7 @@ class AWSFacade(AWSBaseFacade):
         self.securityhub = SecurityHubPublicFacade(self.session)
         self.wafv2 = WAFv2PublicFacade(self.session, self.owner_id)
         self.backup = BackupPublicFacade(self.session, self.owner_id)
+        self.bedrock = BedrockFacade(self.session)
         self.macie = MacieFacade(self.session)
         self.networkfirewall = NetworkFirewallFacade(self.session, self.owner_id)
         self.ssm = SSMPublicFacade(self.session)

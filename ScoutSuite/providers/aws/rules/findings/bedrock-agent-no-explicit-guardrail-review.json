@@ -1,0 +1,20 @@
+{
+  "description": "Bedrock Agent lacks an explicit guardrail configuration",
+  "rationale": "The agent detail is verified, no guardrail is attached directly, and the configured enforced guardrail list was read successfully and is empty. Per-request protections and other controls remain unverified; this finding is a review candidate, not proof of unfiltered inference.",
+  "remediation": "Evaluate the agent's threat model, configure an appropriate Bedrock Guardrail or enforce it in validated runtime paths, and test prompt-injection/PII protections on deployed aliases.",
+  "references": [
+    "https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html"
+  ],
+  "dashboard_name": "Bedrock Agents",
+  "path": "bedrock.regions.id.agents.id",
+  "conditions": [
+    "and",
+    [
+      "no_explicit_guardrail_review",
+      "true",
+      ""
+    ]
+  ],
+  "id_suffix": "noexplicitguardrailreview",
+  "evidence_policy": "bedrock-m10-r-v1"
+}

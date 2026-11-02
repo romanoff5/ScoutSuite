@@ -1,0 +1,25 @@
+<!-- M10-R Bedrock: metadata only; escaped Handlebars -->
+<script id="services.bedrock.regions.id.guardrails.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>name: <samp>{{name}}</samp></li>
+<li>guardrail_id: <samp>{{guardrail_id}}</samp></li>
+<li>arn: <samp>{{arn}}</samp></li>
+<li>status: <samp>{{status}}</samp></li>
+<li>version: <samp>{{version}}</samp></li>
+<li>kms_key_arn: <samp>{{kms_key_arn}}</samp></li>
+<li>detail_verified: <samp>{{detail_verified}}</samp></li>
+<li>topic_policy_configured: <samp>{{topic_policy_configured}}</samp></li>
+<li>content_policy_configured: <samp>{{content_policy_configured}}</samp></li>
+<li>pii_policy_configured: <samp>{{pii_policy_configured}}</samp></li>
+<li>grounding_policy_configured: <samp>{{grounding_policy_configured}}</samp></li>
+<li>automated_reasoning_configured: <samp>{{automated_reasoning_configured}}</samp></li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.bedrock.regions.id.guardrails",
+ $("#services\\.bedrock\\.regions\\.id\\.guardrails\\.partial").html());</script>
+<script id="single_bedrock_guardrails-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.bedrock.regions.id.guardrails' }}
+</script>
+<script>var single_bedrock_guardrails_template =
+ Handlebars.compile($("#single_bedrock_guardrails-template").html());</script>

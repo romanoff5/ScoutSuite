@@ -1,0 +1,20 @@
+<!-- M10-R Bedrock: metadata only; escaped Handlebars -->
+<script id="services.bedrock.regions.id.knowledge_bases.id.data_sources.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>data_source_id: <samp>{{data_source_id}}</samp></li>
+<li>name: <samp>{{name}}</samp></li>
+<li>status: <samp>{{status}}</samp></li>
+<li>source_type: <samp>{{source_type}}</samp></li>
+<li>s3_bucket_arn: <samp>{{s3_bucket_arn}}</samp></li>
+<li>data_deletion_policy: <samp>{{data_deletion_policy}}</samp></li>
+<li>detail_verified: <samp>{{detail_verified}}</samp></li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.bedrock.regions.id.knowledge_bases.id.data_sources",
+ $("#services\\.bedrock\\.regions\\.id\\.knowledge_bases\\.id\\.data_sources\\.partial").html());</script>
+<script id="single_bedrock_data_sources-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.bedrock.regions.id.knowledge_bases.id.data_sources' }}
+</script>
+<script>var single_bedrock_data_sources_template =
+ Handlebars.compile($("#single_bedrock_data_sources-template").html());</script>
