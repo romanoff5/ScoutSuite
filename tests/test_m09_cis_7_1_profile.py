@@ -17,7 +17,7 @@ def test_cis_7_1_0_partial_profile_is_explicit_and_preserves_legacy_mapping():
     assert profile['benchmark']['version'] == '7.1.0'
     assert profile['benchmark']['coverage'] == 'partial'
     assert profile['profile_id'] == 'cis-aws-foundations-partial'
-    assert len(profile['control_mappings']) == len(profile['rules']) == 30
+    assert len(profile['control_mappings']) == len(profile['rules']) == 32
     assert profile['control_mappings']['ec2-instance-imdsv1-enabled.json'][0]['control_id'] == '6.7'
     assert profile['control_mappings']['iam-password-policy-minimum-length.json'][0]['control_id'] == '2.8'
     assert (ROOT / 'ScoutSuite/providers/aws/rules/rulesets/cis-1.2.0.json').exists()
@@ -74,6 +74,8 @@ def test_rc4_profile_adds_observed_auto_controls_without_replacing_legacy():
         'rds-instance-publicly-accessible.json': '3.2.3',
         'rds-instance-deletion-protection-disabled.json': '3.2.5',
         'efs-filesystem-not-encrypted.json': '3.3.1',
+        's3-bucket-public-access-block-incomplete.json': '3.1.4',
+        'securityhub-region-not-subscribed.json': '5.16',
         'ec2-ebs-default-encryption-disabled.json': '6.1.1',
         'bedrock-invocation-logging-review.json': '7.4.2',
     }.items():
@@ -82,7 +84,7 @@ def test_rc4_profile_adds_observed_auto_controls_without_replacing_legacy():
         assert profile['rules'][name][0]['enabled'] is True
     assert profile['rules']['iam-unused-credentials-not-disabled.json'][0]['args'] == ['45']
     assert profile['rules']['iam-user-no-key-rotation.json'][0]['args'] == ['Active', '90']
-    assert len({v[0]['control_id'] for v in profile['control_mappings'].values()}) == 28
+    assert len({v[0]['control_id'] for v in profile['control_mappings'].values()}) == 30
     assert all(v[0]['coverage'] == 'candidate' for v in profile['control_mappings'].values())
     assert profile['benchmark']['coverage'] == 'partial'
     assert not profile['benchmark'].get('compliance_verified', False)
