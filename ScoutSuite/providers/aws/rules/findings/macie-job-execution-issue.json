@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Macie classification job is paused, cancelled or reports execution errors",
+    "rationale": "An explicit status of PAUSED, USER_PAUSED, CANCELLED or lastRunErrorStatus=ERROR requires review. An error does not prove sensitive data was exposed, and absence of job activity is handled independently.",
+    "remediation": "Inspect job ID, status, error code, target buckets, IAM/KMS access and schedule. Resume or re-create the job as appropriate.",
+    "references": [
+        "https://docs.aws.amazon.com/macie/latest/APIReference/jobs-jobid.html"
+    ],
+    "dashboard_name": "Macie classification jobs",
+    "path": "macie.regions.id.jobs.id",
+    "conditions": [
+        "and",
+        [
+            "execution_issue",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "JobExecutionReview",
+    "evidence_policy": "macie-job-execution-v1"
+}

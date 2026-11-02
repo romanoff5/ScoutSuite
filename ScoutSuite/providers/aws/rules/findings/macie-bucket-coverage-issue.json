@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Macie S3 bucket has analysis errors or lacks recent analysis evidence",
+    "rationale": "Explicit bucket errors, aged activity or monitored buckets without run timestamps require review. This does not assert that sensitive data exists or that a configured job completed successfully.",
+    "remediation": "Review bucket/account identifiers, access errors and classification job schedules. Check service role, bucket/KMS permissions and actual job results without revealing sensitive records.",
+    "references": [
+        "https://docs.aws.amazon.com/macie/latest/user/discovery-coverage-review.html"
+    ],
+    "dashboard_name": "Macie S3 coverage",
+    "path": "macie.regions.id.buckets.id",
+    "conditions": [
+        "and",
+        [
+            "review_required",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "CoverageReview",
+    "evidence_policy": "macie-bucket-coverage-v1"
+}

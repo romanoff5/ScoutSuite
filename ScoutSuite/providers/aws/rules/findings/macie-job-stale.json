@@ -1,0 +1,20 @@
+{
+    "description": "Scheduled Amazon Macie classification job has no recent execution evidence",
+    "rationale": "A scheduled job's last run is older than the 45-day review window, or no last run is reported more than 45 days after creation. One-time jobs are excluded; a run does not itself prove classification success.",
+    "remediation": "Review the job ID, run status/error, bucket definitions, schedule and S3/KMS access. The 45-day threshold is a ScoutSuite review heuristic, not a universal compliance requirement.",
+    "references": [
+        "https://docs.aws.amazon.com/macie/latest/APIReference/jobs-jobid.html"
+    ],
+    "dashboard_name": "Macie jobs",
+    "path": "macie.regions.id.jobs.id",
+    "conditions": [
+        "and",
+        [
+            "stale",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "StaleJob",
+    "evidence_policy": "macie-job-recency-v1"
+}
