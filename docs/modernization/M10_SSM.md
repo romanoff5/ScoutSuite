@@ -12,6 +12,8 @@ patch details. Compares SSM registrations with the regional EC2 inventory.
 - ssm:DescribePatchGroups
 - ssm:DescribeInstancePatchStates
 - ssm:DescribeInstancePatches
+- ssm:ListCommands
+- ssm:ListCommandInvocations
 - ec2:DescribeInstances
 
 The role can use AWS-managed SecurityAudit plus extra read-only actions where
@@ -24,8 +26,11 @@ installation or SendCommand is performed.
   inventories are complete. It may mean missing agent, IAM, networking or
   missing registration; its root cause remains unknown.
 - Only PingStatus=Online and a reported Operation=Scan with OperationEndTime
-  within seven days satisfy the scan-freshness policy. A recent Install
-  operation is not proof of a recent scan.
+  within seven days are recent *reported* patch-scan evidence. Additionally,
+  a matching per-node successful AWS-RunPatchBaseline Run Command invocation
+  with an Operation=Scan parameter and a plugin completion timestamp confirms
+  the latest successful scan (when command history is accessible). A recent
+  Install operation does not prove a recent scan.
 - CriticalNonCompliantCount, SecurityNonCompliantCount, MissingCount,
   FailedCount, InstalledPendingRebootCount, InstalledRejectedCount and
   OtherNonCompliantCount are preserved individually.
