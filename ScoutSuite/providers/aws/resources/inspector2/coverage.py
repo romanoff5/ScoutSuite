@@ -35,4 +35,10 @@ class InspectorCoverage(AWSResources):
                      'account_id': item['account_id'], 'scan_type': item['scan_type'],
                      'scan_status': status or 'UNKNOWN', 'inactive': status == 'INACTIVE',
                      'scan_reason': item.get('scan_reason') if isinstance(
-                         item.get('scan_reason'), str) else None}
+                         item.get('scan_reason'), str) else None,
+                     'last_scanned_at': item.get('last_scanned_at'),
+                     'provider': item.get('provider'),
+                     'provider_region': item.get('provider_region'),
+                     'provider_account_id': item.get('provider_account_id'),
+                     'provider_org_id': item.get('provider_org_id'),
+                     'scan_mode': item.get('scan_mode')}
