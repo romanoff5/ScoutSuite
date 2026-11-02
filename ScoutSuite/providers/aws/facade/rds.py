@@ -112,7 +112,7 @@ class RDSFacade(AWSBaseFacade):
                 snapshot['VpcId'] = snapshot['VpcId'] if 'VpcId' in snapshot else ec2_classic
 
             await get_and_set_concurrently(
-                [self._get_and_set_snapshot_attributes], self._snapshots_cache[region], region=region)
+                [self._get_and_set_snapshot_attributes], snapshots, region=region)
 
             # Now, Cluster snapshots, as they are a different resource on the API
             cluster_snapshots_for_region = await AWSFacadeUtils.get_all_pages(

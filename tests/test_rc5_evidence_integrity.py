@@ -69,6 +69,40 @@ def test_failed_rds_enrichment_does_not_poison_cache_or_skip_retry():
     asyncio.run(scenario())
 
 
+def test_rds_snapshot_cache_enriches_before_publishing_and_reuses_result():
+    async def scenario():
+        facade = RDSFacade(Mock())
+        db_snapshot = {'DBSnapshotIdentifier': 'synthetic-db-snapshot', 'VpcId': 'vpc-a'}
+        cluster_snapshot = {'DBClusterSnapshotIdentifier': 'synthetic-cluster-snapshot', 'VpcId': 'vpc-a'}
+
+        async def pages(_service, _region, _session, operation, _key):
+            if operation == 'describe_db_snapshots':
+                return [db_snapshot]
+            if operation == 'describe_db_cluster_snapshots':
+                return [cluster_snapshot]
+            raise AssertionError(f'Unexpected operation: {operation}')
+
+        async def enrich(sources, rows, region):
+            assert region == 'eu-central-1'
+            assert len(sources) == 1
+            for row in rows:
+                row['Attributes'] = {'verified': True}
+
+        with patch.object(AWSFacadeUtils, 'get_all_pages', new_callable=AsyncMock,
+                          side_effect=pages) as api, \
+             patch('ScoutSuite.providers.aws.facade.rds.get_and_set_concurrently',
+                   new_callable=AsyncMock, side_effect=enrich) as enrichment:
+            first = await facade.get_snapshots('eu-central-1', 'vpc-a')
+            assert first == [db_snapshot, cluster_snapshot]
+            assert all(row['Attributes'] == {'verified': True} for row in first)
+            assert api.await_count == 2
+            assert enrichment.await_count == 2
+            assert await facade.get_snapshots('eu-central-1', 'vpc-a') == first
+            assert api.await_count == 2
+
+    asyncio.run(scenario())
+
+
 def test_malformed_rds_cluster_membership_is_unknown_not_standalone():
     parser = RDSInstances.__new__(RDSInstances)
     for malformed in ('', '   ', 42, {}):
