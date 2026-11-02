@@ -3,6 +3,8 @@
 Global service endpoint: commercial us-east-1, GovCloud us-gov-west-1,
 China cn-northwest-1. No cross-account traversal or policy-document access.
 """
+import json
+
 from botocore.exceptions import ClientError
 
 from ScoutSuite.core.run_context import get_current_run_context
@@ -32,6 +34,7 @@ class OrganizationsFacade(AWSBaseFacade):
     def __init__(self, session, partition):
         super().__init__(session)
         self.partition = partition
+        self._scp_context_cache = {}
 
     @staticmethod
     def _issue(status, reason):
@@ -152,4 +155,149 @@ class OrganizationsFacade(AWSBaseFacade):
             rows, status = await self._list(client, operation, field, pages, limit)
             result[label] = rows
             result['collection'][label] = status
+        return result
+
+    async def get_scp_context(self, accounts, roots):
+        """Read account -> OU -> root SCP attachments; never claim effective IAM access.
+
+        Partial for missing account hierarchy, denied APIs, malformed policies and
+        limits. SCPs constrain authorization, but are not an IAM permission grant.
+        """
+        ids = tuple(sorted({row['Id'] for row in accounts
+                            if isinstance(row, dict) and isinstance(row.get('Id'), str)}))
+        if ids in self._scp_context_cache:
+            return self._scp_context_cache[ids]
+        result = {'accounts': {}, 'collection_status': 'complete',
+                  'effective_permissions_verified': False}
+        if len(ids) > 5000:
+            self._issue('partial', 'SCPAccountLimit')
+            result['collection_status'] = 'partial'
+            result['account_limit'] = 5000
+            ids = ids[:5000]
+        region = HOME_REGIONS.get(self.partition)
+        if not region:
+            result['collection_status'] = 'partial'
+            return result
+        client = AWSFacadeUtils.get_client('organizations', self.session, region)
+        if client is None:
+            self._issue('failed', 'SCPClientConstruction')
+            result['collection_status'] = 'partial'
+            return result
+        known_roots = {root['Id'] for root in roots
+                       if isinstance(root, dict) and isinstance(root.get('Id'), str)}
+        parent_cache, policy_cache, document_cache = {}, {}, {}
+        async def target_parents(target):
+            if target not in parent_cache:
+                try:
+                    response = await run_concurrently(
+                        lambda target=target: client.list_parents(ChildId=target))
+                    rows = response.get('Parents') if isinstance(response, dict) else None
+                    if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict) or (
+                            rows[0].get('Type') not in ('ROOT', 'ORGANIZATIONAL_UNIT')
+                            or not isinstance(rows[0].get('Id'), str)):
+                        raise ValueError('MalformedParents')
+                    parent_cache[target] = (rows[0]['Id'], 'complete')
+                except Exception as error:
+                    status, reason = self._error_status(error)
+                    self._issue('partial', 'ListParents' + reason)
+                    parent_cache[target] = (None, 'partial')
+            return parent_cache[target]
+        async def policies(target):
+            if target not in policy_cache:
+                try:
+                    rows, status, token, seen = [], 'complete', None, set()
+                    for _ in range(500):
+                        kwargs = {'TargetId': target, 'Filter': 'SERVICE_CONTROL_POLICY',
+                                  'MaxResults': PAGE_SIZE}
+                        if token:
+                            kwargs['NextToken'] = token
+                        response = await run_concurrently(
+                            lambda kwargs=kwargs: client.list_policies_for_target(**kwargs))
+                        page = response.get('Policies') if isinstance(response, dict) else None
+                        if not isinstance(page, list) or any(not isinstance(p, dict) or
+                                not isinstance(p.get('Id'), str) for p in page):
+                            status = 'partial'
+                            break
+                        rows.extend(page)
+                        if len(rows) > 10000:
+                            rows = rows[:10000]
+                            status = 'partial'
+                            break
+                        token = response.get('NextToken')
+                        if not token:
+                            break
+                        if not isinstance(token, str) or token in seen:
+                            status = 'partial'
+                            break
+                        seen.add(token)
+                    else:
+                        status = 'partial'
+                except Exception as error:
+                    _, reason = self._error_status(error)
+                    self._issue('partial', 'ListPoliciesForTarget' + reason)
+                    rows, status = [], 'partial'
+                policy_cache[target] = (rows, status)
+            return policy_cache[target]
+        async def document(identifier):
+            if identifier not in document_cache:
+                try:
+                    response = await run_concurrently(
+                        lambda identifier=identifier: client.describe_policy(PolicyId=identifier))
+                    policy = response.get('Policy', {}) if isinstance(response, dict) else {}
+                    content = policy.get('Content')
+                    if not isinstance(content, str):
+                        raise ValueError('MissingPolicyDocument')
+                    parsed = json.loads(content)
+                    if not isinstance(parsed, dict):
+                        raise ValueError('InvalidPolicyDocument')
+                    document_cache[identifier] = (parsed, 'complete')
+                except Exception as error:
+                    _, reason = self._error_status(error)
+                    self._issue('partial', 'DescribePolicy' + reason)
+                    document_cache[identifier] = (None, 'partial')
+            return document_cache[identifier]
+        try:
+            for account_id in ids:
+                chain, visited, state = [account_id], {account_id}, 'complete'
+                for depth in range(33):
+                    current = chain[-1]
+                    if current in known_roots:
+                        break
+                    parent, parent_state = await target_parents(current)
+                    if parent_state != 'complete' or not parent or parent in visited:
+                        state = 'partial'
+                        break
+                    chain.append(parent)
+                    visited.add(parent)
+                else:
+                    state = 'partial'
+                    self._issue('partial', 'SCPAncestorDepthLimit')
+                attachments, documents = {}, {}
+                for target in chain:
+                    rows, status = await policies(target)
+                    if status != 'complete':
+                        state = 'partial'
+                    attachments[target] = []
+                    for row in rows:
+                        pid = row['Id']
+                        attachments[target].append({
+                            'id': pid, 'name': row.get('Name'),
+                            'arn': row.get('Arn'), 'description': row.get('Description')})
+                        body, doc_status = await document(pid)
+                        if doc_status != 'complete':
+                            state = 'partial'
+                        else:
+                            documents[pid] = body
+                result['accounts'][account_id] = {
+                    'account_id': account_id, 'ancestor_path': chain,
+                    'attached_policies_by_target': attachments,
+                    'policy_documents': documents, 'collection_status': state,
+                    'effective_permissions_verified': False}
+                if state != 'complete':
+                    result['collection_status'] = 'partial'
+        finally:
+            close = getattr(client, 'close', None)
+            if callable(close):
+                close()
+        self._scp_context_cache[ids] = result
         return result
