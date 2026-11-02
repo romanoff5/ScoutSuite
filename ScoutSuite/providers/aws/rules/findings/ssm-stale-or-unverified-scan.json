@@ -1,0 +1,21 @@
+{
+    "description": "SSM patch scan is stale or lacks verified successful scan evidence",
+    "rationale": "Patch observation freshness is evaluated independently from SSM Agent connectivity. A new OperationEndTime or a successful Install does not prove a successful Scan; missing scan evidence is a coverage gap, not proof a scan never occurred.",
+    "remediation": "Confirm successful AWS-RunPatchBaseline Scan invocation, update inventory and investigate stale or missing scan evidence; validate on-host patch state.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-states.html",
+        "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeInstancePatchStates.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "patch_scan_needs_review",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "ssm-stale-or-unverified-scan",
+    "evidence_policy": "ssm-scan-recency-v1"
+}
