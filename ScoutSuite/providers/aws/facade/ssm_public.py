@@ -319,7 +319,8 @@ class SSMPublicFacade(AWSBaseFacade):
         # assert that EC2 instances are patched; the EC2/SSM comparison below
         # still emits unmanaged-instance findings.
         defer_baseline_details = bool(
-            managed_ok and not managed and groups_ok and not groups)
+            managed_ok and not managed and groups_ok and not groups
+            and baseline_ok)
         baseline_records = []
         seen_baselines = set()
         for summary in baselines:
