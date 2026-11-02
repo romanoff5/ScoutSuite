@@ -280,14 +280,15 @@ def test_missing_organization_admin_never_passes_even_with_visible_assignments()
 def test_api_denied_preserves_partial_pages_and_does_not_invent_empty_inventory():
     async def run():
         client = Mock()
+        row = {'AccountId': ACCOUNTS[0], 'PermissionSetArn': PS,
+               'PrincipalId': USER, 'PrincipalType': 'USER'}
         client.list_account_assignments.side_effect = [
-            {'AccountAssignments': [{'AccountId': ACCOUNTS[0]}], 'NextToken': 'more'},
-            failure()]
+            {'AccountAssignments': [row], 'NextToken': 'more'}, failure()]
         ctx = RunContext('aws').setup()
         try:
             rows, status = await IdentityCenterFacade(object(), ACCOUNTS[0])._pages(
                 client, 'list_account_assignments', 'AccountAssignments', {})
-            assert rows == [{'AccountId': ACCOUNTS[0]}]
+            assert rows == [row]
             assert status == 'partial'
             assert any(x['status'] == 'partial' for x in ctx.collection_issues)
         finally:
@@ -343,16 +344,18 @@ def test_default_rules_evidence_status_unknown_on_unverified_scope(tmp_path):
         'one': {'permission_sets': {'ps': {'assignments': {
             'assigned': candidate, 'unresolved': unknown}}}}}}}}
     provider = SimpleNamespace(services={'identitycenter': data}, service_list=['identitycenter'])
-    ctx = RunContext('aws').setup()
-    try:
-        ProcessingEngine(Ruleset('aws', filename=str(ruleset_path))).run(provider)
-        for name in names:
-            rule = data['findings'][name[:-5]]
-            assert rule['flagged_items'] == 1
-            assert rule['assessment_status'] == 'incomplete'
-            assert rule['evaluation_summary']['counts']['unknown'] == 1
-    finally:
-        asyncio.run(ctx.aclose())
+    async def run():
+        ctx = RunContext('aws').setup()
+        try:
+            ProcessingEngine(Ruleset('aws', filename=str(ruleset_path))).run(provider)
+            for name in names:
+                rule = data['findings'][name[:-5]]
+                assert rule['flagged_items'] == 1
+                assert rule['assessment_status'] == 'incomplete'
+                assert rule['evaluation_summary']['counts']['unknown'] == 1
+        finally:
+            await ctx.aclose()
+    asyncio.run(run())
 
 
 def test_report_partials_escape_untrusted_usernames_and_contact_emails():
