@@ -35,7 +35,7 @@ Selector does not change any external launcher hardcoded to an executable; selec
 
 ## Authorized non-mutating AWS preflight and field run
 
-No real client AWS scanning is performed by CI or installer. Check authorization, account and Region explicitly. Example under the existing assessed profile:
+No real client AWS scanning is performed by CI or installer. Run only authorized read-only AWS assessments: confirm written authorization, account and Region explicitly. Example under the existing assessed profile:
 
 ```powershell
 aws sts get-caller-identity --profile newclient-scanners
