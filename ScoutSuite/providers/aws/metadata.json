@@ -529,6 +529,10 @@
                 "coverage": {
                     "cols": 2,
                     "path": "services.inspector2.regions.id.coverage"
+                },
+                "members": {
+                    "cols": 2,
+                    "path": "services.inspector2.regions.id.organization.members"
                 }
             }
         }
