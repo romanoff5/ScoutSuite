@@ -290,7 +290,10 @@ async def collect_backup_rpo(facade, region, arns, jobs):
                     and j.get('State') in ('FAILED', 'ABORTED', 'EXPIRED')]
         entry['failed_job_ids'] = [v for v in failures if isinstance(v, str)]
         entry['census_complete'] = complete
-        if complete and any(p['status'] == 'STOPPED' for p in entry['recovery_points']):
+        dated_points = [(when, p) for p in entry['recovery_points']
+                        if (when := _date(p.get('creation_date'))) is not None]
+        latest_record = max(dated_points, key=lambda pair: pair[0])[1] if dated_points else None
+        if complete and latest_record is not None and latest_record['status'] == 'STOPPED':
             entry['state'] = 'gap_observed'
             entry['reasons'].append('continuous_recovery_point_stopped')
         elif rpo is None:
@@ -307,10 +310,13 @@ async def collect_backup_rpo(facade, region, arns, jobs):
             # PITR creation dates and historic gap cannot confirm ongoing RPO.
             entry['state'] = 'fresh_point_observed'
         output['resources'][arn] = entry
-    if len(arns) > BACKUP_MAX_RESOURCES:
+    if len(arns) > BACKUP_MAX_RESOURCES or any(
+            not row['census_complete'] for row in output['resources'].values()):
         output['status'] = 'partial'
     elif any(x['state'] == 'gap_observed' for x in output['resources'].values()):
         output['status'] = 'gap_observed'
+    elif any(x['state'] == 'rpo_review_candidate' for x in output['resources'].values()):
+        output['status'] = 'review_required'
     else:
         output['status'] = 'observed_only' if output['resources'] else 'not_applicable'
     return output
