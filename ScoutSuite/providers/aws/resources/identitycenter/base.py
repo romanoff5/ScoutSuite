@@ -185,7 +185,11 @@ class IdentityCenter(Regions):
             ctx = get_current_run_context()
             if ctx is not None:
                 ctx.record_collection_issue('partial', 'identitycenter', 'AssignmentAccountOutsideVerifiedRoster')
-        total_complete = admin_verified
+        total_complete = admin_verified and bool(self.get('regions'))
+        if not self.get('regions'):
+            ctx = get_current_run_context()
+            if ctx is not None:
+                ctx.record_collection_issue('partial', 'identitycenter', 'NoRegionsEnumerated')
         for region in self.get('regions', {}).values():
             # Region is partial if any Identity Center API is denied or if an
             # instance is visible without a complete identity/assignment census.
