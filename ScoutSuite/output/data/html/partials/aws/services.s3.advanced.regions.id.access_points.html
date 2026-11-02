@@ -13,6 +13,8 @@
     <li>Policy is public (review, not proof of access): {{policy_public}}</li>
     <li>Detail collection complete: {{detail_complete}}</li>
     <li>VPC: {{VpcConfiguration.VpcId}}</li><li>Public policy review: {{public_policy_review}}</li>
+    <!-- M10-Q v2: all evidence remains escaped -->
+    <li>Correlated bucket: <samp>{{m10q_bucket_target.target_bucket}}</samp></li><li>Bucket resolution: {{m10q_bucket_target.status}}</li><li>Bucket listing completeness: {{m10q_bucket_target.bucket_listing_status}}</li>
   </ul>
 </div>
 </script>
