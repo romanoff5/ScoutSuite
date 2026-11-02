@@ -25,7 +25,7 @@ NOW = datetime(2026, 11, 2, tzinfo=timezone.utc)
 
 def state(**overrides):
     data = {
-        'InstanceId': INSTANCE, 'BaselineId': 'pb-11111111',
+        'InstanceId': INSTANCE, 'BaselineId': 'pb-0123456789abcdef0',
         'Operation': 'Scan', 'OperationEndTime': NOW,
         'MissingCount': 0, 'FailedCount': 0,
         'InstalledPendingRebootCount': 0, 'InstalledRejectedCount': 0,
@@ -115,8 +115,10 @@ def test_real_sdk_stubber_for_patch_states_pagination_and_scalar_fields():
         with Stubber(client) as stub:
             stub.add_response('describe_instance_patch_states', {
                 'InstancePatchStates': [{
-                    'InstanceId': INSTANCE, 'BaselineId': 'pb-11111111',
-                    'Operation': 'Scan', 'OperationEndTime': NOW,
+                    'InstanceId': INSTANCE, 'BaselineId': 'pb-0123456789abcdef0',
+                    'PatchGroup': 'production',
+                    'Operation': 'Scan', 'OperationStartTime': NOW - timedelta(minutes=5),
+                    'OperationEndTime': NOW,
                     'MissingCount': 1, 'CriticalNonCompliantCount': 1,
                     'SecurityNonCompliantCount': 1,
                 }], 'NextToken': 'next'}, {
@@ -178,9 +180,9 @@ def test_unreported_states_remain_unknown_and_details_are_preserved():
                 'LastPingDateTime': NOW}]}
         ssm.describe_patch_baselines.return_value = {
             'BaselineIdentities': [{
-                'BaselineId': 'pb-11111111', 'BaselineName': 'prod-baseline'}]}
+                'BaselineId': 'pb-0123456789abcdef0', 'BaselineName': 'prod-baseline'}]}
         ssm.get_patch_baseline.return_value = {
-            'BaselineId': 'pb-11111111', 'Name': 'prod-baseline',
+            'BaselineId': 'pb-0123456789abcdef0', 'Name': 'prod-baseline',
             'ApprovedPatches': ['KB123456']}
         ssm.describe_patch_groups.return_value = {'Mappings': []}
         ssm.describe_instance_patch_states.return_value = {
