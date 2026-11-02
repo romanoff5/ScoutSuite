@@ -25,10 +25,11 @@ def _store(rows, field, prefix):
     indexed = {}
     for row in rows:
         key = row.get(field) if isinstance(row, dict) else None
-        if not isinstance(key, str) or not key or key in indexed:
+        hashed = get_non_provider_id(key) if isinstance(key, str) and key else None
+        if not hashed or hashed in indexed:
             _issue(prefix + 'InvalidOrDuplicateIdentity')
             continue
-        indexed[key] = {'id': get_non_provider_id(key), 'name': row.get(
+        indexed[hashed] = {'id': hashed, 'name': row.get(
             'ResourceName') or row.get('RestoreTestingPlanName') or key, **row}
     return indexed
 
@@ -93,7 +94,9 @@ class BackupPublic(Regions):
             status[key] = 'complete' if complete else 'partial'
         data['backup_inventory_status'] = status
 
-        protected = set(data['protected_resources'])
+        protected = {
+            item['ResourceArn'] for item in data['protected_resources'].values()
+            if isinstance(item.get('ResourceArn'), str)}
         jobs = data['backup_jobs'].values()
         for plan in data['plans'].values():
             plan_id = plan.get('backup_plan_id')

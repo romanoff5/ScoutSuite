@@ -195,6 +195,7 @@ def test_plan_reconciliation_distinguishes_assignments_recovery_points_and_jobs(
         await service.fetch_all(regions=[REGION])
         region = service['regions'][REGION]
         assert service['protected_resources_count'] == 1
+        assert next(iter(region['protected_resources'])).startswith('scoutid-')
         result = next(iter(region['plans'].values()))
         assert result['matching_protected_resource_arns'] == [RESOURCE]
         assert result['observed_completed_backup_resource_arns'] == [RESOURCE]
