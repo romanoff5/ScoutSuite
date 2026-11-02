@@ -147,3 +147,57 @@ def test_macie_completed_run_evidence_is_not_per_bucket_classification_proof():
             'linked_job_completed_no_reported_access_errors')
         assert bucket['classification_results_verified'] is False
     asyncio.run(run())
+
+
+def test_tagged_candidate_pagination_discovers_unprotected_resources():
+    async def run():
+        client = Mock()
+        client.get_resources.side_effect = [
+            {'ResourceTagMappingList': [], 'PaginationToken': 'page-2'},
+            {'ResourceTagMappingList': [
+                {'ResourceARN': ARN, 'Tags': [{'Key': 'backup', 'Value': 'daily'}]}]}]
+        facade = BackupPublicFacade(object(), ACCOUNT)
+        with patch.object(AWSFacadeUtils, 'get_client', return_value=client):
+            result = await facade.get_tagged_resource_candidates(
+                'us-east-1', {'backup'})
+        assert result['status'] == 'complete'
+        assert result['tags'][ARN] == {'backup': 'daily'}
+        assert result['candidate_count'] == 1
+        assert client.get_resources.call_count == 2
+    asyncio.run(run())
+
+
+def test_backup_tagged_selection_gap_only_when_protected_inventory_complete():
+    from ScoutSuite.providers.aws.facade.backup import BoundedResults
+    from ScoutSuite.providers.aws.resources.backup.base import BackupPublic
+
+    async def run(protected_status):
+        resources = BoundedResults()
+        resources.complete = protected_status
+        backup = SimpleNamespace(
+            get_vaults=AsyncMock(return_value=[]),
+            get_plans=AsyncMock(return_value=[{
+                'arn': 'arn:aws:backup:us-east-1:222222222222:backup-plan:plan-1',
+                'name': 'tagged', 'plan_id': 'plan-1', 'rules': [],
+                'selection_collection_complete': True,
+                'selections': [{'BackupSelection': {
+                    'Conditions': {'StringEquals': [{
+                        'ConditionKey': 'aws:ResourceTag/backup',
+                        'ConditionValue': 'daily'}]}}}]}]),
+            get_protected_resources=AsyncMock(return_value=resources),
+            get_backup_jobs=AsyncMock(return_value=BoundedResults()),
+            get_restore_jobs=AsyncMock(return_value=BoundedResults()),
+            get_restore_testing_plans=AsyncMock(return_value=BoundedResults()),
+            get_tagged_resource_candidates=AsyncMock(return_value={
+                'tags': {ARN: {'backup': 'daily'}}, 'status': 'complete'}))
+        public = SimpleNamespace(
+            build_region_list=AsyncMock(return_value=['us-east-1']), backup=backup)
+        resource = BackupPublic(public)
+        await resource.fetch_all()
+        return next(iter(resource['regions']['us-east-1']['plans'].values()))
+    complete = asyncio.run(run(True))
+    assert complete['selected_tagged_resource_arns_without_reported_recovery_point'] == [ARN]
+    assert complete['tagged_resource_gap_evidence_status'] == 'candidate_only_not_opt_in_verified'
+    partial = asyncio.run(run(False))
+    assert partial['selected_tagged_resource_arns_without_reported_recovery_point'] == []
+    assert partial['correlation_status'] == 'partial'
