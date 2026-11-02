@@ -386,6 +386,7 @@
       "m10q-ec2-not-reported-by-inspector2.json",
       "m10q-ecr-image-scanning-gap.json",
       "m10q-s3-backup-evidence-gap.json",
+      "m10r-org-cloudtrail-config-gap.json",
       "macie-bucket-coverage-issue.json",
       "macie-job-execution-issue.json",
       "macie-job-stale.json",
