@@ -10,6 +10,10 @@ from .vaults import Vaults
 from .plans import Plans
 
 
+class MissingCollection(list):
+    complete = False
+
+
 def _issue(reason):
     ctx = get_current_run_context()
     if ctx is not None:
@@ -34,7 +38,8 @@ def _matches_selection(arn, detail):
     selection = detail.get('BackupSelection', {})
     if not isinstance(selection, dict):
         return False
-    if selection.get('ListOfTags') or any(selection.get('Conditions', {}).values()):
+    if selection.get('ListOfTags') or (isinstance(selection.get('Conditions'), dict)
+                                    and any(selection['Conditions'].values())):
         return False
     includes = selection.get('Resources', [])
     excludes = selection.get('NotResources', [])
@@ -71,7 +76,9 @@ class BackupPublic(Regions):
              'RestoreTestingPlanArn'),
         )
         results = await asyncio.gather(*(
-            getattr(backup, method)(region) for _, method, _ in methods),
+            (getattr(backup, method)(region) if hasattr(backup, method)
+             else asyncio.sleep(0, result=MissingCollection()))
+            for _, method, _ in methods),
             return_exceptions=True)
         status = {}
         for (key, _, identity), result in zip(methods, results):

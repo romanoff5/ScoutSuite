@@ -1,0 +1,22 @@
+<!-- M10-N; all evidence escaped by Handlebars. -->
+<script id="services.backup.regions.id.restore_testing_plans.partial" type="text/x-handlebars-template">
+ <div class="list-group-item active"><h4>{{name}}</h4></div>
+ <div class="list-group-item"><ul>
+ <li>RestoreTestingPlanArn: <samp>{{RestoreTestingPlanArn}}</samp></li>
+ <li>ScheduleExpression: <samp>{{ScheduleExpression}}</samp></li>
+ <li>ScheduleExpressionTimezone: <samp>{{ScheduleExpressionTimezone}}</samp></li>
+ <li>LastExecutionTime: <samp>{{LastExecutionTime}}</samp></li>
+ <li>selection_collection_complete: <samp>{{selection_collection_complete}}</samp></li>
+ <li>results_status: <samp>{{results_status}}</samp></li>
+ </ul></div>
+</script>
+<script>
+ Handlebars.registerPartial("services.backup.regions.id.restore_testing_plans", $("#services\\.backup\\.regions\\.id\\.restore_testing_plans\\.partial").html());
+</script>
+<script id="single_backup_restore_testing_plans-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.backup.regions.id.restore_testing_plans' }}
+</script>
+<script>
+ var single_backup_restore_testing_plans_template = Handlebars.compile(
+   $("#single_backup_restore_testing_plans-template").html());
+</script>

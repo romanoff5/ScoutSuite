@@ -1,5 +1,4 @@
 """M10-K/M10-N: bounded, read-only regional AWS Backup evidence."""
-from copy import deepcopy
 from botocore.exceptions import ClientError
 
 from ScoutSuite.core.run_context import get_current_run_context

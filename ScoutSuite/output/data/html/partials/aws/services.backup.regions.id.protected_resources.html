@@ -1,0 +1,22 @@
+<!-- M10-N; all evidence escaped by Handlebars. -->
+<script id="services.backup.regions.id.protected_resources.partial" type="text/x-handlebars-template">
+ <div class="list-group-item active"><h4>{{name}}</h4></div>
+ <div class="list-group-item"><ul>
+ <li>ResourceArn: <samp>{{ResourceArn}}</samp></li>
+ <li>ResourceName: <samp>{{ResourceName}}</samp></li>
+ <li>ResourceType: <samp>{{ResourceType}}</samp></li>
+ <li>LastBackupTime: <samp>{{LastBackupTime}}</samp></li>
+ <li>LastBackupVaultArn: <samp>{{LastBackupVaultArn}}</samp></li>
+ <li>LastRecoveryPointArn: <samp>{{LastRecoveryPointArn}}</samp></li>
+ </ul></div>
+</script>
+<script>
+ Handlebars.registerPartial("services.backup.regions.id.protected_resources", $("#services\\.backup\\.regions\\.id\\.protected_resources\\.partial").html());
+</script>
+<script id="single_backup_protected_resources-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.backup.regions.id.protected_resources' }}
+</script>
+<script>
+ var single_backup_protected_resources_template = Handlebars.compile(
+   $("#single_backup_protected_resources-template").html());
+</script>

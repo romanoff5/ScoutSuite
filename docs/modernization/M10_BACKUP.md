@@ -39,3 +39,24 @@ then the standard Ubuntu/Windows matrix and AWS/Azure/GCP preservation gates.
 This task does not inspect any live account. Disable with
 `--skip-services backup`. Revert the additive M10-K commit for full rollback;
 prior reports require no migration.
+
+## M10-N — AWS Backup depth (2026-11-02)
+
+Default AWS scan additionally calls read-only `ListBackupSelections`,
+`GetBackupSelection`, `ListProtectedResources`,
+`GetBackupVaultAccessPolicy`, `ListBackupJobs`, `ListRestoreJobs`,
+`ListRestoreTestingPlans`, and `ListRestoreTestingSelections`.
+Grant corresponding `backup:` permissions to cross-account audit roles as
+needed. Bounded pagination and explicit issues cover denied APIs, invalid
+pagination, incomplete inventories and identity mismatches. All diagnostic
+identifiers, role ARNs, exact selection patterns, vault policies, timestamps
+and job/validation messages are retained in JSON/SQLite.
+
+Selection assignment is NOT proof of backup execution. A protected resource
+only proves AWS Backup reports a recovery point, regardless of point status.
+A completed job with `CreatedBy.BackupPlanId` is stronger but only covers
+the recent job history (ListBackupJobs ordinarily returns 30 days). Tag-based
+selections cannot be resolved by this inventory alone. Without completed
+inventory, explicit ARN absence is unknown. Restore testing jobs are joined
+using `CreatedBy.RestoreTestingPlanArn`, with independent `Status` and
+`ValidationStatus`; no observed job is not proof of restore failure.
