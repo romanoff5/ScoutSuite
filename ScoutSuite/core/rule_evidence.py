@@ -383,7 +383,20 @@ def classify_inspector2_coverage(resource):
     return 'unknown'
 
 
+def classify_inspector2_member(member):
+    """Member account visibility is not equivalent to healthy account state."""
+    if not isinstance(member, dict):
+        return 'unknown'
+    status = member.get('account_status')
+    if status == 'ENABLED':
+        return 'secure'
+    if status in ('DISABLED', 'SUSPENDED'):
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'inspector2-member-state-v1': classify_inspector2_member,
     'inspector2-account-state-v1': classify_inspector2_account,
     # Account and individual scan enrollment share the same AWS state model.
     # Reuse one classifier instead of duplicating semantics.
