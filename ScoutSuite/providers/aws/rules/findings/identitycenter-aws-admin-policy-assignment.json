@@ -1,0 +1,20 @@
+{
+    "description": "IAM Identity Center account assignment includes AWS AdministratorAccess managed policy",
+    "rationale": "A permission set attached to a user or group is assigned to an AWS account and explicitly references the AWS-managed AdministratorAccess policy. This indicates potential administrative reach, not a proof of unrestricted effective permissions; SCPs and permissions boundaries can restrict access. Group membership and identity lookups may be incomplete.",
+    "remediation": "Review the account ID, permission set ARN, principal ID/email and group membership. Confirm the business justification, least-privilege policies, permission boundaries, SCPs and time-limited access before reducing or removing the assignment.",
+    "references": [
+        "https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsets.html"
+    ],
+    "dashboard_name": "AWS account assignments",
+    "path": "identitycenter.regions.id.instances.id.assignments.id",
+    "conditions": [
+        "and",
+        [
+            "administrator_access_managed_policy",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "AWSManagedAdministratorAccess",
+    "evidence_policy": "identitycenter-admin-managed-policy-v1"
+}

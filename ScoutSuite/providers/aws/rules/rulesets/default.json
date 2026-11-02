@@ -1502,6 +1502,9 @@
                 "level": "warning"
             }
         ],
+        "identitycenter-aws-admin-policy-assignment.json": [
+            {"enabled": true, "level": "warning"}
+        ],
         "backup-vault-lock-disabled.json": [
             {
                 "enabled": true,

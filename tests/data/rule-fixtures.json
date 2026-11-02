@@ -361,6 +361,7 @@
       "iam-user-with-password-and-key.json",
       "iam-user-with-policies.json",
       "iam-user-without-mfa.json",
+      "identitycenter-aws-admin-policy-assignment.json",
       "inspector2-account-disabled.json",
       "inspector2-coverage-inactive.json",
       "inspector2-member-account-disabled.json",
