@@ -1675,6 +1675,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "m10r-org-cloudtrail-config-gap.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
         ]
     }
 }
