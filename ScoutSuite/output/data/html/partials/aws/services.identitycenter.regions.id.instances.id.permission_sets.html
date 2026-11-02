@@ -1,0 +1,35 @@
+<!-- M10-L: all Identity Center evidence is escaped by Handlebars. -->
+<script id="services.identitycenter.regions.id.instances.id.permission_sets.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Permission set configuration</h4>
+    <p>Permission set ARN: <samp>{{arn}}</samp></p>
+    <p>Description: {{description}}; Session duration: {{session_duration}}; Relay state: {{relay_state}}</p>
+    <p>Created: {{created_date}}; Assigned principals: {{assignments_count}}</p>
+    <p>Administrative policy candidate: {{admin_candidate}}; Broad permissions candidate: {{broad_permissions_candidate}}</p>
+    <p>Policy analysis complete: {{policy_analysis_complete}}; Collection complete: {{collection_complete}}</p>
+    <h4>AWS managed policies</h4>
+    {{#each managed_policies}}<p>{{Name}} — <samp>{{Arn}}</samp></p>{{/each}}
+    <h4>Customer-managed policy references (documents require target-account review)</h4>
+    {{#each customer_managed_policies}}<p>{{Path}}{{Name}}</p>{{/each}}
+    <h4>Inline policy document</h4>
+    <pre>{{inline_policy_raw}}</pre>
+    <h4>Permission boundary</h4>
+    <p>Managed policy ARN: <samp>{{permissions_boundary.ManagedPolicyArn}}</samp></p>
+    <p>Customer policy: {{permissions_boundary.CustomerManagedPolicyReference.Path}}{{permissions_boundary.CustomerManagedPolicyReference.Name}}</p>
+    <h4>Provisioned account IDs</h4>
+    {{#each provisioned_account_ids}}<p><samp>{{this}}</samp></p>{{/each}}
+    <h4>Collection status</h4>
+    {{#each collection}}<p>{{@key}}: {{this}}</p>{{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.identitycenter.regions.id.instances.id.permission_sets", $("#services\\.identitycenter\\.regions\\.id\\.instances\\.id\\.permission_sets\\.partial").html());
+</script>
+<script id="single_identitycenter_permission_set-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.identitycenter.regions.id.instances.id.permission_sets' }}
+</script>
+<script>
+  var single_identitycenter_permission_set_template =
+    Handlebars.compile($("#single_identitycenter_permission_set-template").html());
+</script>
