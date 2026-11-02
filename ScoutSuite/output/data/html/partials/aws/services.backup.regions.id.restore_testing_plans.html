@@ -1,0 +1,37 @@
+<!-- M10-N; all evidence escaped by Handlebars. -->
+<script id="services.backup.regions.id.restore_testing_plans.partial" type="text/x-handlebars-template">
+ <div class="list-group-item active"><h4>{{name}}</h4></div>
+ <div class="list-group-item"><ul>
+ <li>RestoreTestingPlanArn: <samp>{{RestoreTestingPlanArn}}</samp></li>
+ <li>ScheduleExpression: <samp>{{ScheduleExpression}}</samp></li>
+ <li>ScheduleExpressionTimezone: <samp>{{ScheduleExpressionTimezone}}</samp></li>
+ <li>LastExecutionTime: <samp>{{LastExecutionTime}}</samp></li>
+ <li>selection_collection_complete: <samp>{{selection_collection_complete}}</samp></li>
+ <li>results_status: <samp>{{results_status}}</samp></li>
+ </ul>
+ <h4>Restore test selections</h4>
+ {{#each selections}}<ul>
+   <li>Selection: {{RestoreTestingSelectionName}}</li>
+   <li>Protected resource type: {{ProtectedResourceType}}</li>
+   <li>Role ARN: <samp>{{IamRoleArn}}</samp></li>
+   <li>Validation window (hours): {{ValidationWindowHours}}</li>
+ </ul>{{/each}}
+ <h4>Observed restore jobs and validation</h4>
+ {{#each observed_restore_jobs}}<ul>
+   <li>Job: {{RestoreJobId}}; resource: <samp>{{SourceResourceArn}}</samp></li>
+   <li>Restore status: {{Status}}; validation status: {{ValidationStatus}}</li>
+   <li>Status detail: {{StatusMessage}}</li>
+   <li>Validation detail: {{ValidationStatusMessage}}</li>
+ </ul>{{/each}}
+ </div>
+</script>
+<script>
+ Handlebars.registerPartial("services.backup.regions.id.restore_testing_plans", $("#services\\.backup\\.regions\\.id\\.restore_testing_plans\\.partial").html());
+</script>
+<script id="single_backup_restore_testing_plans-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.backup.regions.id.restore_testing_plans' }}
+</script>
+<script>
+ var single_backup_restore_testing_plans_template = Handlebars.compile(
+   $("#single_backup_restore_testing_plans-template").html());
+</script>

@@ -720,7 +720,11 @@
             "resources": {
                 "regions": {"cols": 2, "path": "services.backup.regions"},
                 "vaults": {"cols": 2, "path": "services.backup.regions.id.vaults"},
-                "plans": {"cols": 2, "path": "services.backup.regions.id.plans"}
+                "plans": {"cols": 2, "path": "services.backup.regions.id.plans"},
+                "protected_resources": {"cols": 2, "path": "services.backup.regions.id.protected_resources"},
+                "backup_jobs": {"cols": 2, "path": "services.backup.regions.id.backup_jobs"},
+                "restore_jobs": {"cols": 2, "path": "services.backup.regions.id.restore_jobs"},
+                "restore_testing_plans": {"cols": 2, "path": "services.backup.regions.id.restore_testing_plans"}
             }
         },
         "efs": {

@@ -1,0 +1,29 @@
+<!-- M10-N; all evidence escaped by Handlebars. -->
+<script id="services.backup.regions.id.backup_jobs.partial" type="text/x-handlebars-template">
+ <div class="list-group-item active"><h4>{{name}}</h4></div>
+ <div class="list-group-item"><ul>
+ <li>BackupJobId: <samp>{{BackupJobId}}</samp></li>
+ <li>State: <samp>{{State}}</samp></li>
+ <li>MessageCategory: <samp>{{MessageCategory}}</samp></li>
+ <li>StatusMessage: <samp>{{StatusMessage}}</samp></li>
+ <li>ResourceArn: <samp>{{ResourceArn}}</samp></li>
+ <li>ResourceType: <samp>{{ResourceType}}</samp></li>
+ <li>CreatedBy.BackupPlanId: <samp>{{CreatedBy.BackupPlanId}}</samp></li>
+ <li>CreatedBy.BackupPlanArn: <samp>{{CreatedBy.BackupPlanArn}}</samp></li>
+ <li>BackupVaultArn: <samp>{{BackupVaultArn}}</samp></li>
+ <li>RecoveryPointArn: <samp>{{RecoveryPointArn}}</samp></li>
+ <li>CreationDate: <samp>{{CreationDate}}</samp></li>
+ <li>CompletionDate: <samp>{{CompletionDate}}</samp></li>
+ <li>EncryptionKeyArn: <samp>{{EncryptionKeyArn}}</samp></li>
+ </ul></div>
+</script>
+<script>
+ Handlebars.registerPartial("services.backup.regions.id.backup_jobs", $("#services\\.backup\\.regions\\.id\\.backup_jobs\\.partial").html());
+</script>
+<script id="single_backup_backup_jobs-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.backup.regions.id.backup_jobs' }}
+</script>
+<script>
+ var single_backup_backup_jobs_template = Handlebars.compile(
+   $("#single_backup_backup_jobs-template").html());
+</script>
