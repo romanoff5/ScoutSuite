@@ -1,3 +1,35 @@
+## RC8 disabled-service evidence corrections and release preparation (2026-11-02)
+
+- Triage of the RC7 field run's 17 residual collection issues against the
+  locally retained CLI evidence showed that three disabled-service fixes never
+  triggered for the IAM-limited audit role:
+  - Security Hub `DescribeHub` returns `InvalidAccessException` "Account <id>
+    is not subscribed to AWS Security Hub CSPM"; RC5 only accepted
+    `ResourceNotFoundException`, so `securityhub-region-not-subscribed` stayed
+    UNKNOWN (commit `933d3e37`).
+  - Macie `GetMacieSession` and `ListClassificationJobs` are IAM-denied while
+    `ListFindings` returns "Macie is not enabled."; PR #25 only inspected
+    `GetMacieSession`. RC8 adds a classify-only `ListFindings(maxResults=1)`
+    probe after an IAM denial, discards the response and records
+    `session_status_source` (commit `1ebe130e`).
+  - Bedrock `ListModelCustomizationJobs` returns `UnknownOperationException` in
+    a Region without model customization, so PR #26's sparse deferral never
+    applied; that operation alone now counts as verified absent with
+    `regional_availability` (commit `a5ae0be6`).
+- Not changed: Inspector2 per-EC2 evidence stays UNKNOWN when the account's
+  Inspector enrollment is disabled, by the existing no-double-count design;
+  `inspector2-account-disabled` already reports it. The
+  `MalformedCoverageStatistics` issue for a disabled account is unconfirmed
+  without a live response and is left as a recorded limitation.
+- Tests: `tests/test_rc8_disabled_service_evidence.py` (commit `dfdc5ebf`, the
+  RC8 workflow ancestry anchor) uses strict Stubber/mocks with field-shaped
+  messages; 5 of its 8 tests fail without the fixes, the negative cases
+  (other InvalidAccess/denials stay UNKNOWN, no finding IDs retained) pass
+  both ways. Local guarded suite: 719 passed with the 4 known environmental
+  failures; flake8 and `git diff --check` passed.
+- RC8 installs in `.venv-scout-fork-rc8`; `ForkRc7` is added as a rollback
+  mode. Release notes state the expected RC7 -> RC8 field delta.
+
 ## RC7 release preparation (2026-11-02)
 
 - RC7 derives from master after the post-RC6 S3 backup evidence gap fix
