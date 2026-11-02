@@ -1717,6 +1717,18 @@
                 "enabled": true,
                 "level": "danger"
             }
+        ],
+        "s3-bucket-public-access-block-incomplete.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "securityhub-region-not-subscribed.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
