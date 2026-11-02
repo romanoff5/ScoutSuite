@@ -1,4 +1,4 @@
-"""M10-K: WAFv2 resource associations, CloudFront and scoped completeness."""
+"""M10-J2: WAFv2 resource associations, CloudFront and scoped completeness."""
 import asyncio
 import json
 from pathlib import Path
@@ -283,7 +283,7 @@ def test_evidence_rule_and_normalized_resource_are_scope_aware(tmp_path):
     for example, expected in [(unused, 'insecure'), (attached, 'secure'),
                               (unknown, 'unknown'), ({}, 'unknown')]:
         assert classify_wafv2_association(example) == expected
-    rules = {'about': 'M10-K synthetic', 'rules': {
+    rules = {'about': 'M10-J2 synthetic', 'rules': {
         'wafv2-web-acl-unassociated.json': [{'enabled': True, 'level': 'warning'}]}}
     file = tmp_path / 'm10k.json'
     file.write_text(json.dumps(rules), encoding='utf-8')

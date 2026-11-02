@@ -428,6 +428,7 @@
         }
     },
     "security": {
+        "identitycenter": {"resources": {"instances": {"cols": 2, "path": "services.identitycenter.regions.id.instances"}}},
         "accessanalyzer": {
             "resources": {
                 "analyzers": {

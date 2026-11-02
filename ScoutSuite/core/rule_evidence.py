@@ -519,7 +519,19 @@ def classify_backup_vault_lock(vault):
     return 'unknown'
 
 
+def classify_identitycenter_admin_assignment(assignment):
+    """Warn on a confirmed AWS-managed AdministratorAccess assignment only."""
+    if not isinstance(assignment, dict):
+        return 'unknown'
+    if assignment.get('administrator_access_managed_policy') is True:
+        return 'insecure'
+    if assignment.get('policy_collection_complete') is True:
+        return 'not_applicable'  # Custom/inline privilege is not evaluated.
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'identitycenter-admin-managed-policy-v1': classify_identitycenter_admin_assignment,
     'backup-vault-lock-v1': classify_backup_vault_lock,
     'inspector2-member-state-v1': classify_inspector2_member,
     'inspector2-account-state-v1': classify_inspector2_account,
