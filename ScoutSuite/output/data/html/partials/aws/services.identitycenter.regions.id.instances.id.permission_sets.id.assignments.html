@@ -1,0 +1,32 @@
+<!-- M10-L: all Identity Center evidence is escaped by Handlebars. -->
+<script id="services.identitycenter.regions.id.instances.id.permission_sets.id.assignments.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Account assignment and principal evidence</h4>
+    <p>Account ID: <samp>{{account_id}}</samp>; Account: {{account_name}}</p>
+    <p>Account contact e-mail: <samp>{{account_email}}</samp></p>
+    <p>Principal: {{principal_type}} / {{principal_name}} / <samp>{{principal_id}}</samp></p>
+    <p>Permission set: <samp>{{permission_set_arn}}</samp></p>
+    <p>Identity Center instance: <samp>{{instance_arn}}</samp>; Region: {{region}}</p>
+    <p>Principal resolved: {{principal_resolved}}; Policy analysis complete: {{policy_analysis_complete}}</p>
+    <p>Administrative candidate: {{admin_candidate}}; Broad permissions: {{broad_permissions_candidate}}</p>
+    <p>Cross-account administrative candidate: {{cross_account_admin_candidate}}</p>
+    <p>Organization coverage: {{organization_coverage_status}}; Effective permissions verified: {{effective_permissions_verified}}</p>
+    <h4>User e-mails / group member e-mails</h4>
+    {{#each emails}}<p><samp>{{this}}</samp></p>{{/each}}
+    <h4>Group member user IDs</h4>
+    {{#each member_user_ids}}<p><samp>{{this}}</samp></p>{{/each}}
+    <h4>Accounts with administrative candidate</h4>
+    {{#each admin_account_ids}}<p><samp>{{this}}</samp></p>{{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.identitycenter.regions.id.instances.id.permission_sets.id.assignments", $("#services\\.identitycenter\\.regions\\.id\\.instances\\.id\\.permission_sets\\.id\\.assignments\\.partial").html());
+</script>
+<script id="single_identitycenter_assignment-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.identitycenter.regions.id.instances.id.permission_sets.id.assignments' }}
+</script>
+<script>
+  var single_identitycenter_assignment_template =
+    Handlebars.compile($("#single_identitycenter_assignment-template").html());
+</script>
