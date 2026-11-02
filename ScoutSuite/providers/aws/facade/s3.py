@@ -12,6 +12,9 @@ from ScoutSuite.providers.utils import run_concurrently, get_and_set_concurrentl
 
 class S3Facade(AWSBaseFacade):
     async def get_buckets(self):
+        # A failed ListBuckets is not a verified empty inventory. M10-Q must
+        # not claim a referenced Access Point bucket is absent in that case.
+        self.bucket_inventory_status = 'incomplete'
         try:
             # If there are regions specified, try for each of them until one works.
             # Otherwise, try all the available regions until one works.
@@ -19,6 +22,7 @@ class S3Facade(AWSBaseFacade):
             # as per https://github.com/nccgroup/ScoutSuite/issues/727
             buckets = []
             exception = None
+            listed = False
             region_list = self.regions if self.regions else await run_concurrently(lambda: self.session.get_available_regions('s3'))
             for region in region_list:
                 try:
@@ -28,14 +32,16 @@ class S3Facade(AWSBaseFacade):
                     exception = e
                 else:
                     exception = None  # Fix for https://github.com/nccgroup/ScoutSuite/issues/916#issuecomment-728783965
+                    listed = True
                     break
-            if exception:
+            if exception or not listed:
                 from ScoutSuite.core.run_context import get_current_run_context
                 context = get_current_run_context()
                 if context is not None:
                     context.record_collection_issue('failed', 's3', 'ListBuckets')
                 print_exception('Failed to list S3 buckets in all candidate regions')
                 return []
+            self.bucket_inventory_status = 'complete'
             if not buckets:
                 return []
         except Exception as e:
