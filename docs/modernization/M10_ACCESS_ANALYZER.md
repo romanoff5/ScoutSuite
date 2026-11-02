@@ -5,14 +5,16 @@ This is an **opt-in first slice of M10**, not full AWS service coverage.
 ## Scope and risk boundaries
 
 Explicit `--services accessanalyzer` is required. Legacy default scans do not
-collect this service. Only `accessanalyzer:ListAnalyzers` is used; it does
-not fetch policies, access findings, tags or sensitive resource contents.
+collect this service. Only `accessanalyzer:ListAnalyzers` is used; it does not fetch access findings, raw policy contents or secret values.
+ListAnalyzers already returns metadata including tags, creation time and
+last-analyzed resource; all available diagnostic fields are now retained.
 Selected partition/regions use the existing SDK endpoint metadata and region
 opt-in discovery (`ec2:DescribeRegions`). An organization analyzer visible
 from another delegated administrator is not implied or inferred.
 
-The collector makes at most 20 calls and accepts at most 2,000 analyzers
-per region. Denied, unsupported, malformed, looped-token or truncated
+The collector makes at most 500 calls and accepts at most 50,000 analyzers
+per region. Limits are explicit safety budgets (formerly 20/2,000).
+Denied, unsupported, malformed, looped-token or truncated
 collections record explicit incomplete status rather than presenting an
 empty/clean result. The `DISABLED` and `FAILED` statuses are flagged;
 `CREATING` is not flagged and is labeled partial.
