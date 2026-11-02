@@ -12,7 +12,7 @@ Additional read-only permission requirements: `organizations:ListParents`, `orga
 
 ## AWS Backup tag-based selections
 
-Evaluate `ListOfTags` with OR and `Conditions` with AND, including `StringEquals`, `StringLike`, `StringNotEquals`, `StringNotLike`, against verified tags of **observed protected resources**. Respect `NotResources` exclusions and resource patterns. Mixed legacy `ListOfTags` and resource patterns are reported `unknown` where selection semantics cannot be established. The match is observational, never proof that the plan ran successfully for every possible resource.
+Evaluate `ListOfTags` with OR and `Conditions` with AND, including `StringEquals`, `StringLike`, `StringNotEquals`, `StringNotLike`, against verified tags of **observed protected resources**. Respect `NotResources` exclusions and resource patterns. `Resources` and `ListOfTags` are combined using OR; `Conditions` constrain the result using AND. Missing tag evidence still produces `unknown` unless an ARN branch independently establishes a match. The match is observational, never proof that the plan ran successfully for every possible resource.
 
 Use `resourcegroupstaggingapi:GetResources` with `ResourceARNList` in batches of at most 100 ARNs. AWS does not return untagged/unsupported resources; absence of a returned ARN is **not** proof of empty tags. The collection explicitly records unknown ARNs, failed calls, and unresolved selection matches. `ListProtectedResources` and completed `ListBackupJobs` are independent observations with their own history/coverage limits. Dynamic selections can include resources absent from the protected-resources inventory: these remain outside the evidence scope.
 
