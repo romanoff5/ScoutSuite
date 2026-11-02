@@ -1,304 +1,373 @@
-"""M10-L: SSO account assignments, group emails and unknown-safe evidence."""
+"""M10-L strict offline IAM Identity Center API, normalization, and incomplete evidence tests."""
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 import boto3
+from botocore.exceptions import ClientError
 from botocore.session import get_session
 from botocore.stub import Stubber
 
 from ScoutSuite.core.processingengine import ProcessingEngine
-from ScoutSuite.core.rule_evidence import classify_identitycenter_admin_assignment
+from ScoutSuite.core.rule_evidence import (
+    classify_identitycenter_admin, classify_identitycenter_broad,
+    classify_identitycenter_cross_account)
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
-from ScoutSuite.providers.aws.facade.identitycenter import IdentityCenterFacade, PAGE_SIZE
+from ScoutSuite.providers.aws.facade.identitycenter import IdentityCenterFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
-from ScoutSuite.providers.aws.provider import AWSProvider
-from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter
+from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter, _risk
 
-ROOT = Path(__file__).resolve().parents[1]
-REGION = 'us-east-1'
-INSTANCE = 'arn:aws:sso:::instance/ssoins-1234567890abcdef'
-PERMISSION = 'arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef'
-ACCOUNT = '000000000000'
-GROUP = '11111111-1111-1111-1111-111111111111'
-USER = '22222222-2222-2222-2222-222222222222'
-MEMBERSHIP = '33333333-3333-3333-3333-333333333333'
+
+INSTANCE = 'arn:aws:sso:::instance/ssoins-1111111111111111'
+PS = 'arn:aws:sso:::permissionSet/ssoins-1111111111111111/ps-2222222222222222'
 STORE = 'd-1234567890'
-ADMIN = 'arn:aws:iam::aws:policy/AdministratorAccess'
+USER = '11111111-1111-1111-1111-111111111111'
+GROUP = '22222222-2222-2222-2222-222222222222'
+ACCOUNTS = ('111111111111', '222222222222')
+ROOT = Path(__file__).resolve().parents[1]
 
 
-def client(name):
-    return boto3.client(name, region_name=REGION,
-                        aws_access_key_id='synthetic', aws_secret_access_key='synthetic')
+def failure(code='AccessDeniedException'):
+    return ClientError({'Error': {'Code': code, 'Message': 'synthetic error'}}, 'ListAccountAssignments')
 
 
-def test_model_has_required_read_operations():
-    sso = get_session().get_service_model('sso-admin')
-    identity = get_session().get_service_model('identitystore')
-    sso_ops = (
-        'ListInstances', 'ListPermissionSets', 'DescribePermissionSet',
-        'ListManagedPoliciesInPermissionSet', 'ListCustomerManagedPolicyReferencesInPermissionSet',
-        'GetInlinePolicyForPermissionSet', 'GetPermissionsBoundaryForPermissionSet',
-        'ListAccountsForProvisionedPermissionSet', 'ListAccountAssignments')
-    for name in sso_ops:
-        assert name in sso.operation_names
-    for name in ('DescribeUser', 'DescribeGroup', 'ListGroupMemberships'):
-        assert name in identity.operation_names
-    assert 'AccountId' in sso.operation_model('ListAccountAssignments').input_shape.required_members
-    assert 'IdentityStoreId' in identity.operation_model('ListGroupMemberships').input_shape.required_members
+def ps_record():
+    return {
+        'id': PS, 'name': 'Admin', 'arn': PS,
+        'managed_policies': [{'Name': 'AdministratorAccess',
+                              'Arn': 'arn:aws:iam::aws:policy/AdministratorAccess'}],
+        'customer_managed_policies': [],
+        'inline_policy': {'Statement': [{'Effect': 'Allow', 'Action': 'ec2:Describe*',
+                                         'Resource': '*'}]},
+        'permissions_boundary': None, 'provisioned_account_ids': list(ACCOUNTS),
+        'collection': {name: 'complete' for name in (
+            'details', 'managed_policies', 'customer_managed_policies',
+            'inline_policy', 'permissions_boundary', 'assignments')},
+        'assignments': {
+            account + ':GROUP:' + GROUP: {
+                'id': account + ':GROUP:' + GROUP, 'account_id': account,
+                'principal_id': GROUP, 'principal_type': 'GROUP',
+                'permission_set_arn': PS, 'instance_arn': INSTANCE, 'region': 'eu-west-1'}
+            for account in ACCOUNTS},
+    }
 
 
-def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
-    async def scenario():
-        sso, directory = client('sso-admin'), client('identitystore')
+def region_inventory():
+    return {
+        'collection': {'instances': 'complete'},
+        'instances': {
+            INSTANCE: {
+                'arn': INSTANCE, 'name': 'Organization SSO', 'identity_store_id': STORE,
+                'permission_sets': {PS: ps_record()},
+                'users': {
+                    USER: {'id': USER, 'name': '<test-user>', 'emails': ['person@example.invalid']}},
+                'groups': {
+                    GROUP: {'id': GROUP, 'name': '<Administrators>',
+                            'member_emails': ['person@example.invalid'],
+                            'members': {'mem-1': {'user_id': USER, 'emails': ['person@example.invalid']}}},
+                },
+                'collection': {'permission_sets': 'complete', 'users': 'complete',
+                               'groups': 'complete', 'memberships': 'complete'},
+            },
+        },
+    }
+
+
+def organization(management=True, accounts_complete=True):
+    return {
+        'organization': {'Id': 'o-demo12345',
+                         'ManagementAccountId': ACCOUNTS[0] if management else ACCOUNTS[1]},
+        'accounts': [{'Id': a, 'Name': 'AWS-' + a, 'Email': a + '@example.invalid',
+                      'State': 'ACTIVE'} for a in ACCOUNTS],
+        'collection': {'accounts': 'complete' if accounts_complete else 'denied'},
+    }
+
+
+def test_aws_sdk_service_models_and_operation_input_output_shapes():
+    models = get_session()
+    sso = models.get_service_model('sso-admin')
+    identity = models.get_service_model('identitystore')
+    for name, key in [
+        ('ListInstances', 'Instances'), ('ListPermissionSets', 'PermissionSets'),
+        ('ListManagedPoliciesInPermissionSet', 'AttachedManagedPolicies'),
+        ('ListCustomerManagedPolicyReferencesInPermissionSet', 'CustomerManagedPolicyReferences'),
+        ('ListAccountsForProvisionedPermissionSet', 'AccountIds'),
+        ('ListAccountAssignments', 'AccountAssignments'),
+    ]:
+        op = sso.operation_model(name)
+        assert key in op.output_shape.members
+        assert 'NextToken' in op.output_shape.members
+    for name, key in [('ListUsers', 'Users'), ('ListGroups', 'Groups'),
+                      ('ListGroupMemberships', 'GroupMemberships')]:
+        op = identity.operation_model(name)
+        assert key in op.output_shape.members
+        assert 'NextToken' in op.output_shape.members
+    assert 'PermissionSet' in sso.operation_model('DescribePermissionSet').output_shape.members
+    assert 'InlinePolicy' in sso.operation_model('GetInlinePolicyForPermissionSet').output_shape.members
+    assert 'PermissionsBoundary' in sso.operation_model('GetPermissionsBoundaryForPermissionSet').output_shape.members
+
+
+def test_stubber_real_sdk_model_empty_intermediate_page_and_pagination():
+    async def run():
+        client = boto3.client('sso-admin', region_name='eu-west-1',
+                              aws_access_key_id='synthetic', aws_secret_access_key='synthetic')
         try:
-            with Stubber(sso) as a, Stubber(directory) as b:
-                a.add_response('list_instances', {'Instances': [{
-                    'InstanceArn': INSTANCE, 'IdentityStoreId': STORE,
-                    'OwnerAccountId': ACCOUNT, 'Name': 'synthetic-instance',
-                    'Status': 'ACTIVE'}]}, {'MaxResults': PAGE_SIZE})
-                a.add_response('list_permission_sets', {'PermissionSets': [PERMISSION]},
-                               {'InstanceArn': INSTANCE, 'MaxResults': PAGE_SIZE})
-                a.add_response('describe_permission_set', {'PermissionSet': {
-                    'Name': 'Admin', 'PermissionSetArn': PERMISSION,
-                    'SessionDuration': 'PT1H'}},
-                    {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION})
-                a.add_response('list_managed_policies_in_permission_set', {
-                    'AttachedManagedPolicies': [{'Name': 'AdministratorAccess', 'Arn': ADMIN}]},
-                    {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION,
-                     'MaxResults': PAGE_SIZE})
-                a.add_response('list_customer_managed_policy_references_in_permission_set', {
-                    'CustomerManagedPolicyReferences': []},
-                    {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION,
-                     'MaxResults': PAGE_SIZE})
-                a.add_response('get_inline_policy_for_permission_set', {},
-                               {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION})
-                a.add_response('get_permissions_boundary_for_permission_set', {
-                    'PermissionsBoundary': {'ManagedPolicyArn':
-                                            'arn:aws:iam::aws:policy/ReadOnlyAccess'}},
-                    {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION})
-                a.add_response('list_accounts_for_provisioned_permission_set', {
-                    'AccountIds': [ACCOUNT]}, {'InstanceArn': INSTANCE,
-                                               'PermissionSetArn': PERMISSION,
-                                               'MaxResults': PAGE_SIZE})
-                a.add_response('list_account_assignments', {
-                    'AccountAssignments': [{
-                        'AccountId': ACCOUNT, 'PermissionSetArn': PERMISSION,
-                        'PrincipalId': GROUP, 'PrincipalType': 'GROUP'}]},
-                    {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION,
-                     'AccountId': ACCOUNT, 'MaxResults': PAGE_SIZE})
-                b.add_response('describe_group', {
-                    'GroupId': GROUP, 'DisplayName': 'Security Administrators',
-                    'GroupArn': 'arn:aws:identitystore:::group/' + GROUP,
-                    'Revision': '2', 'IdentityStoreId': STORE}, {'IdentityStoreId': STORE, 'GroupId': GROUP})
-                b.add_response('list_group_memberships', {'GroupMemberships': [{
-                    'MembershipId': MEMBERSHIP,
-                    'MembershipArn': 'arn:aws:identitystore:::membership/' + MEMBERSHIP,
-                    'IdentityStoreId': STORE, 'GroupId': GROUP,
-                    'MemberId': {'UserId': USER}}]},
-                    {'IdentityStoreId': STORE, 'GroupId': GROUP, 'MaxResults': PAGE_SIZE})
-                b.add_response('describe_user', {
-                    'UserId': USER, 'IdentityStoreId': STORE,
-                    'UserArn': 'arn:aws:identitystore:::user/' + USER,
-                    'Revision': '3',
-                    'UserName': 'synthetic-admin', 'DisplayName': '<admin & member>',
-                    'Emails': [{'Value': 'admin@example.test', 'Primary': True},
-                               {'Value': 'secondary@example.test', 'Primary': False}]},
-                    {'IdentityStoreId': STORE, 'UserId': USER})
-                with patch.object(AWSFacadeUtils, 'get_client',
-                                  side_effect=lambda svc, session, region: (
-                                      sso if svc == 'sso-admin' else directory)):
-                    facade = IdentityCenterFacade(object())
-                    result = await facade.get_instances(REGION)
-                a.assert_no_pending_responses()
-                b.assert_no_pending_responses()
+            with Stubber(client) as stub:
+                stub.add_response('list_instances',
+                                  {'Instances': [], 'NextToken': 'next'},
+                                  {})
+                stub.add_response('list_instances',
+                                  {'Instances': [{'InstanceArn': INSTANCE,
+                                                  'IdentityStoreId': STORE}]},
+                                  {'NextToken': 'next'})
+                rows, state = await IdentityCenterFacade(object(), ACCOUNTS[0])._pages(
+                    client, 'list_instances', 'Instances')
+                stub.assert_no_pending_responses()
+            assert state == 'complete'
+            assert rows[0]['IdentityStoreId'] == STORE
         finally:
-            sso.close()
-            directory.close()
-        assert len(result) == 1
-        assert result[0]['owner_account_id'] == ACCOUNT
-        assert result[0]['permission_sets_complete'] is True
-        assert result[0]['permission_sets'][0]['policy_collection_complete'] is True
-        raw = result[0]['assignments'][0]
-        assert raw['administrator_access_managed_policy'] is True
-        assert raw['principal_name'] == 'Security Administrators'
-        assert raw['group_members_complete'] is True
-        assert raw['group_members'][0]['email'] == 'admin@example.test'
-        assert raw['group_members'][0]['emails'][1]['Value'] == 'secondary@example.test'
-        assert raw['group_members'][0]['membership_id'] == MEMBERSHIP
-        assert raw['group_members'][0]['membership_arn'].endswith(MEMBERSHIP)
-        assert raw['group_members'][0]['principal_arn'].endswith(USER)
-        assert raw['permission_boundary']['ManagedPolicyArn'].endswith('ReadOnlyAccess')
-        assert raw['account_id'] == ACCOUNT and raw['permission_set_arn'] == PERMISSION
-        source = SimpleNamespace(
-            build_region_list=AsyncMock(return_value=[REGION]),
-            identitycenter=SimpleNamespace(get_instances=AsyncMock(return_value=result)))
-        resources = IdentityCenter(source)
-        await resources.fetch_all(regions=[REGION])
-        assert resources['regions_count'] == 1
-        assert resources['instances_count'] == 1
-        item = next(iter(resources['regions'][REGION]['instances'].values()))
-        assert item['permission_sets_count'] == 1 and item['assignments_count'] == 1
-        assert 'assignments' not in next(iter(item['permission_sets'].values()))
-        mapped = next(iter(item['assignments'].values()))
-        assert mapped['group_members'][0]['email'] == 'admin@example.test'
-        assert mapped['id'].startswith('scoutid-')
-    asyncio.run(scenario())
+            client.close()
+    asyncio.run(run())
 
 
-def test_pagination_token_cycle_and_deny_dont_claim_complete():
-    async def scenario():
-        sdk = Mock()
-        sdk.list_instances.side_effect = [
-            {'Instances': [], 'NextToken': 'repeat'},
-            {'Instances': [], 'NextToken': 'repeat'}]
-        context = RunContext('aws').setup()
-        try:
-            with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
-                result = await IdentityCenterFacade(object()).get_instances(REGION)
-            assert result == []
-            assert sdk.list_instances.call_count == 2
-            assert any(x['reason_code'] == 'ListInstancesInvalidPaginationToken'
-                       for x in context.collection_issues)
-        finally:
-            await context.aclose()
-    asyncio.run(scenario())
-
-
-def test_policy_missing_or_directory_denial_is_not_verified_safe():
-    async def scenario():
+def test_full_inventory_with_group_emails_and_cross_account_admin():
+    async def run():
         sso = Mock()
+        store = Mock()
         sso.list_instances.return_value = {
-            'Instances': [{'InstanceArn': INSTANCE, 'IdentityStoreId': STORE}]}
-        sso.list_permission_sets.return_value = {'PermissionSets': [PERMISSION]}
+            'Instances': [{'InstanceArn': INSTANCE, 'IdentityStoreId': STORE,
+                           'OwnerAccountId': ACCOUNTS[0], 'Name': '<SSO>',
+                           'CreatedDate': datetime(2026, 1, 2, tzinfo=timezone.utc)}]}
+        sso.list_permission_sets.return_value = {'PermissionSets': [PS]}
         sso.describe_permission_set.return_value = {'PermissionSet': {
-            'Name': 'PolicyReview', 'PermissionSetArn': PERMISSION}}
-        sso.list_managed_policies_in_permission_set.side_effect = RuntimeError('blocked')
-        sso.list_customer_managed_policy_references_in_permission_set.return_value = {
-            'CustomerManagedPolicyReferences': []}
-        sso.get_inline_policy_for_permission_set.return_value = {}
-        sso.get_permissions_boundary_for_permission_set.return_value = {}
-        sso.list_accounts_for_provisioned_permission_set.return_value = {'AccountIds': [ACCOUNT]}
-        sso.list_account_assignments.return_value = {'AccountAssignments': [{
-            'AccountId': ACCOUNT, 'PermissionSetArn': PERMISSION,
-            'PrincipalId': USER, 'PrincipalType': 'USER'}]}
-        directory = Mock()
-        directory.describe_user.side_effect = RuntimeError('denied')
-        context = RunContext('aws').setup()
-        try:
-            with patch.object(AWSFacadeUtils, 'get_client',
-                              side_effect=lambda svc, session, region: (
-                                  sso if svc == 'sso-admin' else directory)):
-                records = await IdentityCenterFacade(object()).get_instances(REGION)
-            assert len(records) == 1
-            assert records[0]['permission_sets_complete'] is False
-            assignment = records[0]['assignments'][0]
-            assert assignment['identity_resolution_status'] == 'unknown'
-            assert assignment['policy_collection_complete'] is False
-            assert classify_identitycenter_admin_assignment(assignment) == 'unknown'
-            assert any(x['scope'] == 'identitycenter' for x in context.collection_issues)
-        finally:
-            await context.aclose()
-    asyncio.run(scenario())
-
-
-def test_admin_assignment_rule_uses_confirmed_managed_policy_only(tmp_path):
-    assert classify_identitycenter_admin_assignment({
-        'administrator_access_managed_policy': True,
-        'policy_collection_complete': True}) == 'insecure'
-    assert classify_identitycenter_admin_assignment({
-        'administrator_access_managed_policy': False,
-        'policy_collection_complete': True}) == 'not_applicable'
-    assert classify_identitycenter_admin_assignment({
-        'administrator_access_managed_policy': False,
-        'policy_collection_complete': False}) == 'unknown'
-    assert classify_identitycenter_admin_assignment(None) == 'unknown'
-    rules = {'about': 'synthetic', 'rules': {
-        'identitycenter-aws-admin-policy-assignment.json': [
-            {'enabled': True, 'level': 'warning'}]}}
-    file = tmp_path / 'rules.json'
-    file.write_text(json.dumps(rules), encoding='utf-8')
-    assigned = {
-        'admin': {'administrator_access_managed_policy': True,
-                  'policy_collection_complete': True, 'principal_id': GROUP},
-        'other': {'administrator_access_managed_policy': False,
-                  'policy_collection_complete': True, 'principal_id': USER},
-        'unknown': {'administrator_access_managed_policy': False,
-                    'policy_collection_complete': False, 'principal_id': USER}}
-    provider = SimpleNamespace(services={'identitycenter': {'regions': {REGION: {
-        'instances': {'test': {'assignments': assigned}}}}}}, service_list=['identitycenter'])
-    ctx = RunContext('aws').setup()
-    try:
-        ProcessingEngine(Ruleset('aws', filename=str(file))).run(provider)
-        result = provider.services['identitycenter']['findings'][
-            'identitycenter-aws-admin-policy-assignment']
-        assert result['flagged_items'] == 1
-        assert result['assessment_status'] == 'incomplete'
-        assert result['evaluation_summary']['counts'] == {
-            'secure': 0, 'insecure': 1, 'unknown': 1, 'not_applicable': 1}
-    finally:
-        ctx.cleanup()
-
-
-def test_default_selection_and_escaped_confidential_report_fields():
-    creds = SimpleNamespace(session=object())
-    with patch('ScoutSuite.providers.aws.provider.get_partition_name', return_value='aws'), \
-         patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value=ACCOUNT), \
-         patch('ScoutSuite.providers.aws.provider.AWSServicesConfig',
-               side_effect=lambda c: SimpleNamespace(credentials=c, identitycenter={}, iam={}, s3={})):
-        default = AWSProvider(credentials=creds)
-        chosen = AWSProvider(credentials=creds, services=['identitycenter'])
-        skipped = AWSProvider(credentials=creds, skipped_services=['identitycenter'])
-    assert 'identitycenter' in default.service_list
-    assert chosen.service_list == ['identitycenter']
-    assert 'identitycenter' not in skipped.service_list
-    metadata = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text())
-    assert metadata['security']['identitycenter']['resources']['instances']['path'] == (
-        'services.identitycenter.regions.id.instances')
-    template = (ROOT / 'ScoutSuite/output/data/html/partials/aws/'
-                'services.identitycenter.regions.id.instances.html').read_text()
-    for expected in ('{{instance_arn}}', '{{principal_id}}', '{{email}}',
-                     '{{permission_set_arn}}', '{{principal_email}}'):
-        assert expected in template
-    assert '{{{' not in template
-    assert 'onclick=' not in template
-    assert 'javascript:' not in template
-
-
-def test_missing_identitystore_client_preserves_assignment_and_marks_unknown():
-    async def scenario():
-        sso = Mock()
-        sso.list_instances.return_value = {
-            'Instances': [{'InstanceArn': INSTANCE, 'IdentityStoreId': STORE}]}
-        sso.list_permission_sets.return_value = {'PermissionSets': [PERMISSION]}
-        sso.describe_permission_set.return_value = {'PermissionSet': {
-            'Name': 'Admin', 'PermissionSetArn': PERMISSION}}
+            'Name': '<Admin>', 'CreatedDate': datetime(2026, 1, 3, tzinfo=timezone.utc)}}
         sso.list_managed_policies_in_permission_set.return_value = {
-            'AttachedManagedPolicies': [{'Name': 'AdministratorAccess', 'Arn': ADMIN}]}
+            'AttachedManagedPolicies': [{'Name': 'AdministratorAccess',
+                                          'Arn': 'arn:aws:iam::aws:policy/AdministratorAccess'}]}
         sso.list_customer_managed_policy_references_in_permission_set.return_value = {
             'CustomerManagedPolicyReferences': []}
-        sso.get_inline_policy_for_permission_set.return_value = {}
-        sso.get_permissions_boundary_for_permission_set.return_value = {}
-        sso.list_accounts_for_provisioned_permission_set.return_value = {'AccountIds': [ACCOUNT]}
-        sso.list_account_assignments.return_value = {'AccountAssignments': [{
-            'AccountId': ACCOUNT, 'PermissionSetArn': PERMISSION,
-            'PrincipalId': GROUP, 'PrincipalType': 'GROUP'}]}
+        sso.get_inline_policy_for_permission_set.return_value = {
+            'InlinePolicy': '{"Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}'}
+        sso.get_permissions_boundary_for_permission_set.return_value = {'PermissionsBoundary': None}
+        sso.list_accounts_for_provisioned_permission_set.return_value = {
+            'AccountIds': list(ACCOUNTS)}
+        sso.list_account_assignments.side_effect = [
+            {'AccountAssignments': [{
+                'AccountId': a, 'PermissionSetArn': PS, 'PrincipalId': GROUP,
+                'PrincipalType': 'GROUP'}]} for a in ACCOUNTS]
+        store.list_users.return_value = {'Users': [{
+            'UserId': USER, 'UserName': '<user>',
+            'Emails': [{'Value': 'private@example.invalid', 'Primary': True}]}]}
+        store.list_groups.return_value = {
+            'Groups': [{'GroupId': GROUP, 'DisplayName': '<administrators>'}]}
+        store.list_group_memberships.return_value = {
+            'GroupMemberships': [{'MembershipId': 'mem1', 'GroupId': GROUP,
+                                   'MemberId': {'UserId': USER}}]}
+        facade = IdentityCenterFacade(object(), ACCOUNTS[0])
+        with patch.object(AWSFacadeUtils, 'get_client',
+                          side_effect=lambda service, *_: sso if service == 'sso-admin' else store):
+            data = await facade.get_region('eu-west-1')
+        instance = data['instances'][INSTANCE]
+        assert instance['created_date'] == '2026-01-02T00:00:00+00:00'
+        assert instance['permission_sets'][PS]['created_date'] == '2026-01-03T00:00:00+00:00'
+        assert instance['users'][USER]['primary_email'] == 'private@example.invalid'
+        assert instance['groups'][GROUP]['member_emails'] == ['private@example.invalid']
+        assert len(instance['permission_sets'][PS]['assignments']) == 2
+        assert data['collection']['instances'] == 'complete'
+        assert facade.region_statuses['eu-west-1']['instances'] == 'complete'
+        public = SimpleNamespace(
+            owner_id=ACCOUNTS[0],
+            identitycenter=SimpleNamespace(
+                region_statuses=facade.region_statuses,
+                get_region=AsyncMock(return_value=data)),
+            organizations=SimpleNamespace(get_organization_inventory=AsyncMock(
+                return_value=organization())))
+        async def region_list(*args, **kwargs):
+            return ['eu-west-1']
+        public.build_region_list = region_list
+        resources = IdentityCenter(public)
+        await resources.fetch_all()
+        ps = resources['regions']['eu-west-1']['instances'][INSTANCE]['permission_sets'][PS]
+        assert ps['admin_candidate'] is True
+        assert ps['broad_permissions_candidate'] is True
+        assert all(row['cross_account_admin_candidate'] for row in ps['assignments'].values())
+        assert all(row['account_email'] for row in ps['assignments'].values())
+        assert all(row['emails'] == ['private@example.invalid'] for row in ps['assignments'].values())
+        assert resources['collection_status'] == 'complete'
+        assert 'private@example.invalid' in json.dumps(dict(resources))
+    asyncio.run(run())
+
+
+def test_cross_account_admin_via_membership_in_distinct_groups():
+    async def run():
+        second_group = '33333333-3333-3333-3333-333333333333'
+        data = region_inventory()
+        instance = data['instances'][INSTANCE]
+        first = instance['permission_sets'][PS]['assignments']
+        first.clear()
+        for account, group_id in zip(ACCOUNTS, (GROUP, second_group)):
+            key = account + ':GROUP:' + group_id
+            first[key] = {'id': key, 'account_id': account, 'principal_type': 'GROUP',
+                          'principal_id': group_id, 'permission_set_arn': PS,
+                          'instance_arn': INSTANCE, 'region': 'eu-west-1'}
+        instance['groups'][second_group] = {
+            'id': second_group, 'name': 'Other admin group',
+            'member_emails': ['person@example.invalid'],
+            'members': {'mem2': {'user_id': USER, 'emails': ['person@example.invalid']}}}
+        facade = SimpleNamespace(
+            owner_id=ACCOUNTS[0], identitycenter=SimpleNamespace(
+                get_region=AsyncMock(return_value=data),
+                region_statuses={'eu-west-1': {'instances': 'complete'}}),
+            organizations=SimpleNamespace(
+                get_organization_inventory=AsyncMock(return_value=organization())),
+            build_region_list=AsyncMock(return_value=['eu-west-1']))
+        resource = IdentityCenter(facade)
+        await resource.fetch_all()
+        assignments = resource['regions']['eu-west-1']['instances'][INSTANCE][
+            'permission_sets'][PS]['assignments']
+        assert all(row['cross_account_admin_candidate'] for row in assignments.values())
+        assert all(row['cross_account_admin_user_ids'] == [USER] for row in assignments.values())
+        assert all(row['admin_account_ids'] == list(ACCOUNTS) for row in assignments.values())
+    asyncio.run(run())
+
+
+def test_wildcard_scoped_to_one_resource_is_broad_but_not_administrator():
+    record = ps_record()
+    record['managed_policies'] = []
+    record['inline_policy'] = {
+        'Statement': [{'Effect': 'Allow', 'Action': '*',
+                       'Resource': 'arn:aws:s3:::one-bucket'}]}
+    assert _risk(record) == (False, True, True)
+
+
+def test_missing_organization_admin_never_passes_even_with_visible_assignments():
+    async def run():
+        public = SimpleNamespace(
+            owner_id=ACCOUNTS[0],
+            identitycenter=SimpleNamespace(
+                region_statuses={'eu-west-1': {'instances': 'complete'}},
+                get_region=AsyncMock(return_value=region_inventory())),
+            organizations=SimpleNamespace(get_organization_inventory=AsyncMock(
+                return_value=organization(management=False, accounts_complete=False))))
+        public.build_region_list = AsyncMock(return_value=['eu-west-1'])
         ctx = RunContext('aws').setup()
         try:
-            with patch.object(AWSFacadeUtils, 'get_client',
-                              side_effect=lambda svc, session, region: (
-                                  sso if svc == 'sso-admin' else None)):
-                records = await IdentityCenterFacade(object()).get_instances(REGION)
-            assert len(records) == 1
-            assert len(records[0]['assignments']) == 1
-            assert records[0]['assignments'][0]['principal_id'] == GROUP
-            assert records[0]['assignments'][0]['identity_resolution_status'] == 'unknown'
-            assert records[0]['assignments'][0]['group_members_complete'] is False
-            assert any(issue['reason_code'] == 'IdentityStoreClientUnavailable'
-                       for issue in ctx.collection_issues)
+            resources = IdentityCenter(public)
+            await resources.fetch_all()
+            assert resources['collection_status'] == 'partial'
+            assert resources['organization_coverage']['status'] == 'partial'
+            assert any(x['reason_code'] == 'OrganizationManagementScopeUnverified'
+                       for x in ctx.collection_issues)
+            rows = resources['regions']['eu-west-1']['instances'][INSTANCE][
+                'permission_sets'][PS]['assignments'].values()
+            for item in rows:
+                assert item['organization_coverage_status'] == 'partial'
+            assert classify_identitycenter_admin({
+                'admin_candidate': False, 'policy_analysis_complete': True,
+                'principal_resolved': True, 'organization_coverage_status': 'partial'}) == 'unknown'
+            assert classify_identitycenter_cross_account({
+                'cross_account_admin_candidate': False, 'policy_analysis_complete': True,
+                'principal_resolved': True, 'organization_coverage_status': 'partial'}) == 'unknown'
         finally:
             await ctx.aclose()
-    asyncio.run(scenario())
+    asyncio.run(run())
+
+
+def test_api_denied_preserves_partial_pages_and_does_not_invent_empty_inventory():
+    async def run():
+        client = Mock()
+        row = {'AccountId': ACCOUNTS[0], 'PermissionSetArn': PS,
+               'PrincipalId': USER, 'PrincipalType': 'USER'}
+        client.list_account_assignments.side_effect = [
+            {'AccountAssignments': [row], 'NextToken': 'more'}, failure()]
+        ctx = RunContext('aws').setup()
+        try:
+            rows, status = await IdentityCenterFacade(object(), ACCOUNTS[0])._pages(
+                client, 'list_account_assignments', 'AccountAssignments', {})
+            assert rows == [row]
+            assert status == 'partial'
+            assert any(x['status'] == 'partial' for x in ctx.collection_issues)
+        finally:
+            await ctx.aclose()
+    asyncio.run(run())
+
+
+def test_repeated_token_missing_fields_and_permission_policy_ambiguity():
+    async def run():
+        fac = IdentityCenterFacade(object(), ACCOUNTS[0])
+        client = Mock()
+        client.list_users.side_effect = [
+            {'Users': [], 'NextToken': 'duplicate'}, {'Users': [], 'NextToken': 'duplicate'}]
+        ctx = RunContext('aws').setup()
+        try:
+            assert (await fac._pages(client, 'list_users', 'Users'))[1] == 'partial'
+            assert (await fac._pages(Mock(list_users=Mock(return_value={})),
+                                     'list_users', 'Users'))[1] == 'partial'
+            assert len(ctx.collection_issues) >= 2
+        finally:
+            await ctx.aclose()
+    asyncio.run(run())
+    obj = ps_record()
+    obj['managed_policies'] = []
+    obj['customer_managed_policies'] = [{'Name': 'AuditAdmin', 'Path': '/'}]
+    assert _risk(obj) == (False, False, False)
+    obj['customer_managed_policies'] = []
+    obj['inline_policy'] = {'Statement': [{'Effect': 'Allow', 'Action': '*', 'Resource': '*'}]}
+    assert _risk(obj) == (True, True, True)
+    obj['inline_policy'] = {'Statement': [{'Effect': 'Deny', 'Action': '*', 'Resource': '*'}]}
+    assert _risk(obj) == (False, False, True)
+    assert classify_identitycenter_admin({'admin_candidate': True}) == 'insecure'
+    assert classify_identitycenter_broad({'broad_permissions_candidate': True}) == 'insecure'
+    assert classify_identitycenter_cross_account({'cross_account_admin_candidate': True}) == 'insecure'
+
+
+def test_default_rules_evidence_status_unknown_on_unverified_scope(tmp_path):
+    names = ('identitycenter-admin-assignment.json', 'identitycenter-broad-permissions.json',
+             'identitycenter-cross-account-admin.json')
+    ruleset_path = tmp_path / 'rules.json'
+    ruleset_path.write_text(json.dumps({
+        'about': 'Synthetic identity-center assignment rules',
+        'rules': {name: [{'enabled': True, 'level': 'danger'}] for name in names}}))
+    candidate = {'admin_candidate': True, 'broad_permissions_candidate': True,
+                 'cross_account_admin_candidate': True, 'principal_resolved': True,
+                 'policy_analysis_complete': True,
+                 'organization_coverage_status': 'partial'}
+    unknown = {'admin_candidate': False, 'broad_permissions_candidate': False,
+               'cross_account_admin_candidate': False, 'principal_resolved': False,
+               'policy_analysis_complete': False,
+               'organization_coverage_status': 'partial'}
+    data = {'regions': {'eu-west-1': {'instances': {
+        'one': {'permission_sets': {'ps': {'assignments': {
+            'assigned': candidate, 'unresolved': unknown}}}}}}}}
+    provider = SimpleNamespace(services={'identitycenter': data}, service_list=['identitycenter'])
+    async def run():
+        ctx = RunContext('aws').setup()
+        try:
+            ProcessingEngine(Ruleset('aws', filename=str(ruleset_path))).run(provider)
+            for name in names:
+                rule = data['findings'][name[:-5]]
+                assert rule['flagged_items'] == 1
+                assert rule['assessment_status'] == 'incomplete'
+                assert rule['evaluation_summary']['counts']['unknown'] == 1
+        finally:
+            await ctx.aclose()
+    asyncio.run(run())
+
+
+def test_report_partials_escape_untrusted_usernames_and_contact_emails():
+    partials = ROOT / 'ScoutSuite/output/data/html/partials/aws'
+    paths = [
+        partials / 'services.identitycenter.regions.id.instances.id.permission_sets.html',
+        partials / 'services.identitycenter.regions.id.instances.id.permission_sets.id.assignments.html',
+    ]
+    for path in paths:
+        content = path.read_text(encoding='utf-8')
+        assert '{{{' not in content
+        assert 'innerHTML' not in content
+        assert 'eval(' not in content
+        assert '{{name}}' in content
+    assert '{{account_email}}' in paths[1].read_text(encoding='utf-8')
