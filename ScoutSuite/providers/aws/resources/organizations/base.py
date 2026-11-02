@@ -77,8 +77,8 @@ class Organizations(AWSResources):
         raw_org = collected.get('organization')
         organization = self._organization(raw_org)
         feature_set = organization['feature_set'] if organization is not None else 'UNKNOWN'
-        self['organization'] = organization or {}
-        self['organization_count'] = int(organization is not None)
+        self['organizations'] = {organization['id']: organization} if organization is not None else {}
+        self['organizations_count'] = len(self['organizations'])
         self['roots'] = {root['Id']: self._root(root, feature_set)
                          for root in collected.get('roots', [])}
         self['roots_count'] = len(self['roots'])
