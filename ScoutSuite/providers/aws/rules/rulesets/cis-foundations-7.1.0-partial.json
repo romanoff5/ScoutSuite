@@ -203,6 +203,12 @@
                 "control_id": "5.16",
                 "coverage": "candidate"
             }
+        ],
+        "rds-cluster-deletion-protection-disabled.json": [
+            {
+                "control_id": "3.2.5",
+                "coverage": "candidate"
+            }
         ]
     },
     "rules": {
@@ -403,6 +409,12 @@
             }
         ],
         "securityhub-region-not-subscribed.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-cluster-deletion-protection-disabled.json": [
             {
                 "enabled": true,
                 "level": "warning"
