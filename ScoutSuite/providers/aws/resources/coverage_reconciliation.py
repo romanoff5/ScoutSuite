@@ -258,6 +258,7 @@ def _s3(services, selected, backup_regions):
                     'region': region, 'canonical_bucket_arn': arn,
                     'recovery_point_arns': [],
                     'completed_job_ids': [], 'last_completed_job_at': None,
+                    'job_history_status': 'unknown',
                     'ongoing_schedule_verified': False, 'reasons': []}
         if not isinstance(arn, str) or not arn.startswith('arn:'):
             evidence['reasons'].append('s3_bucket_identity_unknown')
@@ -276,9 +277,21 @@ def _s3(services, selected, backup_regions):
             jobs_complete = (isinstance(status, dict)
                              and status.get('backup_jobs') == 'complete'
                              and isinstance(jobs, dict))
-            if not protected_complete or not jobs_complete:
+            # Job history is deferred only after a verified complete and empty
+            # plan/vault/protected-resource census. No current recovery point can
+            # match this bucket, so the gap stands; history stays unassessed.
+            no_current_backup_inventory = (
+                protected_complete and not protected
+                and status.get('backup_jobs') == 'deferred_no_current_backup_inventory'
+                and inventory.get('backup_service_activity') == 'no_current_resources_observed')
+            if no_current_backup_inventory:
+                evidence['state'] = 'not_reported'
+                evidence['job_history_status'] = 'not_assessed'
+                evidence['reasons'].append('no_current_backup_inventory_job_history_not_assessed')
+            elif not protected_complete or not jobs_complete:
                 evidence['reasons'].append('backup_inventory_incomplete')
             else:
+                evidence['job_history_status'] = 'complete'
                 matches = [item for item in protected.values()
                            if isinstance(item, dict) and item.get('ResourceArn') == arn]
                 done = [item for item in jobs.values()

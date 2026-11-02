@@ -150,6 +150,62 @@ def test_backup_recovery_point_and_completed_job_are_evidence_not_schedule_proof
     assert data['s3']['buckets']['bucket-1']['m10q_backup_evidence_gap'] is True
 
 
+def test_deferred_backup_job_history_requires_verified_empty_current_inventory():
+    deferred = 'deferred_no_current_backup_inventory'
+
+    def reconcile(protected_status='complete', protected=None, activity='no_current_resources_observed'):
+        data = fixture()
+        region = data['backup']['regions'][REGION]
+        region['backup_inventory_status'] = {
+            'protected_resources': protected_status, 'backup_jobs': deferred}
+        region['protected_resources'] = protected or {}
+        region['backup_jobs'] = {}
+        if activity is not None:
+            region['backup_service_activity'] = activity
+        reconcile_m10q_coverage(data, ALL, ACCOUNT)
+        return data['s3']['buckets']['bucket-1']
+
+    bucket = reconcile()
+    assert bucket['m10q_backup']['state'] == 'not_reported'
+    assert bucket['m10q_backup']['job_history_status'] == 'not_assessed'
+    assert bucket['m10q_backup_evidence_gap'] is True
+    assert classify_m10q_s3_backup(bucket) == 'insecure'
+    # Fail closed: a deferred marker without the verified-empty census, or
+    # alongside contradictory inventory, never becomes a negative finding.
+    for kwargs in ({'activity': None}, {'activity': 'not_determined'},
+                   {'protected_status': 'partial'},
+                   {'protected': {'rp': {'ResourceArn': BUCKET_ARN}}}):
+        bucket = reconcile(**kwargs)
+        assert bucket['m10q_backup']['state'] == 'unknown', kwargs
+        assert bucket['m10q_backup']['reasons'] == ['backup_inventory_incomplete'], kwargs
+        assert bucket['m10q_backup_evidence_gap'] is False, kwargs
+        assert classify_m10q_s3_backup(bucket) == 'unknown', kwargs
+
+
+def test_deferred_home_region_still_honours_cross_region_recovery_point():
+    data = fixture()
+    data['backup']['regions'][REGION].update({
+        'backup_inventory_status': {'protected_resources': 'complete',
+                                    'backup_jobs': 'deferred_no_current_backup_inventory'},
+        'backup_service_activity': 'no_current_resources_observed',
+        'plans': {}, 'vaults': {}, 'restore_testing_plans': {}})
+    data['backup']['regions']['eu-west-1'] = {
+        'backup_inventory_status': {'protected_resources': 'complete', 'backup_jobs': 'complete'},
+        'protected_resources': {'rp': {'ResourceArn': BUCKET_ARN}}, 'backup_jobs': {}}
+    reconcile_m10q_coverage(data, ALL, ACCOUNT)
+    bucket = data['s3']['buckets']['bucket-1']
+    assert bucket['m10q_backup']['state'] == 'cross_region_evidence_only'
+    assert bucket['m10q_backup']['cross_region_evidence_regions'] == ['eu-west-1']
+    assert bucket['m10q_backup_evidence_gap'] is False
+
+
+def test_complete_backup_job_history_status_is_recorded():
+    data = fixture()
+    reconcile_m10q_coverage(data, ALL, ACCOUNT)
+    assert data['s3']['buckets']['bucket-1']['m10q_backup']['job_history_status'] == 'complete'
+    assert data['s3']['buckets']['bucket-2']['m10q_backup']['job_history_status'] == 'unknown'
+
+
 def test_denied_partial_inspector_or_backup_cannot_create_negative_finding():
     data = fixture()
     data['inspector2']['regions'][REGION]['coverage_summary']['status'] = 'partial'

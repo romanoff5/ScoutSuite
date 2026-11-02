@@ -90,6 +90,47 @@ def test_backup_verified_empty_current_census_defers_restricted_history_not_abse
     asyncio.run(scenario())
 
 
+def test_backup_verified_empty_census_keeps_s3_backup_evidence_gap_finding():
+    from ScoutSuite.core.rule_evidence import classify_m10q_s3_backup
+    from ScoutSuite.providers.aws.resources.coverage_reconciliation import (
+        reconcile_m10q_coverage)
+
+    async def scenario():
+        backup = SimpleNamespace(
+            discovery_complete={REGION: {'plans': True, 'vaults': True}},
+            get_vaults=AsyncMock(return_value=[]),
+            get_plans=AsyncMock(return_value=[]),
+            get_protected_resources=AsyncMock(return_value=BoundedResults()),
+            get_backup_jobs=AsyncMock(side_effect=AssertionError('not required')),
+            get_restore_jobs=AsyncMock(side_effect=AssertionError('not required')),
+            get_restore_testing_plans=AsyncMock(
+                side_effect=AssertionError('not required')))
+        service = BackupPublic(SimpleNamespace(
+            build_region_list=AsyncMock(return_value=[REGION]), backup=backup))
+        await service.fetch_all(regions=[REGION])
+        return service
+
+    service = asyncio.run(scenario())
+    services = {
+        's3': {'buckets': {'bucket-1': {
+            'id': 'bucket-1', 'name': 'synthetic-bucket',
+            'arn': 'arn:aws:s3:::*/synthetic-bucket', 'region': REGION}}},
+        'backup': {'regions': {REGION: service['regions'][REGION]}},
+    }
+    reconcile_m10q_coverage(services, ['s3', 'backup'], '000000000000')
+    bucket = services['s3']['buckets']['bucket-1']
+    evidence = bucket['m10q_backup']
+    # A region with no vault, plan or protected resource cannot hold an AWS
+    # Backup recovery point for the bucket: the gap is verified, not UNKNOWN.
+    assert evidence['state'] == 'not_reported'
+    assert evidence['canonical_bucket_arn'] == 'arn:aws:s3:::synthetic-bucket'
+    assert evidence['job_history_status'] == 'not_assessed'
+    assert evidence['reasons'] == ['no_current_backup_inventory_job_history_not_assessed']
+    assert evidence['completed_job_ids'] == []
+    assert bucket['m10q_backup_evidence_gap'] is True
+    assert classify_m10q_s3_backup(bucket) == 'insecure'
+
+
 def test_backup_incomplete_or_nonempty_census_still_queries_deep_history():
     async def scenario(protected_complete, plan_present):
         empty = BoundedResults()
