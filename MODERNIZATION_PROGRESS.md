@@ -373,7 +373,7 @@ Adds the public `wafv2` service to the default AWS scan, with bounded read-only 
   vault tags, recovery-point resilience, backup audit evidence and restore
   test coverage. These were not evaluated by M10-K.
 
-## M10-K — WAFv2 associations (2026-11-02)
+## M10-J2 — WAFv2 associations (2026-11-02)
 
 Extended default-scan WAFv2 to discover actual Regional Web ACL associations
 via `ListResourcesForWebACL` (ALB, API Gateway REST stages, AppSync, Cognito,
