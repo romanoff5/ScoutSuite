@@ -196,8 +196,6 @@ class S3AdvancedFacade:
         definitions = [
             ('access_points', ctrl, 'ListAccessPoints', 'AccessPointList',
              'Name', 'NextToken', 'NextToken', 'MaxResults'),
-            ('directory_access_points', ctrl, 'ListAccessPointsForDirectoryBuckets',
-             'AccessPointList', 'Name', 'NextToken', 'NextToken', 'MaxResults'),
             ('directory_buckets', s3, 'ListDirectoryBuckets',
              'Buckets', 'Name', 'ContinuationToken', 'ContinuationToken',
              'MaxDirectoryBuckets'),
@@ -213,6 +211,27 @@ class S3AdvancedFacade:
             data[collection] = index
             data['collection'][collection] = (
                 'complete' if pages_complete and identities_complete else 'incomplete')
+        # Query directory access points only when there is a verified local
+        # directory-bucket target. A zero-bucket census does NOT prove absence
+        # of cross-account directory access points owned by this account.
+        # Preserve an explicitly incomplete external-bucket scope instead
+        # of making a successful/secure claim or requiring optional IAM.
+        if (data['collection']['directory_buckets'] == 'complete'
+                and data['directory_buckets']):
+            rows, pages_complete = await self._pages(
+                ctrl, 'ListAccessPointsForDirectoryBuckets',
+                'AccessPointList', region, AccountId=self.account_id)
+            index, valid = self._index(
+                rows, region, 'ListAccessPointsForDirectoryBuckets', 'Name')
+            data['directory_access_points'] = index
+            data['collection']['directory_access_points'] = (
+                'complete' if pages_complete and valid else 'incomplete')
+        elif data['collection']['directory_buckets'] == 'complete':
+            data['collection']['directory_access_points'] = (
+                'deferred_cross_account_scope_unknown')
+        else:
+            data['collection']['directory_access_points'] = (
+                'deferred_directory_bucket_inventory_incomplete')
         for point in data['access_points'].values():
             await self._access_point(ctrl, point, region)
         for point in data['directory_access_points'].values():
