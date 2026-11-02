@@ -103,7 +103,11 @@ def test_both_scopes_and_normalized_resources_with_stubbed_sdk():
                                           'ResourceArn': arn('cdn', 'CLOUDFRONT')})
                 ctx = RunContext('aws').setup()
                 try:
-                    with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk) as get, \
+                    with patch.object(AWSFacadeUtils, 'get_client', side_effect=lambda service, *_: (
+                            sdk if service == 'wafv2' else SimpleNamespace(
+                                get_metric_data=lambda **_: {'MetricDataResults': [
+                                    {'Id': 'm' + str(i), 'StatusCode': 'Complete',
+                                     'Values': [1.0 if i == 0 else 0.0]} for i in range(5)]}))) as get, \
                          patch('ScoutSuite.providers.aws.facade.wafv2.discover_associations',
                                new_callable=AsyncMock) as associations:
                         associations.return_value = {
@@ -116,7 +120,10 @@ def test_both_scopes_and_normalized_resources_with_stubbed_sdk():
                         }
                         facade = WAFv2PublicFacade(object(), ACCOUNT)
                         records = await facade.get_web_acls(REGION)
-                        get.assert_called_once_with('wafv2', facade.session, REGION)
+                        assert sum(call.args[0] == 'wafv2' for call in get.call_args_list) == 1
+                        assert sum(call.args[0] == 'cloudwatch' for call in get.call_args_list) == 2
+                        assert all(row['operational_traffic']['status'] == 'observed'
+                                   for row in records)
                         assert associations.await_count == 2
                     stub.assert_no_pending_responses()
                     assert any(x['reason_code'] == 'LoggingConfigurationNotFound'
