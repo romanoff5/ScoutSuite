@@ -12,6 +12,32 @@
   exact-master release and SHA256SUMS. Fresh authorized field acceptance is
   separate: compared with RC6, S3 buckets in Regions without AWS Backup should
   regain `m10q-s3-backup-evidence-gap`.
+- Local checks before push: guarded suite 711 passed with the 4 known
+  environmental failures (three M11 Azure/GCP SDK contract tests in the reused
+  older test environment, one Windows `WinError 1314` symlink test); flake8,
+  `git diff --check` and actionlint 1.7.12 passed; a scratch PowerShell 7
+  replica of the CI selection gate passed for `Fork` (RC7), `ForkRc6` and
+  `Stable`, rejected a tampered executable and refused an RC6 record in the
+  RC7 slot.
+- Staging commit `c8dd5770cc80a6a21122319a5406b55c43193203` on branch
+  `release/fork-m10-rc7-20261102`:
+  [branch Offline CI](https://github.com/romanoff5/ScoutSuite/actions/runs/41524620251)
+  passed all four Windows/Ubuntu Python 3.11/3.14 jobs, including the real
+  Windows RC7 wheel install through `install-fork.ps1`. Remote `master` was
+  fast-forwarded and verified at the same SHA;
+  [master Offline CI](https://github.com/romanoff5/ScoutSuite/actions/runs/41525293329)
+  passed and the
+  [Fork RC release run](https://github.com/romanoff5/ScoutSuite/actions/runs/41526031697)
+  published prerelease
+  [`fork-v5.14.0-m10-rc7`](https://github.com/romanoff5/ScoutSuite/releases/tag/fork-v5.14.0-m10-rc7)
+  with tag object `c8dd5770cc80a6a21122319a5406b55c43193203`. All six
+  GitHub asset SHA256 digests match the published `SHA256SUMS` (wheel
+  `2019b98635c4ea90c26f7cca3f6a9ecfd1f72e0ed035fd85acd39ff99c18377b`).
+- Not done: RC7 was not installed into the scanner toolkit and no live AWS
+  field acceptance was run; both remain the owner's authorized step. No PR,
+  upstream push or PyPI/container publication. A later push of this record
+  re-triggers the release workflow, whose guard correctly refuses to
+  overwrite the existing RC7 release.
 
 ## Post-RC6 review: S3 backup evidence gap with deferred AWS Backup history (2026-11-02)
 
