@@ -15,7 +15,8 @@ class CloudTrail(Regions):
     async def finalize(self):
         # M10-R: preserve API collection completeness independent of an empty
         # trail list. A denied DescribeTrails must never resemble no trails.
-        statuses = getattr(self.facade.cloudtrail, 'trail_inventory_status', {})
+        statuses = getattr(getattr(self.facade, 'cloudtrail', None),
+                           'trail_inventory_status', {})
         for name, record in self.get('regions', {}).items():
             record['trails_inventory_status'] = statuses.get(name, 'unknown')
         global_events_logging = []
