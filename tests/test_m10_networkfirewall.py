@@ -11,7 +11,7 @@ from botocore.stub import Stubber
 
 from ScoutSuite.core.run_context import RunContext
 from ScoutSuite.providers.aws.facade.networkfirewall import (
-    NetworkFirewallFacade, PAGE_SIZE, broad_pass)
+    NetworkFirewallFacade, PAGE_SIZE, broad_pass, reconcile_group_references)
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.resources.networkfirewall.base import NetworkFirewallPublic
 
@@ -61,6 +61,20 @@ def test_broad_pass_flags_only_universal_pass_without_constraints():
                       'pass ip any any -> any any (sid:123; rev:1;)'}}, 'STATEFUL')
     assert not broad_pass({'RulesSource': {'RulesString':
                           '# pass ip any any -> any any (sid:123;)'}}, 'STATEFUL')
+
+
+def test_managed_or_missing_policy_rule_groups_are_never_claimed_complete():
+    known = {'arn': GROUP}
+    foreign = 'arn:aws:network-firewall:us-east-1:aws:stateful-rulegroup/managed'
+    policies = [{'detail_complete': True, 'stateful_group_refs': [
+        {'ResourceArn': GROUP}, {'ResourceArn': foreign}],
+        'stateless_group_refs': []}]
+    assert not reconcile_group_references(policies, [known])
+    assert policies[0]['unresolved_rule_group_arns'] == [foreign]
+    assert policies[0]['group_reference_coverage_complete'] is False
+    policies[0]['stateful_group_refs'] = [{'ResourceArn': GROUP}]
+    assert reconcile_group_references(policies, [known])
+    assert policies[0]['group_reference_coverage_complete'] is True
 
 
 def test_full_stubber_inventory_unknown_vs_referenced_routing():
