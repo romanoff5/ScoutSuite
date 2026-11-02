@@ -531,3 +531,25 @@ calls. See `docs/modernization/M10_WAFV2.md`.
   analyze inline/customer-managed permissions and cross-account SCP context
   in a separately tested slice; this initial rule is not an effective
   permission evaluator.
+
+## RC5 RDS snapshot cache correction (2026-11-02)
+
+- The published RC5 `get_snapshots` path raised `KeyError` for a previously
+  uncached Region: `_cache_snapshots` passed `_snapshots_cache[region]` to
+  enrichment before publishing that cache entry. Commit
+  `849a73a096da9da72e95bbf9a8bebaa9c57c51e2` passes the freshly fetched
+  local snapshot list and adds a synthetic two-snapshot cache/reuse regression
+  test. AWS RDS read permissions, report schema, rule IDs, and other providers
+  are unchanged. Rollback is the parent commit; the tagged RC5 release remains
+  immutable and is not represented as fixed.
+- Guarded focused tests: 10 passed. Full guarded local suite using RC5 runtime
+  dependencies and the isolated pytest runner: 703 passed, one Windows
+  symlink-privilege failure (`WinError 1314`); no changed-feature failure.
+  Focused flake8 and `git diff --check` passed. The earlier stale test
+  environment additionally failed three Azure/GCP SDK contract tests, which
+  disappeared with RC5 dependencies. CI status and pushed/default-branch SHA
+  are recorded in the follow-up integration note.
+- The Ridgepay assessment's separately authorized live scan and customer
+  evidence are stored outside this repository under the customer's private
+  `results/codex-review` and `reports/scout-fork` directories. No customer
+  data or credentials were used for development fixtures or committed here.
