@@ -48,3 +48,20 @@ Patch Manager evaluates compliance against assigned baselines, which may
 exclude available security updates. EC2 comparison does not cover all
 managed compute services, accounts or regions. Seven-day freshness is
 the assessment policy, not an AWS-defined universal compliance requirement.
+
+## M10-O evidence reconciliation hardening
+
+A previously merged implementation has been hardened in place rather than
+introducing a second SSM collector. The report now requires a **fresh agent
+ping (within 24 hours)**, recent independently corroborated successful Scan
+(within 7 days), zero reported noncompliant counts, resolved baseline details,
+complete patch/command enumeration, and current patch state before using
+`patch_compliant_evidence=true`. Otherwise the evidence is incomplete/unknown
+and must not be presented as a clean machine.
+
+Patch detail enumeration is explicitly bounded to 20 pages and 1,000
+non-compliant patch records per node. Truncation records a collection
+issue and prevents a clean posture. The five default SSM findings now use
+specific registered evidence classifiers; absence of SSM Agent is **not**
+inferred from a missing SSM registration. An offline or unresponsive agent,
+an unverified scan, and missing/critical patches remain separate cases.

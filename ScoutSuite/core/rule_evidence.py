@@ -567,7 +567,87 @@ def classify_identitycenter_cross_account(assignment):
     return 'unknown'
 
 
+
+def classify_ssm_unmanaged(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    if node.get('unmanaged_running_ec2') is True and node.get('ssm_managed') is False:
+        return 'insecure'
+    if node.get('ssm_managed') is True:
+        return 'secure'  # SSM registration observed, not proof of patch health.
+    if node.get('ec2_state') in ('stopped', 'stopping', 'terminated', 'shutting-down'):
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_ssm_offline(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    if node.get('ssm_managed') is not True:
+        return 'not_applicable' if node.get('ssm_managed') is False else 'unknown'
+    if node.get('ping_status') == 'ConnectionLost':
+        return 'insecure'
+    if node.get('ping_status') == 'Online' and node.get('agent_ping_fresh') is True:
+        return 'secure'
+    return 'unknown'
+
+
+def classify_ssm_scan_unverified(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    if node.get('ssm_managed') is False:
+        return 'not_applicable'
+    if node.get('ssm_managed') is not True:
+        return 'unknown'
+    if node.get('patch_compliant_evidence') is True:
+        return 'secure'
+    if node.get('scan_unverified') is True:
+        return 'insecure'  # Missing evidence, not proof the scan never occurred.
+    return 'unknown'
+
+
+def classify_ssm_security_noncompliant(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    patch = node.get('patch_state')
+    if node.get('ssm_managed') is False:
+        return 'not_applicable'
+    if not isinstance(patch, dict):
+        return 'unknown'
+    counts = (patch.get('CriticalNonCompliantCount'),
+              patch.get('SecurityNonCompliantCount'))
+    if any(type(count) is int and count > 0 for count in counts):
+        return 'insecure'
+    if node.get('patch_compliant_evidence') is True and counts == (0, 0):
+        return 'secure'
+    return 'unknown'
+
+
+def classify_ssm_missing_patches(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    if node.get('ssm_managed') is False:
+        return 'not_applicable'
+    patch = node.get('patch_state')
+    if not isinstance(patch, dict):
+        return 'unknown'
+    fields = ('MissingCount', 'FailedCount', 'InstalledPendingRebootCount',
+              'InstalledRejectedCount')
+    values = [patch.get(field) for field in fields]
+    if any(type(value) is int and value > 0 for value in values):
+        return 'insecure'
+    if (node.get('patch_compliant_evidence') is True
+            and all(type(value) is int and value == 0 for value in values)):
+        return 'secure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'ssm-unmanaged-ec2-v1': classify_ssm_unmanaged,
+    'ssm-offline-agent-v1': classify_ssm_offline,
+    'ssm-scan-unverified-v1': classify_ssm_scan_unverified,
+    'ssm-security-patches-v1': classify_ssm_security_noncompliant,
+    'ssm-missing-patches-v1': classify_ssm_missing_patches,
     'identitycenter-admin-assignment-v1': classify_identitycenter_admin,
     'identitycenter-broad-assignment-v1': classify_identitycenter_broad,
     'identitycenter-cross-account-admin-v1': classify_identitycenter_cross_account,

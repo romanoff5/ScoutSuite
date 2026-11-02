@@ -8,7 +8,9 @@
       <li>EC2 state: {{ec2_state}}; EC2 type: {{instance_type}}</li>
       <li>Private IP: {{private_ip_address}}</li>
       <li>SSM managed: {{ssm_managed}}; agent ping: {{ping_status}}</li>
-      <li>Last agent ping: {{last_ping_at}}</li>
+      <li>Last agent ping: {{last_ping_at}}; age hours: {{agent_ping_age_hours}}</li>
+      <li>Agent ping fresh (24 hours): {{agent_ping_fresh}}</li>
+      <li>Agent connectivity unverified: {{agent_ping_unverified}}</li>
       <li>Assessment: {{patch_assessment}}</li>
       <li>Last reported scan: {{last_reported_scan_at}}</li>
       <li>Last confirmed successful Scan (Run Command): {{last_successful_scan_at}}</li>
@@ -17,6 +19,8 @@
       <li>Last patch operation: {{last_patch_operation_at}}</li>
       <li>Scan age in days: {{scan_age_days}}; scan fresh: {{scan_fresh}}</li>
       <li>Patch counts evidence complete: {{compliance_evidence_complete}}</li>
+      <li>Full patch inventory evidence complete: {{inventory_evidence_complete}}</li>
+      <li>Patch baseline resolution: {{baseline_resolution_status}}</li>
       <li>Patch baseline: <samp>{{patch_baseline_id}}</samp></li>
       <li>Patch group: {{patch_group}}</li>
     </ul>

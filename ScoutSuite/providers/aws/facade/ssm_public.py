@@ -17,6 +17,9 @@ MAX_ITEMS = 100000
 SSM_PAGE_SIZE = 50
 EC2_PAGE_SIZE = 1000
 SCAN_MAX_AGE_DAYS = 7
+AGENT_MAX_PING_AGE_HOURS = 24
+PATCH_DETAIL_MAX_PAGES = 20
+PATCH_DETAIL_MAX_ITEMS = 1000
 DENIED = frozenset(('AccessDenied', 'AccessDeniedException', 'UnauthorizedOperation'))
 
 
@@ -66,20 +69,31 @@ def assessment(node, now=None):
                    for k in ('CriticalNonCompliantCount', 'SecurityNonCompliantCount'))
     managed = node.get('ssm_managed') is True
     ping = node.get('ping_status')
-    online = managed and ping == 'Online'
+    ping_time = as_datetime(node.get('last_ping_at'))
+    ping_age_hours = ((now - ping_time).total_seconds() / 3600
+                      if ping_time is not None else None)
+    node['agent_ping_age_hours'] = (round(ping_age_hours, 2)
+                                    if ping_age_hours is not None else None)
+    node['agent_ping_fresh'] = (
+        ping == 'Online' and ping_age_hours is not None
+        and 0 <= ping_age_hours <= AGENT_MAX_PING_AGE_HOURS)
+    online = managed and node['agent_ping_fresh']
     node['last_patch_operation_at'] = json_safe(last) if last else None
     node['last_reported_scan_at'] = json_safe(last) if is_scan and last else None
     node['scan_age_days'] = round(age, 2) if is_scan and age is not None else None
     node['scan_fresh'] = recent
     node['scan_stale'] = bool(is_scan and age is not None and age > SCAN_MAX_AGE_DAYS)
     node['scan_unverified'] = managed and not (recent and confirmed)
-    node['agent_not_online'] = managed and ping != 'Online'
+    node['agent_not_online'] = managed and ping == 'ConnectionLost'
+    node['agent_ping_unverified'] = managed and not node['agent_ping_fresh']
     node['security_noncompliant'] = critical
     node['missing_or_failed_patches'] = bool(bad)
     node['unmanaged_running_ec2'] = (node.get('ec2_state') == 'running'
                                      and node.get('ssm_managed') is False)
     node['compliance_evidence_complete'] = bool(
-        online and recent and confirmed and known and node.get('patch_state_observed') is True)
+        online and recent and confirmed and known
+        and node.get('patch_state_observed') is True
+        and node.get('inventory_evidence_complete', True) is True)
     if node['unmanaged_running_ec2']:
         node['patch_assessment'] = 'unmanaged_running_ec2'
     elif not managed:
@@ -92,8 +106,12 @@ def assessment(node, now=None):
         node['patch_assessment'] = 'agent_offline_or_unverified'
     elif not recent:
         node['patch_assessment'] = 'patch_scan_unknown_or_stale'
+    elif not confirmed:
+        node['patch_assessment'] = 'successful_scan_unverified'
     elif not known:
         node['patch_assessment'] = 'patch_counts_unknown'
+    elif not node.get('inventory_evidence_complete', True):
+        node['patch_assessment'] = 'inventory_incomplete'
     else:
         node['patch_assessment'] = 'recent_scan_no_reported_noncompliance'
     # AWS reports a completed scan operation, not independent proof of
@@ -127,10 +145,11 @@ class SSMPublicFacade(AWSBaseFacade):
             self.failure(method, exc)
             return None
 
-    async def pages(self, client, method, key, size=SSM_PAGE_SIZE, **fixed):
+    async def pages(self, client, method, key, size=SSM_PAGE_SIZE, *,
+                    max_pages=MAX_PAGES, max_items=MAX_ITEMS, **fixed):
         """Return (rows, complete), never silently accept truncated data."""
         rows, seen, token = [], set(), None
-        for _ in range(MAX_PAGES):
+        for _ in range(max_pages):
             params = dict(fixed)
             params['MaxResults'] = size
             if token is not None:
@@ -143,8 +162,8 @@ class SSMPublicFacade(AWSBaseFacade):
                     or any(not isinstance(x, dict) for x in batch)):
                 self.issue('partial', method + ':MalformedPage')
                 return rows, False
-            if len(rows) + len(batch) > MAX_ITEMS:
-                rows.extend(batch[:MAX_ITEMS - len(rows)])
+            if len(rows) + len(batch) > max_items:
+                rows.extend(batch[:max_items - len(rows)])
                 self.issue('partial', method + ':ItemLimit')
                 return rows, False
             rows.extend(batch)
@@ -256,6 +275,8 @@ class SSMPublicFacade(AWSBaseFacade):
         rows, complete = await self.pages(
             client, 'describe_instance_patches', 'Patches',
             InstanceId=node['instance_id'],
+            max_pages=PATCH_DETAIL_MAX_PAGES,
+            max_items=PATCH_DETAIL_MAX_ITEMS,
             Filters=[{'Key': 'State', 'Values': [
                 'Missing', 'Failed', 'InstalledPendingReboot',
                 'InstalledRejected', 'AvailableSecurityUpdate']}])
@@ -394,6 +415,24 @@ class SSMPublicFacade(AWSBaseFacade):
         for start in range(0, len(managed_ids), 8):
             await asyncio.gather(*(self.patch_details(ssm, nodes[rid])
                                    for rid in managed_ids[start:start + 8]))
+        available_baselines = {
+            row['BaselineId'] for row in baseline_records
+            if row.get('detail_complete') is True}
+        details_ok = True
+        for rid in managed_ids:
+            node = nodes[rid]
+            baseline_id = node.get('patch_baseline_id')
+            node['baseline_resolution_status'] = (
+                'resolved' if baseline_id in available_baselines and baseline_ok
+                else 'unknown')
+            detail_ok = node.get('missing_patches_collection_complete') is True
+            details_ok = details_ok and detail_ok
+            node['inventory_evidence_complete'] = (
+                bool(managed_ok and baseline_ok and groups_ok and states_ok and commands_ok)
+                and detail_ok and node['baseline_resolution_status'] == 'resolved')
+            # Reclassify after joining the full baseline + patch-details census.
+            # Without complete inventory, zero reported missing patches are UNKNOWN.
+            assessment(node)
         return {
             'managed_nodes': list(nodes.values()),
             'patch_baselines': json_safe(baseline_records),
@@ -401,7 +440,8 @@ class SSMPublicFacade(AWSBaseFacade):
             'collection': {
                 'managed_nodes': managed_ok, 'ec2': ec2_ok,
                 'patch_states': states_ok, 'patch_baselines': baseline_ok,
-                'patch_groups': groups_ok, 'scan_command_history': commands_ok},
+                'patch_groups': groups_ok, 'scan_command_history': commands_ok,
+                'patch_details': details_ok},
             'ec2_comparison_complete': comparison,
             'scan_freshness_days': SCAN_MAX_AGE_DAYS,
             'scan_success_independently_verified': False,

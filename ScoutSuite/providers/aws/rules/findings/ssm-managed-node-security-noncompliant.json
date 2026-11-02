@@ -16,5 +16,5 @@
         ]
     ],
     "id_suffix": "SecurityNoncompliant",
-    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+    "evidence_policy": "ssm-security-patches-v1"
 }
