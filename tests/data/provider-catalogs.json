@@ -37,7 +37,6 @@
       "ecr",
       "ecs",
       "eks",
-      "guardduty",
       "ssm"
     ],
     "metadata_services": [
