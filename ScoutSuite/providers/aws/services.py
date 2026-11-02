@@ -10,6 +10,7 @@ from ScoutSuite.providers.aws.resources.wafv2.base import WAFv2Public
 from ScoutSuite.providers.aws.resources.networkfirewall.base import NetworkFirewallPublic
 from ScoutSuite.providers.aws.resources.ssm.base import SSMPublic
 from ScoutSuite.providers.aws.resources.backup.base import BackupPublic
+from ScoutSuite.providers.aws.resources.macie.base import MaciePublic
 from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
 from ScoutSuite.providers.aws.resources.acm.base import Certificates
@@ -134,6 +135,7 @@ class AWSServicesConfig(BaseServicesConfig):
         self.securityhub = SecurityHubPublic(facade)
         self.wafv2 = WAFv2Public(facade)
         self.backup = BackupPublic(facade)
+        self.macie = MaciePublic(facade)
         self.networkfirewall = NetworkFirewallPublic(facade)
         self.ssm = SSMPublic(facade)
         self.identitycenter = IdentityCenter(facade)
