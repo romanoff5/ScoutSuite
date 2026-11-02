@@ -1,3 +1,10 @@
+> Historical note: this document records the original M09-A 11-rule
+> crosswalk. The newer **RC4 staging** branch extends the opt-in profile to
+> 32 candidate rule associations over 30 CIS v7.1.0 control IDs, adds four
+> regular AWS checks, and keeps a 94-ID implementation inventory.
+> See `CIS_FOUNDATIONS_V7_1_RC4_GAP_REVIEW.md`. This work is **not merged**
+> into RC3 and is **not** a CIS compliance declaration.
+
 # M09-A: deterministic, non-mutating AWS reports and CIS v7.1.0 crosswalk
 
 **Date:** 2026-11-01. Scope: AWS result serialization/validation and opt-in profile.
