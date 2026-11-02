@@ -112,8 +112,7 @@ def test_sdk_has_only_required_read_operations_and_shapes():
         if name not in ('DescribeInstancePatchStates',):
             assert 'NextToken' in op.output_shape.members
     assert 'Parameters' in ssm.operation_model('ListCommands').output_shape.members['Commands'].member.members
-    assert 'Operation' in ssm.operation_model('GetPatchBaseline').output_shape.members or (
-        'ApprovalRules' in ssm.operation_model('GetPatchBaseline').output_shape.members)
+    assert 'ApprovalRules' in ssm.operation_model('GetPatchBaseline').output_shape.members
     ec2 = get_session().get_service_model('ec2').operation_model('DescribeInstances')
     assert {'MaxResults', 'NextToken'} <= set(ec2.input_shape.members)
 
@@ -175,7 +174,11 @@ def test_sdk_stubber_confirms_successful_scan_with_explicit_operation_and_ec2_re
         assert node['patch_health'] == 'observed_current'
         assert inventory['collection']['managed_nodes'] == 'complete'
         assert len(inventory['ec2_instances']) == 2
-        report = run_resource(inventory)
+        fake = SimpleNamespace(
+            build_region_list=AsyncMock(return_value=[REGION]),
+            ssm_patch=SimpleNamespace(inventory=AsyncMock(return_value=inventory)))
+        report = SSMPatchPublic(fake)
+        await report.fetch_all()
         region = report['regions'][REGION]
         managed = next(iter(region['managed_nodes'].values()))
         assert managed['patch_health'] == 'observed_current'
@@ -195,6 +198,8 @@ def test_stale_no_success_critical_and_agent_offline_never_misreported_as_patche
     assert node['missing_security_patch_count'] == 3
     assert classify_ssm_critical(node) == 'insecure'
     assert classify_ssm_security(node) == 'insecure'
+    assert node['critical_patches_present'] is True
+    assert node['security_patches_present'] is True
     no_scan = run_resource(example_inventory(managed_inventory(scan_known=False)))
     node = next(iter(no_scan['regions'][REGION]['managed_nodes'].values()))
     assert classify_ssm_critical(node) == 'unknown'
