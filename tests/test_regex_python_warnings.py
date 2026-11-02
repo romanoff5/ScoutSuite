@@ -53,4 +53,4 @@ def test_regex_literal_fix_does_not_modify_unrelated_runtime_functions():
     block = source.split("secret_patterns = {", 1)[1].split("\ndef is_secret", 1)[0]
     assert block.count("re.compile(") == 87
     # Every detector has a raw Python regex literal, preserving regex escapes.
-    assert len(re.findall(r're\\.compile\\(\\s*r"', block)) == 87
+    assert len(re.findall(r're\.compile\(\s*r"', block)) == 87
