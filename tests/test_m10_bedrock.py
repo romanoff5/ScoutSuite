@@ -173,3 +173,6 @@ def test_report_catalog_and_safe_templates():
         content = template.read_text()
         assert '{{{' not in content and 'onclick=' not in content
         assert 'Handlebars.registerPartial' in content
+    # A deferred/unknown enforcement census must be visible next to its zero count.
+    regions = (root / 'ScoutSuite/output/data/html/partials/aws/services.bedrock.regions.html').read_text()
+    assert '<samp>{{enforced_guardrails_evidence_status}}</samp>' in regions
