@@ -78,6 +78,9 @@ jobs:
       - name: Full guarded offline suite including M01 negative and CLI cases
         if: "!cancelled() && steps.build.outcome == 'success'"
         run: python -B tools/ci.py tests
+      - name: Real TCP loopback SQLite report HTTP integration (isolated Linux namespace)
+        if: "!cancelled() && steps.build.outcome == 'success' && runner.os == 'Linux'"
+        run: python -B tools/ci.py sqlite_http
       - name: Network-isolated adversarial XSS parser and browser verification
         if: "!cancelled() && steps.build.outcome == 'success'"
         run: python -B tools/ci.py xss_browser
