@@ -29,6 +29,21 @@ M11_ALLOWED = {
         'resources/sqldatabase/server_security_alert_policies.py',
     }),
 }
+# Python 3.14 compatibility: only targeted syntax/deprecation fixes are allowed.
+# Unlike M11_ALLOWED, these are fixed Git blob hashes, not a blanket exemption.
+# The original M07 manifest and Azure/GCP dependency pins remain unchanged.
+PY314_COMPAT_BLOBS = {
+    'azure': {
+        'facade/securitycenter.py': '419ebb531e42d5e001281db40c67f1c841d3ab5e',
+        'facade/storageaccounts.py': '51edc0fa8fef46d036717334a33ca1337d658829',
+    },
+    'gcp': {
+        'facade/base.py': '13a85b97f27b9e61c8c8743574b0f8f8e6c30ed5',
+        'facade/gce.py': '1dc0c02a9d41b2c2f768a815803ac8bedbcd6513',
+    },
+}
+
+
 M11_DEPENDENCIES = {
     'google-cloud-kms==1.3.0': 'google-cloud-kms==3.17.0',
     'google-cloud-monitoring==1.1.0': 'google-cloud-monitoring==2.31.0',
@@ -68,9 +83,18 @@ def test_deferred_provider_source_rules_and_assets_are_unchanged(provider):
     assert not missing, f'{provider} files removed: {missing[:12]}'
     assert not unexpected, f'{provider} files added: {unexpected[:12]}'
 
+    # New Python 3.14 changes must match exactly the four reviewed blobs.
+    # All other Azure/GCP sources remain protected by the original M07 hashes.
+    for name, approved_hash in PY314_COMPAT_BLOBS[provider].items():
+        assert name in expected, f'Unrecognized compatibility exception: {name}'
+        assert _blob_sha(actual_paths[name]) == approved_hash, (
+            f'Unreviewed Python 3.14 compatibility source change: {provider}/{name}'
+        )
     changed = sorted(
         name for name, path in actual_paths.items()
-        if name not in M11_ALLOWED[provider] and _blob_sha(path) != expected[name]
+        if name not in M11_ALLOWED[provider]
+        and name not in PY314_COMPAT_BLOBS[provider]
+        and _blob_sha(path) != expected[name]
     )
     assert not changed, (
         f'{provider} SDK/collector/rule content drift: {changed[:12]}. '

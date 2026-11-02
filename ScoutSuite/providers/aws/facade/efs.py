@@ -17,8 +17,7 @@ class EFSFacade(AWSBaseFacade):
         else:
             await get_and_set_concurrently(
                 [self._get_and_set_tags, self._get_and_set_mount_targets], file_systems, region=region)
-        finally:
-            return file_systems
+        return file_systems
 
     async def _get_and_set_tags(self, file_system: {}, region: str):
         client = AWSFacadeUtils.get_client('efs', self.session, region)

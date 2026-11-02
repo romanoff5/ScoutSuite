@@ -2,6 +2,14 @@ import argparse
 from ScoutSuite import __version__
 
 
+def _open_binary_auth_file(path):
+    """Preserve argparse's binary file value without deprecated FileType."""
+    try:
+        return open(path, 'rb')
+    except OSError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
 class ScoutSuiteArgumentParser:
 
     def __init__(self):
@@ -185,7 +193,7 @@ class ScoutSuiteArgumentParser:
         # Service Principal credentials in an auth file
         azure_auth_modes.add_argument('--file-auth',
                                       action='store',
-                                      type=argparse.FileType('rb'),
+                                      type=_open_binary_auth_file,
                                       dest='file_auth',
                                       metavar="FILE",
                                       help='Run Scout with the specified credential file')

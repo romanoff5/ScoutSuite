@@ -25,6 +25,10 @@ jobs:
             python: '3.11.18'
           - os: windows-2022
             python: '3.11.9'
+          - os: ubuntu-24.04
+            python: '3.14.10'
+          - os: windows-2022
+            python: '3.14.10'
     env:
       SCOUT_CI_ENFORCE_OS_ISOLATION: '1'
       PYTHONDONTWRITEBYTECODE: '1'

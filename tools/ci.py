@@ -157,6 +157,14 @@ class Pipeline:
             names = ', '.join(name for name, _ in errors)
             raise RuntimeError('Parallel CI gates failed: ' + names) from errors[0][1]
 
+    @staticmethod
+    def constraint(name, extension='txt'):
+        """Select the independently pinned dependency closure for this runtime."""
+        runtime = (sys.version_info.major, sys.version_info.minor)
+        if runtime not in ((3, 11), (3, 14)):
+            raise RuntimeError('Offline CI dependency closure not validated for Python %s.%s' % runtime)
+        return SOURCE / 'constraints' / ('%s-py%d%d.%s' % (name, *runtime, extension))
+
     def pip(self, name, *arguments):
         # Bytecode is compiled on demand during smoke/tests. Repeated eager
         # compilation across six disposable venvs has no validation benefit.
@@ -201,7 +209,7 @@ class Pipeline:
     def acquire(self):
         self.create('build')
         self.pip('build', 'install', '--cache-dir', self.root / 'pip-cache',
-                 '-r', SOURCE / 'constraints/build-py311.txt', '-r', SOURCE / 'constraints/ci-py311.txt')
+                 '-r', self.constraint('build'), '-r', self.constraint('ci'))
         if self.wheelhouse_valid():
             print('Validated cached dependency wheelhouse: reuse (fresh venvs retained)', flush=True)
         else:
@@ -210,21 +218,21 @@ class Pipeline:
             (self.root / 'wheelhouse-manifest.json').unlink(missing_ok=True)
             self.pip('build', 'wheel', '--no-build-isolation', '--cache-dir', self.root / 'pip-cache',
                      '-r', SOURCE / 'tests/requirements-offline.txt',
-                     '-r', SOURCE / 'constraints/build-py311.txt',
-                     '-c', SOURCE / 'constraints/ci-py311.txt',
-                     '-c', SOURCE / 'constraints/combined-py311.txt',
+                     '-r', self.constraint('build'),
+                     '-c', self.constraint('ci'),
+                     '-c', self.constraint('combined'),
                      '--wheel-dir', self.root / 'wheelhouse')
             self.record_wheelhouse()
         def prepare_profile(name):
             self.create(name)
-            self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', 'pip==24.0',
+            self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', ('pip==26.2.2' if sys.version_info >= (3, 14) else 'pip==24.0'),
                      'setuptools==80.9.0', 'wheel==0.45.1')
             if name == 'aws':
                 self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', '--no-build-isolation',
-                         '--require-hashes', '-r', SOURCE / 'constraints/aws-core-py311.lock')
+                         '--require-hashes', '-r', self.constraint('aws-core', 'lock'))
             else:
                 self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', '--no-build-isolation',
-                         '-r', SOURCE / 'requirements-core.txt', '-c', SOURCE / 'constraints/aws-core-py311.txt')
+                         '-r', SOURCE / 'requirements-core.txt', '-c', self.constraint('aws-core'))
 
         self.parallel([(name, lambda profile=name: prepare_profile(profile))
                        for name in ('core', 'aws')], max_workers=2)
@@ -261,12 +269,12 @@ class Pipeline:
         def install_distribution(name, artifact):
             self.create(name)
             self.pip(name, 'install', '--no-index', '--find-links', self.root / 'wheelhouse',
-                     '-r', SOURCE / 'constraints/build-py311.txt')
+                     '-r', self.constraint('build'))
             self.pip(name, 'install', '--no-index', '--no-build-isolation', '--find-links', self.root / 'wheelhouse',
-                     '-c', SOURCE / 'constraints/combined-py311.txt', '-c', SOURCE / 'constraints/ci-py311.txt', artifact)
+                     '-c', self.constraint('combined'), '-c', self.constraint('ci'), artifact)
             if name == 'test':
                 self.pip(name, 'install', '--no-index', '--find-links', self.root / 'wheelhouse',
-                         '-c', SOURCE / 'constraints/combined-py311.txt', '-c', SOURCE / 'constraints/ci-py311.txt',
+                         '-c', self.constraint('combined'), '-c', self.constraint('ci'),
                          '-r', SOURCE / 'tests/requirements-offline.txt')
 
         distributions = (('test', wheel), ('wheel', wheel), ('sdist', sdist))

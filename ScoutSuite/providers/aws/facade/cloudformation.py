@@ -21,8 +21,7 @@ class CloudFormation(AWSBaseFacade):
             await get_and_set_concurrently(
                 [self._get_and_set_description, self._get_and_set_template, self._get_and_set_policy, self._get_stack_notifications],
                 stacks, region=region)
-        finally:
-            return stacks
+        return stacks
 
     async def _get_and_set_description(self, stack: {}, region: str):
         client = AWSFacadeUtils.get_client('cloudformation', self.session, region)

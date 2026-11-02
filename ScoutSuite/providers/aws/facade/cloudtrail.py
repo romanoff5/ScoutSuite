@@ -20,8 +20,7 @@ class CloudTrailFacade(AWSBaseFacade):
         else:
             await get_and_set_concurrently(
                 [self._get_and_set_status, self._get_and_set_selectors], trails, region=region)
-        finally:
-            return trails
+        return trails
 
     @staticmethod
     def _record_collection_failure(error, reason):

@@ -20,8 +20,7 @@ class KMSFacade(AWSBaseFacade):
         except Exception as e:
             print_exception(f'Failed to get KMS keys: {e}')
             keys = []
-        finally:
-            return keys
+        return keys
 
     async def _get_and_set_key_policy(self, key: {}, region: str):
         client = AWSFacadeUtils.get_client('kms', self.session, region)

@@ -17,8 +17,7 @@ class SNSFacade(AWSBaseFacade):
         except Exception as e:
             print_exception(f'Failed to get CloudWatch alarms: {e}')
             topics = []
-        finally:
-            return topics
+        return topics
 
     async def _get_and_set_topic_attributes(self, topic: {}, region: str):
         sns_client = AWSFacadeUtils.get_client('sns', self.session, region)

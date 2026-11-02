@@ -149,8 +149,7 @@ class GCPFacade(GCPBaseFacade):
 
             print_level(f'Unable to list accessible Projects: {exception_str}')
 
-        finally:
-            return projects
+        return projects
 
     async def get_enabled_services(self, project_id, attempt=1, has_lock=False):
         timeout = 60*attempt
