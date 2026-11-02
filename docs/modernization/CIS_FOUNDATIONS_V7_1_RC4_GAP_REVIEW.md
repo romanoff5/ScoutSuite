@@ -11,13 +11,13 @@ implementation inventory is `ScoutSuite/providers/aws/rules/catalogs/cis-foundat
 
 | Development status | Count | Interpretation |
 | --- | ---: | --- |
-| Candidate evidence mapping | 30 | 32 rule associations; not complete CIS control validation |
+| Candidate evidence mapping | 30 | 33 rule associations; not complete CIS control validation |
 | Manual review required | 43 | May use captured evidence, but cannot be called automated PASS |
 | Partial existing checks, not mapped | 13 | Evidence lacks required specificity or scope |
 | Not implemented | 8 | No suitable rule; must remain unassessed |
 | **Total** | **94** | Not a compliance denominator |
 
-The opt-in profile `cis-foundations-7.1.0-partial.json` contains **32**
+The opt-in profile `cis-foundations-7.1.0-partial.json` contains **33**
 candidate rule mappings across **30** CIS IDs, expanded from the original
 11 mappings. All outputs retain `coverage: candidate` and
 `compliance_verified: false`. No automatic compliant percentage is permitted.
@@ -29,7 +29,7 @@ detailed scans include the four new checks independently of the opt-in profile.
 | Control ID | Rule name | Evidence contract and limitation |
 | --- | --- | --- |
 | 3.1.4 | `s3-bucket-public-access-block-incomplete` | Four effective account/bucket BPA flags; unknown API responses remain UNKNOWN; not proof of object/AP safety or org-wide policy |
-| 3.2.5 | `rds-instance-deletion-protection-disabled` | Existing DescribeDBInstances field; does not assess RDS clusters, backup or IAM |
+| 3.2.5 | `rds-instance-deletion-protection-disabled` and `rds-cluster-deletion-protection-disabled` | Standalone instance vs Aurora/Multi-AZ cluster DeletionProtection, assessed separately; cluster members excluded, uncollected evidence remains UNKNOWN |
 | 3.3.1 | `efs-filesystem-not-encrypted` | DescribeFileSystems Encrypted boolean; does not assess TLS or KMS key policy |
 | 5.16 | `securityhub-region-not-subscribed` | Only explicit DescribeHub ResourceNotFound means NOT_SUBSCRIBED; AccessDenied and invalid responses are UNKNOWN |
 
