@@ -555,6 +555,36 @@
                     "path": "services.wafv2.regions.id.web_acls"
                 }
             }
+        },
+        "identitycenter": {
+            "resources": {
+                "instances": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances"
+                },
+                "permission_sets": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.permission_sets"
+                },
+                "assignments": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.permission_sets.id.assignments"
+                },
+                "users": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.users"
+                },
+                "groups": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.groups"
+                }
+            },
+            "summaries": {
+                "organization_coverage": {
+                    "cols": 1,
+                    "path": "services.identitycenter.organization_coverage"
+                }
+            }
         }
     },
     "database": {
@@ -718,9 +748,18 @@
     "storage": {
         "backup": {
             "resources": {
-                "regions": {"cols": 2, "path": "services.backup.regions"},
-                "vaults": {"cols": 2, "path": "services.backup.regions.id.vaults"},
-                "plans": {"cols": 2, "path": "services.backup.regions.id.plans"}
+                "regions": {
+                    "cols": 2,
+                    "path": "services.backup.regions"
+                },
+                "vaults": {
+                    "cols": 2,
+                    "path": "services.backup.regions.id.vaults"
+                },
+                "plans": {
+                    "cols": 2,
+                    "path": "services.backup.regions.id.plans"
+                }
             }
         },
         "efs": {
