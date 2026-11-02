@@ -2,6 +2,7 @@
 from botocore.exceptions import ClientError
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
+from ScoutSuite.providers.aws.facade.inspector2_organization import Inspector2OrganizationMixin
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
@@ -12,17 +13,33 @@ REQUIRED_SCAN_TYPES = frozenset(('ec2', 'ecr'))
 VALID_SCAN_STATES = frozenset((
     'ENABLING', 'ENABLED', 'DISABLING', 'DISABLED', 'SUSPENDING', 'SUSPENDED',
 ))
-MAX_PAGES = 5
-PAGE_SIZE = 100
-MAX_COVERED_RESOURCES = 500
+# 200 is the AWS ListCoverage maximum page size. At 2,500 pages this
+# supports 500,000 records per account and Region rather than only 500.
+# Limits are circuit breakers, NEVER a successful/complete collection.
+MAX_PAGES = 2500
+PAGE_SIZE = 200
+MAX_COVERED_RESOURCES = MAX_PAGES * PAGE_SIZE
+MAX_STATISTICS_PAGES = 20
+MAX_TOKEN_LENGTH = 1000000
 _DENIED = ('AccessDeniedException', 'AccessDenied', 'UnauthorizedOperation')
 _UNSUPPORTED = ('UnsupportedOperationException', 'UnknownOperationException')
 
 
-class Inspector2Facade(AWSBaseFacade):
+class CoverageRows(list):
+    """List-compatible collection carrying explicit pagination completeness."""
+
+    def __init__(self, records=(), complete=False, pages=0, status='failed'):
+        super().__init__(records)
+        self.complete = complete
+        self.pages = pages
+        self.status = status
+
+
+class Inspector2Facade(Inspector2OrganizationMixin, AWSBaseFacade):
     def __init__(self, session, owner_id):
         super().__init__(session)
         self.owner_id = owner_id
+        self.coverage_collections = {}
 
     @staticmethod
     def _issue(status, reason):
@@ -47,6 +64,7 @@ class Inspector2Facade(AWSBaseFacade):
         else:
             state = 'failed'
         self._issue('partial' if partial else state, operation + state.capitalize())
+        return 'partial' if partial else state
 
     def _account_valid(self):
         valid = (isinstance(self.owner_id, str) and len(self.owner_id) == 12
@@ -112,15 +130,27 @@ class Inspector2Facade(AWSBaseFacade):
         return [{'account_id': self.owner_id, 'status': state['status'],
                  'resource_states': resource_states}]
 
+    def _finish_coverage(self, region, rows, pages=0, status='failed'):
+        """Preserve evidence and explicit collection state separately from resource rows."""
+        complete = status == 'complete'
+        result = CoverageRows(rows, complete=complete, pages=pages, status=status)
+        self.coverage_collections[region] = {
+            'status': status, 'complete': complete, 'pages': pages,
+            'items': len(result), 'account_id': self.owner_id,
+        }
+        return result
+
     async def get_coverage(self, region):
+        """Fully paginate own-account coverage; preserve partial rows on failure."""
         if not self._account_valid():
-            return []
+            return self._finish_coverage(region, [], status='failed')
         client = self._client(region)
         if client is None:
-            return []
+            return self._finish_coverage(region, [], status='failed')
         collected, seen_tokens, seen_resources = [], set(), set()
         token = None
-        for _ in range(MAX_PAGES):
+        incomplete = False
+        for page_index in range(MAX_PAGES):
             params = {'maxResults': PAGE_SIZE,
                       'filterCriteria': {'accountId': [
                           {'comparison': 'EQUALS', 'value': self.owner_id}]}}
@@ -130,42 +160,125 @@ class Inspector2Facade(AWSBaseFacade):
                 response = await run_concurrently(
                     lambda params=params: client.list_coverage(**params))
             except Exception as error:
-                self._error(error, 'ListCoverage', partial=bool(collected))
-                return collected
+                state = self._error(error, 'ListCoverage', partial=bool(collected))
+                return self._finish_coverage(region, collected, page_index, state)
+            pages = page_index + 1
             rows = response.get('coveredResources') if isinstance(response, dict) else None
             if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
                 self._issue('partial' if collected else 'failed', 'MalformedCoveragePage')
-                return collected
-            if len(rows) > PAGE_SIZE or len(rows) + len(collected) > MAX_COVERED_RESOURCES:
+                return self._finish_coverage(region, collected, pages, 'partial' if collected else 'failed')
+            if len(rows) > PAGE_SIZE:
                 self._issue('partial', 'CoverageLimit')
-                return collected
+                return self._finish_coverage(region, collected, pages, 'partial')
             for raw in rows:
+                if len(collected) >= MAX_COVERED_RESOURCES:
+                    self._issue('partial', 'CoverageLimit')
+                    return self._finish_coverage(region, collected, pages, 'partial')
                 if raw.get('accountId') != self.owner_id:
                     self._issue('partial', 'UnexpectedAccount')
+                    incomplete = True
                     continue
                 key = (raw.get('resourceType'), raw.get('resourceId'), raw.get('scanType'))
-                if any(not isinstance(s, str) or not s for s in key):
+                if any(not isinstance(value, str) or not value for value in key):
                     self._issue('partial', 'MalformedCoveredResource')
+                    incomplete = True
                     continue
                 if key in seen_resources:
                     self._issue('partial', 'DuplicateCoveredResource')
+                    incomplete = True
                     continue
                 seen_resources.add(key)
                 scan = raw.get('scanStatus')
                 if not isinstance(scan, dict):
                     self._issue('partial', 'MalformedCoverageStatus')
+                    incomplete = True
                     scan = {}
-                collected.append({'account_id': self.owner_id, 'resource_type': key[0],
-                                  'resource_id': key[1], 'scan_type': key[2],
-                                  'scan_status': scan.get('statusCode'),
-                                  'scan_reason': scan.get('reason')})
+                elif scan.get('statusCode') not in ('ACTIVE', 'INACTIVE'):
+                    self._issue('partial', 'UnknownCoverageStatus')
+                    incomplete = True
+                collected.append({
+                    'account_id': self.owner_id, 'resource_type': key[0],
+                    'resource_id': key[1], 'scan_type': key[2],
+                    'scan_status': scan.get('statusCode'),
+                    'scan_reason': scan.get('reason'),
+                    'last_scanned_at': raw.get('lastScannedAt'),
+                    'provider': raw.get('provider'),
+                    'provider_region': raw.get('providerRegion'),
+                    'provider_account_id': raw.get('providerAccountId'),
+                    'provider_org_id': raw.get('providerOrgId'),
+                    'scan_mode': raw.get('scanMode'),
+                })
             following = response.get('nextToken')
             if following is None or following == '':
-                return collected
-            if not isinstance(following, str) or following in seen_tokens or len(following) > 4096:
+                return self._finish_coverage(
+                    region, collected, pages, 'partial' if incomplete else 'complete')
+            if (not isinstance(following, str) or not following
+                    or len(following) > MAX_TOKEN_LENGTH or following in seen_tokens):
                 self._issue('partial', 'InvalidPaginationToken')
-                return collected
+                return self._finish_coverage(region, collected, pages, 'partial')
             seen_tokens.add(following)
             token = following
         self._issue('partial', 'CoveragePageLimit')
-        return collected
+        return self._finish_coverage(region, collected, MAX_PAGES, 'partial')
+
+    async def get_coverage_statistics(self, region):
+        """Independent Inspector inventory count for consistency, NOT EC2/ECR census."""
+        result = {'status': 'failed', 'total_count': None, 'by_status': {},
+                  'pages': 0, 'scope': 'inspector_inventory_only'}
+        if not self._account_valid():
+            return result
+        client = self._client(region)
+        if client is None:
+            return result
+        token, seen = None, set()
+        for index in range(MAX_STATISTICS_PAGES):
+            args = {'filterCriteria': {'accountId': [
+                {'comparison': 'EQUALS', 'value': self.owner_id}]},
+                'groupBy': 'SCAN_STATUS_CODE'}
+            if token is not None:
+                args['nextToken'] = token
+            try:
+                page = await run_concurrently(
+                    lambda args=args: client.list_coverage_statistics(**args))
+            except Exception as error:
+                result['status'] = self._error(
+                    error, 'ListCoverageStatistics', partial=index > 0)
+                return result
+            result['pages'] += 1
+            total = page.get('totalCounts') if isinstance(page, dict) else None
+            rows = page.get('countsByGroup', []) if isinstance(page, dict) else None
+            if (type(total) is not int or total < 0 or not isinstance(rows, list)):
+                self._issue('partial', 'MalformedCoverageStatistics')
+                result['status'] = 'partial'
+                return result
+            if result['total_count'] is not None and total != result['total_count']:
+                self._issue('partial', 'InconsistentStatisticsTotal')
+                result['status'] = 'partial'
+                return result
+            result['total_count'] = total
+            for row in rows:
+                if (not isinstance(row, dict) or not isinstance(row.get('groupKey'), str)
+                        or type(row.get('count')) is not int or row['count'] < 0
+                        or row['groupKey'] in result['by_status']):
+                    self._issue('partial', 'InvalidStatisticsGroup')
+                    result['status'] = 'partial'
+                    return result
+                result['by_status'][row['groupKey']] = row['count']
+            following = page.get('nextToken')
+            if following is None or following == '':
+                if (sum(result['by_status'].values()) != total):
+                    self._issue('partial', 'StatisticsCountMismatch')
+                    result['status'] = 'partial'
+                else:
+                    result['status'] = 'complete'
+                return result
+            if (not isinstance(following, str) or not following
+                    or len(following) > MAX_TOKEN_LENGTH or following in seen):
+                self._issue('partial', 'StatisticsPaginationToken')
+                result['status'] = 'partial'
+                return result
+            seen.add(following)
+            token = following
+        self._issue('partial', 'StatisticsPageLimit')
+        result['status'] = 'partial'
+        return result

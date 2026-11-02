@@ -108,3 +108,105 @@ AWS source contracts:
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_ResourceState.html
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListCoverage.html
+
+## M10-E — scalable coverage and delegated-administrator visibility (2026-11-02)
+
+This opt-in enhancement retains the original `inspector2` service selection,
+the three preexisting rule IDs and the same read-only SDK boundaries. It does
+not collect Inspector vulnerability findings or retrieve customer payloads.
+The changes are additive to versioned JSON/SQLite reports.
+
+### Full Inspector inventory pagination
+
+- `inspector2:ListCoverage` requests 200 results per page, the documented
+  AWS maximum, and continues until AWS returns no `nextToken`. The safety
+  circuit breaker is now 2,500 pages / **500,000 records per selected
+  account and Region**, rather than 5 pages / 500 records. A safety limit,
+  bad page, duplicate, unexpected account, denied call or token loop produces
+  an explicit **partial** collection, never a verified empty inventory.
+- Preserve full `resourceId`, `accountId`, resource/scan types, status
+  reason code, last scan timestamp and available provider identifiers/Region.
+  Deliberately exclude sensitive raw `resourceMetadata` and vulnerability
+  finding bodies; this opt-in inventory does not request them separately.
+- `inspector2:ListCoverageStatistics` with the same account ID filter and
+  `groupBy=SCAN_STATUS_CODE` independently enumerates Inspector's count.
+  Per-Region `coverage_summary` records list completion, statistical
+  completeness, collected and reported totals, group counts and pagination.
+  A mismatch records `CoverageCountMismatch`. Missing statistics, failed
+  calls or pagination truncation make the summary partial.
+- **Important boundary:** comparison with `ListCoverageStatistics` verifies
+  consistency of **Inspector's own resource inventory only**, not coverage
+  of every AWS EC2/ECR/Lambda resource. `aws_resource_inventory_compared`
+  and `resource_applicability_verified` are explicitly `false`. Further
+  independent AWS inventory reconciliation is required before asserting
+  estate-wide coverage or compliance.
+
+### Regional delegated administrator and members
+
+- `inspector2:GetDelegatedAdminAccount` first identifies the delegated
+  administrator for the selected Region. Only when it matches the current
+  authenticated AWS account and has relationship status `ENABLED` do
+  additional admin-scoped requests occur.
+- `inspector2:ListMembers` uses `onlyAssociated=false` and paginates
+  all returned relationships (50/page, safety bound 1,000 pages / 50,000
+  members). Member accounts and relationship statuses remain unmasked,
+  including disassociated or disabled relationships. Denied, malformed,
+  repeated tokens, unexpected IDs or safety limits mark incomplete.
+- `inspector2:DescribeOrganizationConfiguration` records EC2/ECR/Lambda/
+  Lambda Code/Code Repository auto-enable settings and account-limit state.
+  `inspector2:BatchGetAccountStatus` queries listed member accounts in
+  chunks of at most 100, recording individual account and scan-type statuses,
+  and tracks failures/missing data as unknown rather than PASS.
+- `inspector2-member-account-disabled` is a new rule and fires only for
+  confirmed DISABLED/SUSPENDED member account statuses. The region's
+  `organization` record carries the observed member inventory, member
+  scan states, administrator role, and independent completeness flags.
+  Member IDs, relationships and diagnostic status codes remain available
+  in the report. The new HTML partial uses escaped Handlebars values.
+- **Organization boundary:** an Inspector member list is not automatically
+  the full AWS Organizations account roster. `organization_roster_verified`
+  stays `false`, and organization-region/account membership and eligibility
+  must be reconciled with AWS Organizations and current service scopes before
+  claiming organization-wide security coverage. A member account receives
+  `not_authorized_as_admin`, not a misleading zero-member success.
+
+The same Windows and Ubuntu guarded offline CI, Azure/GCP preservation,
+SDK Stubber pagination and negative tests, rule evidence, packaged wheel
+and offline/XSS checks are required before merge. No live AWS scan or
+credentialed cloud access was performed.
+
+API docs:
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListCoverage.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListCoverageStatistics.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_GetDelegatedAdminAccount.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListMembers.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_DescribeOrganizationConfiguration.html
+
+
+### Optional independent inventory reconciliation
+
+When the user explicitly selects `inspector2` together with other AWS
+services in **the same assessment**, M10-E also correlates already collected
+resource identifiers without issuing any extra AWS API requests:
+- `ec2`: EC2 instance IDs vs Inspector `AWS_EC2_INSTANCE` coverage.
+- `ecr`: repository ARNs vs `AWS_ECR_REPOSITORY` coverage.
+- `awslambda`: function ARNs vs `AWS_LAMBDA_FUNCTION` coverage.
+- `organizations`: active account IDs vs Inspector regional member accounts
+  and the delegated administrator ID, but only when both source inventories
+  are explicitly complete.
+
+The per-region `resource_reconciliation` section preserves the full
+identifiers not seen in Inspector, counts and explicit source scope.
+`comparison_verified=false` and `source_inventory_complete=false` remain
+until independent enumeration completeness and resource eligibility can
+actually be established. Missing coverage **does not** automatically prove a
+vulnerability: a resource might not be eligible for that Inspector scan type.
+The mismatch is reported as `ResourceInventoryGapUnverified`, not PASS.
+The organization report separates `organization_roster_compared`,
+`organization_roster_verified` and the full list
+`aws_org_accounts_missing_from_inspector_members`; a mismatch records
+`OrganizationRosterGap` and never claims organizational completeness.
+
+No code in the cross-service reconciliation requests credentials, AWS
+secrets, vulnerability findings or additional cloud API permissions.

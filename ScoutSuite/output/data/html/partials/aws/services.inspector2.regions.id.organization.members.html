@@ -1,0 +1,27 @@
+<!-- M10-E: all untrusted member metadata uses escaped Handlebars interpolation. -->
+<script id="services.inspector2.regions.id.organization.members.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <p>Account: <samp>{{account_id}}</samp></p>
+    <p>Delegated administrator: {{delegated_admin_account_id}}</p>
+    <p>Relationship: {{relationship_status}}</p>
+    <p>Account scan state: {{account_status}}</p>
+    <p>Relationship updated: {{updated_at}}</p>
+    <p>EC2 scanning: {{scan_types.ec2}}</p>
+    <p>ECR scanning: {{scan_types.ecr}}</p>
+    <p>Lambda scanning: {{scan_types.lambda}}</p>
+    <p>Lambda Code scanning: {{scan_types.lambdaCode}}</p>
+    <p>Code Repository scanning: {{scan_types.codeRepository}}</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.inspector2.regions.id.organization.members",
+    $("#services\\.inspector2\\.regions\\.id\\.organization\\.members\\.partial").html());
+</script>
+<script id="single_inspector2_member-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.inspector2.regions.id.organization.members' }}
+</script>
+<script>
+  var single_inspector2_member_template = Handlebars.compile(
+    $("#single_inspector2_member-template").html());
+</script>

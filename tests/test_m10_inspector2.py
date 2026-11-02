@@ -167,7 +167,7 @@ def test_partial_coverage_on_denied_second_page():
     ([{'coveredResources': [coverage('i-0123456789abcdef0', 'ACTIVE'), coverage('i-0123456789abcdef0', 'ACTIVE')]}],
      'DuplicateCoveredResource'),
     ([{'coveredResources': [coverage('i-0123456789abcdef0', 'ACTIVE')], 'nextToken': str(i)}
-      for i in range(MAX_PAGES)], 'CoveragePageLimit'),
+      for i in range(3)], 'CoveragePageLimit'),
     ([{'coveredResources': [coverage(str(i), 'ACTIVE') for i in range(PAGE_SIZE + 1)]}],
      'CoverageLimit'),
     ([{'coveredResources': [dict(coverage('i-0123456789abcdef0', 'ACTIVE'), accountId='111111111111')]}],
@@ -179,10 +179,11 @@ def test_malformed_bounded_and_cross_account_collections(pages, reason):
         sdk.list_coverage.side_effect = pages
         ctx = RunContext('aws').setup()
         try:
-            with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
+            with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk), \
+                 patch('ScoutSuite.providers.aws.facade.inspector2.MAX_PAGES', 3):
                 result = await Inspector2Facade(object(), ACCOUNT).get_coverage(REGION)
-            assert len(result) <= 500
-            assert sdk.list_coverage.call_count <= MAX_PAGES
+            assert len(result) <= 600
+            assert sdk.list_coverage.call_count <= 3
             assert any(x['reason_code'] == reason for x in ctx.collection_issues)
         finally:
             await ctx.aclose()

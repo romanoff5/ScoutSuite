@@ -212,7 +212,8 @@ def test_no_duplicate_colliding_inspector_names_and_safe_partial():
     assert names == {
         'inspector2-account-disabled.json',
         'inspector2-coverage-inactive.json',
-        'inspector2-scan-type-inactive.json'}
+        'inspector2-scan-type-inactive.json',
+        'inspector2-member-account-disabled.json'}
     html = (ROOT / 'ScoutSuite/output/data/html/partials/aws/'
             'services.inspector2.regions.id.accounts.html').read_text(encoding='utf-8')
     assert '{{scan_types.ec2.status}}' in html

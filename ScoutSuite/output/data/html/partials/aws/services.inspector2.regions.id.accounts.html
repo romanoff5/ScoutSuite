@@ -9,6 +9,13 @@
     <p>ECR: {{scan_types.ecr.status}}</p>
     <p>Lambda: {{scan_types.lambda.status}}</p>
     <p>Lambda code: {{scan_types.lambdaCode.status}}</p>
+    <p>Coverage enumeration: {{coverage_summary.status}}</p>
+    <p>Inspector records collected: {{coverage_summary.collected_records}}</p>
+    <p>Inspector API statistical total: {{coverage_summary.inspector_reported_records}}</p>
+    <p>Organization role: {{organization.role}}</p>
+    <p>Organization assessment: {{organization.status}}</p>
+    <p>Delegated administrator: {{organization.delegated_admin_account_id}}</p>
+    <p>Inspector member accounts: {{organization.members_count}}</p>
     <p>Code Repository: {{scan_types.codeRepository.status}}</p>
   </div>
 </script>
