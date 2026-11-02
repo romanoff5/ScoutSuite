@@ -1,0 +1,21 @@
+{
+    "description": "IAM Identity Center account assignment grants administrator-level permission-set policy",
+    "rationale": "A named user or group is assigned a permission set containing AWS AdministratorAccess or an explicit inline Allow Action '*'. The finding is a privileged-access candidate; it does not simulate permission boundaries, SCPs, session policies or IAM deny evaluation.",
+    "remediation": "Review the named principal, email, instance, permission set and target account. Replace administrator rights with task-specific permissions where feasible; verify effective controls and approval evidence.",
+    "references": [
+        "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_ListAccountAssignments.html",
+        "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_GetInlinePolicyForPermissionSet.html"
+    ],
+    "dashboard_name": "IAM Identity Center assignments",
+    "path": "identitycenter.regions.id.instances.id.permission_sets.id.assignments.id",
+    "conditions": [
+        "and",
+        [
+            "admin_candidate",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "AdminCandidate",
+    "evidence_policy": "identitycenter-admin-assignment-v1"
+}
