@@ -191,7 +191,7 @@ def test_evidence_and_rule_evaluation_no_false_clean(tmp_path):
         context.cleanup()
 
 
-def test_service_is_explicit_opt_in_and_html_safe():
+def test_guardduty_and_access_analyzer_default_and_html_safe():
     fake_config = lambda credentials: SimpleNamespace(
         credentials=credentials, iam={}, guardduty={}, accessanalyzer={}, s3={})
     credentials = SimpleNamespace(session=object())
@@ -200,8 +200,8 @@ def test_service_is_explicit_opt_in_and_html_safe():
          patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value='000000000000'):
         default = AWSProvider(credentials=credentials)
         chosen = AWSProvider(credentials=credentials, services=['guardduty'])
-    assert 'guardduty' not in default.service_list
-    assert 'accessanalyzer' not in default.service_list
+    assert 'guardduty' in default.service_list
+    assert 'accessanalyzer' in default.service_list
     assert chosen.service_list == ['guardduty']
     meta = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text(encoding='utf-8'))
     assert meta['security']['guardduty']['resources']['detectors']['path'] == (

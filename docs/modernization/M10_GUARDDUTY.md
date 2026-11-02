@@ -1,7 +1,7 @@
-# M10-B — GuardDuty detector inventory (opt-in)
+# M10-B — GuardDuty detector inventory (default AWS scan)
 
-A second standalone read-only AWS vertical slice. Explicit
-`--services guardduty` is required; the previous default scan remains unchanged.
+This read-only service participates in the normal AWS scan by default.
+Use `--skip-services guardduty` to exclude it.
 
 ## API/permission contract
 

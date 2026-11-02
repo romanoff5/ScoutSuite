@@ -299,9 +299,32 @@ cloud writes or live AWS assessments. Azure/GCP unchanged.
 ## M10-H — default ECR/ECS/EKS and deeper controls (2026-11-02)
 
 ECR, ECS and EKS are part of the ordinary AWS service selection. Other
-experimental M10 services remain opt-in. ECR now collects registry scanning
+experimental M10 services remained opt-in at that stage. ECR now collects registry scanning
 configuration; ECS enumerates up to 1,000 ACTIVE task definition revisions
 with a strictly sanitized report (no environment values or logging tokens);
 EKS evaluates `audit` control-plane logging from DescribeCluster.
 Collection failures stay explicit, and no resource modification is used.
 See M10_ECR.md, M10_ECS.md and M10_EKS.md for scope and limits.
+
+## M10-I — All integrated M10 services enabled by default (2026-11-02)
+
+Ordinary `scout aws` scans now include **all eight** integrated M10 services:
+`accessanalyzer`, `guardduty`, `securityhub`, `organizations`,
+`inspector2`, `ecr`, `ecs`, and `eks`. Removed the provider-level
+post-selection filter which previously disabled five of them.
+
+Normal service selection is still handled by `BaseProvider`:
+`--services` can restrict a scan to requested services; `--skip-services`
+can exclude any subset without affecting the others. Local/offline replay
+does not construct live provider facades or perform AWS SDK calls.
+
+**Operational note:** default AWS scans will issue the read-only API requests
+required by each selected M10 collector. IAM permissions/SCPs and AWS service
+availability may make a collection denied, unsupported, partial or
+not-applicable; missing evidence is never considered a successful security
+check. Organization and Inspector delegated-admin enumeration remain subject
+to their existing permission, scope and completeness gates. New default
+selection does not assert live-tested estate-wide coverage.
+
+No Azure/GCP collector modernization, new AWS write operations, vulnerability
+finding payload requests, or changes to configured collection caps.

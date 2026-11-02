@@ -1,11 +1,11 @@
 # M10-A — IAM Access Analyzer vertical slice
 
-This is an **opt-in first slice of M10**, not full AWS service coverage.
+This is a read-only M10 service included in the ordinary AWS scan by default; it does not constitute full AWS service coverage.
 
 ## Scope and risk boundaries
 
-Explicit `--services accessanalyzer` is required. Legacy default scans do not
-collect this service. Only `accessanalyzer:ListAnalyzers` is used; it does not fetch access findings, raw policy contents or secret values.
+The normal `scout aws` scan includes Access Analyzer. Use
+`--skip-services accessanalyzer` to exclude it. Only `accessanalyzer:ListAnalyzers` is used; it does not fetch access findings, raw policy contents or secret values.
 ListAnalyzers already returns metadata including tags, creation time and
 last-analyzed resource; all available diagnostic fields are now retained.
 Selected partition/regions use the existing SDK endpoint metadata and region
@@ -38,5 +38,5 @@ selected services such as Bedrock. Never advertise unimplemented support.
 ## Rollback
 
 Revert this slice's commits. No changes to customer resources or migrations
-are performed. Omitting `accessanalyzer` from the service selection restores
+are performed. Excluding `accessanalyzer` with `--skip-services` restores
 pre-slice AWS requests.

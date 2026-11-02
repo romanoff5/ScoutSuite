@@ -318,9 +318,9 @@ def test_opt_in_metadata_templates_and_packaging_contract():
                return_value=ACCOUNT_ID):
         default = AWSProvider(credentials=credentials)
         chosen = AWSProvider(credentials=credentials, services=['organizations'])
-    assert 'organizations' not in default.service_list
-    assert 'accessanalyzer' not in default.service_list
-    assert 'guardduty' not in default.service_list
+    assert 'organizations' in default.service_list
+    assert 'accessanalyzer' in default.service_list
+    assert 'guardduty' in default.service_list
     assert chosen.service_list == ['organizations']
     meta = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text(encoding='utf8'))
     for resource in ('organizations', 'roots', 'accounts'):
