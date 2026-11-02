@@ -4,8 +4,8 @@ Status: integrated M10-C slice; **M10 overall remains incomplete**.
 
 ## AWS API and permissions
 
-The new collector is **opt-in**: `--services organizations`. Other/default AWS
-scans make no new Organizations calls. Uses only:
+The collector participates in the default AWS scan. Use
+`--skip-services organizations` to exclude it. It uses only:
 
 - `organizations:DescribeOrganization` (any account in an organization)
 - `organizations:ListRoots` (management account or delegated administrator)

@@ -1,4 +1,4 @@
-# M10-G — EKS regional cluster inventory (opt-in)
+# M10-G — EKS regional cluster inventory (default AWS scan)
 
 EKS is included in the standard AWS scan without `--services`. The optional
 private-provider integration is preserved. No calls to
