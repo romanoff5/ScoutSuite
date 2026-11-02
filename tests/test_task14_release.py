@@ -97,7 +97,7 @@ def test_rc8_release_pins_installable_dependency_closure_and_runtime_hotfix():
     assert "70cf29d5579864543b6363e7a271a84216bb6837" in flow
     assert "merge-base --is-ancestor" in flow
     assert "fork-v5.14.0-m10-rc8" in flow
-    assert "dfdc5ebfc0688a3cdb7f79e004804d1eb001b784" in flow
+    assert "8c9f2d0dab2e11c17820c8dd0d6e9bebae37917c" in flow
     assert "fork-v5.14.0-m10-rc7" not in flow
     assert "409b07570b690cce67612e729718a6178a6d020a" in flow
     assert "fork-v5.14.0-m10-rc6" not in flow

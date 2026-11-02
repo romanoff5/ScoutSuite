@@ -57,12 +57,12 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse 409b07570b690cce67612e729718a6178a6d020a^{commit})" = "409b07570b690cce67612e729718a6178a6d020a"
           git merge-base --is-ancestor 409b07570b690cce67612e729718a6178a6d020a HEAD
-      - name: Ensure release SHA includes the RC8 disabled-service evidence fixes
+      - name: Ensure release SHA includes the RC8 disabled-service evidence and report status fixes
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse dfdc5ebfc0688a3cdb7f79e004804d1eb001b784^{commit})" = "dfdc5ebfc0688a3cdb7f79e004804d1eb001b784"
-          git merge-base --is-ancestor dfdc5ebfc0688a3cdb7f79e004804d1eb001b784 HEAD
+          test "$(git rev-parse 8c9f2d0dab2e11c17820c8dd0d6e9bebae37917c^{commit})" = "8c9f2d0dab2e11c17820c8dd0d6e9bebae37917c"
+          git merge-base --is-ancestor 8c9f2d0dab2e11c17820c8dd0d6e9bebae37917c HEAD
       - name: Build pinned fork wheel and source distribution
         shell: bash
         run: |

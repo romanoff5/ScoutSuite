@@ -27,6 +27,25 @@
   (other InvalidAccess/denials stay UNKNOWN, no finding IDs retained) pass
   both ways. Local guarded suite: 719 passed with the 4 known environmental
   failures; flake8 and `git diff --check` passed.
+- Visual review of the RC7 field HTML report (served read-only on
+  `127.0.0.1` in the desktop browser pane; all requests local, no CDN) found
+  that zero-flagged findings were drawn green regardless of
+  `assessment_status`: 24 findings marked incomplete in JSON and the Bedrock,
+  Macie, Organizations and Security Hub service icons looked passed. Commit
+  `8c9f2d0d` passes the assessment status / additive
+  `last_run.summary.<service>.incomplete_rules` count to `dashboard_color`
+  (incomplete -> unknown/grey), shows "Assessment status" and the
+  unknown-evidence count in finding details, and guards a pre-existing filter
+  click handler `TypeError`. A re-render of the saved RC7 results with these
+  templates (no AWS call) showed no green service with incomplete evidence, the
+  Good filter excluding them and no console errors. Node check added to the
+  `tools/verify_report_xss.py` CI gate; Azure/GCP findings without an
+  assessment status keep previous colours. The release anchor moved to
+  `8c9f2d0d`.
+- Not addressed: service-scoped `RuleEvidenceUnknown` issues mark every later
+  rule of that service incomplete (19 EC2 rules in the field report, driven by
+  the by-design Inspector2 UNKNOWN); the report now shows that honestly, but
+  the propagation scope itself is unchanged.
 - RC8 installs in `.venv-scout-fork-rc8`; `ForkRc7` is added as a rollback
   mode. Release notes state the expected RC7 -> RC8 field delta.
 
