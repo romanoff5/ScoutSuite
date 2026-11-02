@@ -1,0 +1,20 @@
+{
+    "description": "SSM Patch Manager scan is absent, old or unverified",
+    "rationale": "No Scan operation with a completed timestamp in the past seven days is reported. An Install operation or an old zero-missing count is not evidence of a recent patch assessment.",
+    "remediation": "Run AWS-RunPatchBaseline with Operation=Scan and verify command success, coverage and compliance timestamps.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-reports.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "scan_unverified",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "ScanUnverified",
+    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+}

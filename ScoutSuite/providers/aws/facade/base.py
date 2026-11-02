@@ -10,6 +10,7 @@ from ScoutSuite.providers.aws.facade.inspector2 import Inspector2Facade
 from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
 from ScoutSuite.providers.aws.facade.wafv2 import WAFv2PublicFacade
 from ScoutSuite.providers.aws.facade.networkfirewall import NetworkFirewallFacade
+from ScoutSuite.providers.aws.facade.ssm_public import SSMPublicFacade
 from ScoutSuite.providers.aws.facade.backup import BackupPublicFacade
 from ScoutSuite.providers.aws.facade.identitycenter import IdentityCenterFacade
 from ScoutSuite.providers.aws.facade.organizations import OrganizationsFacade
@@ -67,10 +68,6 @@ except ImportError:
     pass
 try:
     from ScoutSuite.providers.aws.facade.guardduty_private import GuardDutyFacade
-except ImportError:
-    pass
-try:
-    from ScoutSuite.providers.aws.facade.ssm_private import SSMFacade
 except ImportError:
     pass
 
@@ -197,6 +194,7 @@ class AWSFacade(AWSBaseFacade):
         self.wafv2 = WAFv2PublicFacade(self.session, self.owner_id)
         self.backup = BackupPublicFacade(self.session, self.owner_id)
         self.networkfirewall = NetworkFirewallFacade(self.session, self.owner_id)
+        self.ssm = SSMPublicFacade(self.session)
         self.identitycenter = IdentityCenterFacade(self.session, self.owner_id)
         self.organizations = OrganizationsFacade(self.session, self.partition)
 
@@ -223,9 +221,5 @@ class AWSFacade(AWSBaseFacade):
             pass
         try:
             self.guardduty = GuardDutyFacade(self.session)
-        except NameError:
-            pass
-        try:
-            self.ssm = SSMFacade(self.session)
         except NameError:
             pass

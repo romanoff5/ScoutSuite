@@ -1,0 +1,57 @@
+<!-- M10-O: fully escaped offline Handlebars evidence; no raw HTML values. -->
+<script id="services.ssm.regions.id.managed_nodes.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Managed node and patch evidence</h4>
+    <ul>
+      <li>Instance ID: <samp>{{instance_id}}</samp>; AWS Region: {{region}}</li>
+      <li>EC2 state: {{ec2_state}}; EC2 type: {{instance_type}}</li>
+      <li>Private IP: {{private_ip_address}}</li>
+      <li>SSM managed: {{ssm_managed}}; agent ping: {{ping_status}}</li>
+      <li>Last agent ping: {{last_ping_at}}</li>
+      <li>Assessment: {{patch_assessment}}</li>
+      <li>Last reported scan: {{last_reported_scan_at}}</li>
+      <li>Last confirmed successful Scan (Run Command): {{last_successful_scan_at}}</li>
+      <li>Successful Scan corroborated: {{successful_scan_confirmed}}</li>
+      <li>Command history complete: {{scan_command_history_complete}}</li>
+      <li>Last patch operation: {{last_patch_operation_at}}</li>
+      <li>Scan age in days: {{scan_age_days}}; scan fresh: {{scan_fresh}}</li>
+      <li>Patch counts evidence complete: {{compliance_evidence_complete}}</li>
+      <li>Patch baseline: <samp>{{patch_baseline_id}}</samp></li>
+      <li>Patch group: {{patch_group}}</li>
+    </ul>
+    <h4>Reported patch counts</h4>
+    <ul>
+      <li>Missing: {{patch_state.MissingCount}}; failed: {{patch_state.FailedCount}}</li>
+      <li>Critical noncompliant: {{patch_state.CriticalNonCompliantCount}}</li>
+      <li>Security noncompliant: {{patch_state.SecurityNonCompliantCount}}</li>
+      <li>Other noncompliant: {{patch_state.OtherNonCompliantCount}}</li>
+      <li>Pending reboot: {{patch_state.InstalledPendingRebootCount}}</li>
+      <li>Rejected: {{patch_state.InstalledRejectedCount}}</li>
+      <li>Available security updates: {{patch_state.AvailableSecurityUpdateCount}}</li>
+      <li>Reported operation: {{patch_state.Operation}}</li>
+      <li>Operation start: {{patch_state.OperationStartTime}}</li>
+      <li>Operation end: {{patch_state.OperationEndTime}}</li>
+    </ul>
+    <h4>Missing/failed security and other patches</h4>
+    <p>Patch details inventory complete: {{missing_patches_collection_complete}}</p>
+    {{#each missing_patches}}
+    <ul>
+      <li>{{Title}}</li><li>KB: {{KBId}}; CVE: {{CVEIds}}</li>
+      <li>Classification: {{Classification}}; severity: {{Severity}}; state: {{State}}</li>
+    </ul>
+    {{/each}}
+    <p>Classification is platform-specific; use AWS noncompliant counters for authoritative severity.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions.id.managed_nodes",
+    $("#services\\.ssm\\.regions\\.id\\.managed_nodes\\.partial").html());
+</script>
+<script id="single_ssm_managed_nodes-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions.id.managed_nodes' }}
+</script>
+<script>
+  var single_ssm_managed_nodes_template = Handlebars.compile(
+    $("#single_ssm_managed_nodes-template").html());
+</script>

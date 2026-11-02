@@ -1428,6 +1428,36 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ssm-running-ec2-unmanaged.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-managed-node-offline.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-managed-node-scan-unverified.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-managed-node-security-noncompliant.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "ssm-managed-node-missing-patches.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

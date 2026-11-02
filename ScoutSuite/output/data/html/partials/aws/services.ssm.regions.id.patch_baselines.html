@@ -1,0 +1,30 @@
+<!-- M10-O: fully escaped offline Handlebars evidence; no raw HTML values. -->
+<script id="services.ssm.regions.id.patch_baselines.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Patch baseline</h4>
+    <ul>
+      <li>Baseline ID: <samp>{{BaselineId}}</samp>; operating system: {{OperatingSystem}}</li>
+      <li>Default baseline: {{DefaultBaseline}}; description: {{BaselineDescription}}</li>
+      <li>Details retrieved: {{detail_complete}}</li>
+      <li>Approval compliance level: {{detail.ApprovedPatchesComplianceLevel}}</li>
+      <li>Approved patches: {{#each detail.ApprovedPatches}}<samp>{{this}}</samp> {{/each}}</li>
+      <li>Rejected patches: {{#each detail.RejectedPatches}}<samp>{{this}}</samp> {{/each}}</li>
+      <li>Rejected patches action: {{detail.RejectedPatchesAction}}</li>
+      <li>Critical approval rules: {{#each detail.ApprovalRules.PatchRules}}
+        <p>{{ApproveAfterDays}} / {{ApproveUntilDate}} / {{ComplianceLevel}}</p>
+        {{/each}}</li>
+    </ul>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions.id.patch_baselines",
+    $("#services\\.ssm\\.regions\\.id\\.patch_baselines\\.partial").html());
+</script>
+<script id="single_ssm_patch_baselines-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions.id.patch_baselines' }}
+</script>
+<script>
+  var single_ssm_patch_baselines_template = Handlebars.compile(
+    $("#single_ssm_patch_baselines-template").html());
+</script>
