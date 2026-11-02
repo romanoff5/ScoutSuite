@@ -1,10 +1,9 @@
 # M10-D — Amazon Inspector2 read-only vertical slice
 
 Implementation: `modernization/m10d-inspector2-vertical-slice-20261102`.
-This is an **opt-in** inventory and status check, not a full Inspector service
-assessment and not a vulnerability scan. `--services inspector2` is required.
-Existing default services, Azure and GCP collectors, and old report IDs are
-unchanged.
+This inventory and status check is included in ordinary AWS scans, but is
+not a complete Inspector service assessment or a vulnerability scan.
+Azure/GCP collectors and existing report IDs remain unchanged.
 
 ## API and permission contract
 
@@ -17,7 +16,7 @@ The scanner uses **only** these Inspector2 API actions:
 
 Existing region discovery may require `ec2:DescribeRegions`. The installed
 boto3/botocore model supplies supported endpoints for the selected AWS
-partition, and existing Region opt-in handling applies. No account discovery
+partition, and existing explicit Region selection still applies. No account discovery
 from an organization, no delegated admin inference, no `ListFindings`, no
 vulnerability details, no raw resource metadata, no error messages, no AWS
 writes, no enable/disable/scan-trigger actions. Collection runs through the
@@ -38,8 +37,8 @@ existing run-scoped executor and throttler.
 - The rules attach versioned, non-certifying evidence summaries using the
   existing M04/M08 evidence classifier contract. Partial, AccessDenied,
   unsupported, bad pagination and result caps are recorded as collection issues.
-  The static default ruleset adds these definitions but never executes them
-  unless `inspector2` was explicitly selected.
+  The static default ruleset evaluates these definitions when Inspector2 is
+  in scope, including in the ordinary AWS scan.
 
 ## Validation
 
@@ -58,7 +57,7 @@ and dedicated account/resource-state checks only with new scoped tests.
 ## Rollback
 
 Revert the M10-D commits and related fixture changes; no migrations or
-cloud resource modifications are involved. Omit `inspector2` from selected
+cloud resource modifications are involved. Exclude `inspector2` from selected
 services to restore pre-slice AWS calls.
 
 
@@ -101,7 +100,7 @@ behavior is incorporated with tests for SDK stub contract, missing
 EC2/ECR, optional UNKNOWN, failedAccounts, preserved data shapes,
 independent scan-type finding, existing coverage finding, and XSS-safe
 renderer. All five categories are potential scan capabilities rather
-than a guarantee of workload applicability. This remains opt-in,
+than a guarantee of workload applicability. This is enabled by default,
 read-only and restricted to the current AWS account.
 
 AWS source contracts:
@@ -111,7 +110,7 @@ AWS source contracts:
 
 ## M10-E — scalable coverage and delegated-administrator visibility (2026-11-02)
 
-This opt-in enhancement retains the original `inspector2` service selection,
+This enhancement retains explicit `inspector2` service selection support,
 the three preexisting rule IDs and the same read-only SDK boundaries. It does
 not collect Inspector vulnerability findings or retrieve customer payloads.
 The changes are additive to versioned JSON/SQLite reports.
@@ -127,7 +126,7 @@ The changes are additive to versioned JSON/SQLite reports.
 - Preserve full `resourceId`, `accountId`, resource/scan types, status
   reason code, last scan timestamp and available provider identifiers/Region.
   Deliberately exclude sensitive raw `resourceMetadata` and vulnerability
-  finding bodies; this opt-in inventory does not request them separately.
+  finding bodies; this inventory does not request them separately.
 - `inspector2:ListCoverageStatistics` with the same account ID filter and
   `groupBy=SCAN_STATUS_CODE` independently enumerates Inspector's count.
   Per-Region `coverage_summary` records list completion, statistical

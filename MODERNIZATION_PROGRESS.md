@@ -315,3 +315,20 @@ See M10_ECR.md, M10_ECS.md and M10_EKS.md for scope and limits.
 - Detailed breakdown and phased follow-up for the 156 third-party warnings: `docs/modernization/CI_WARNING_AUDIT_2026-11-02.md`; eliminating them requires separate, tested SDK/provider compatibility migration, not silencing deprecations or weakening tests.
 - Source branch `maintenance/m10-ci-deprecation-warning-cleanup-20261102` passed both systems; reconciled parallel M10-H AWS changes in two-parent merge `21cd77c479248059675d70f81bbdbf7f2dd16656`, preserving both histories. [Integrated Offline CI #41413294264](https://github.com/romanoff5/ScoutSuite/actions/runs/41413294264): **461 passed, 156 warnings, 34 subtests passed** per OS, lint, XSS/browser and packaging gates passed. **Zero first-party warnings**, explicit 156-vendor ceiling enforced. Fast-forward merged and remotely verified `master`.
 - No production/cloud credentials, live scans, external assessment artifacts, Azure/GCP modernization, vendor SDK monkeypatching, warning suppression or disabled tests.
+
+## M10 default AWS selection — 2026-11-02
+
+**All eight implemented M10 AWS services are included in standard `scout aws` scans**:
+`accessanalyzer`, `guardduty`, `securityhub`, `organizations`,
+`inspector2`, `ecr`, `ecs`, and `eks`. This supersedes earlier
+opt-in-only implementation notes. The public CLI/API still supports explicit
+service selection and skipped services; no new service must be separately
+selected merely to run its existing rules. Keep all service registrations,
+metadata, default rule definitions and output schemas intact.
+
+If API permissions are absent, an AWS account is not an Organizations
+management/delegated administrator, or a regional API is unsupported, the
+result must be explicitly denied/unsupported/partial/unknown; never turn
+these cases into clean findings or disable collection silently. Read-only
+scoping and collection limits remain unchanged. No new cloud writes, Azure/GCP
+modernization or changes to local report replay are introduced.

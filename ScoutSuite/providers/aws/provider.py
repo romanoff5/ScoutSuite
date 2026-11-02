@@ -53,11 +53,8 @@ class AWSProvider(BaseProvider):
 
         super().__init__(report_dir, timestamp,
                                           services, skipped_services, result_format)
-        # Other M10 services remain opt-in; ECR/ECS/EKS run in normal AWS scans.
-        if not services:
-            for new_service in ('accessanalyzer', 'guardduty', 'securityhub', 'organizations', 'inspector2'):
-                if new_service in self.service_list:
-                    self.service_list.remove(new_service)
+        # All implemented AWS services, including M10, participate in ordinary
+        # scans. BaseProvider handles explicit service selection and exclusions.
 
     def get_report_name(self):
         """

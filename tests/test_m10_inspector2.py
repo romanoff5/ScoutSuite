@@ -241,7 +241,7 @@ def test_rule_engine_flag_and_incomplete_evidence(tmp_path):
         ctx.cleanup()
 
 
-def test_opt_in_and_escaped_report_assets():
+def test_default_selection_and_escaped_report_assets():
     credential = SimpleNamespace(session=object())
     def fake(credentials):
         return SimpleNamespace(credentials=credentials, inspector2={},
@@ -251,7 +251,7 @@ def test_opt_in_and_escaped_report_assets():
          patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value=ACCOUNT):
         default = AWSProvider(credentials=credential)
         chosen = AWSProvider(credentials=credential, services=['inspector2'])
-    assert 'inspector2' not in default.service_list
+    assert 'inspector2' in default.service_list
     assert chosen.service_list == ['inspector2']
     md = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text(encoding='utf-8'))
     assert md['security']['inspector2']['resources']['coverage']['path'] == (
