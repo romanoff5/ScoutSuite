@@ -72,26 +72,9 @@ def python_at(root, name):
 
 
 
-# Exact warning debt for pinned legacy Azure/GCP distributions.
-# Warnings remain visible; do not use filterwarnings to silence them.
-# Every unrecognized warning, including first-party warnings, fails CI.
-# Remove entries only after an independently validated SDK migration.
-LEGACY_VENDOR_WARNING_BUDGET = {
-    'azure/mgmt/sql/models/_models_py3.py:DeprecationWarning': 2,
-    'google/cloud/kms_v1/gapic/enums.py:DeprecationWarning': 4,
-    'google/cloud/kms_v1/gapic/key_management_service_client.py:DeprecationWarning': 4,
-    'google/cloud/kms_v1/gapic/key_management_service_client.py:UserWarning': 1,
-    'google/cloud/kms_v1/gapic/transports/key_management_service_grpc_transport.py:DeprecationWarning': 2,
-    'google/cloud/kms_v1/proto/resources_pb2.py:DeprecationWarning': 104,
-    'google/cloud/kms_v1/proto/service_pb2.py:DeprecationWarning': 12,
-    'google/cloud/monitoring_v3/gapic/enums.py:DeprecationWarning': 1,
-    'google/cloud/monitoring_v3/gapic/service_monitoring_service_client.py:DeprecationWarning': 4,
-    'google/cloud/monitoring_v3/gapic/transports/service_monitoring_service_grpc_transport.py:DeprecationWarning': 2,
-    'google/cloud/monitoring_v3/proto/notification_pb2.py:DeprecationWarning': 1,
-    'google/cloud/monitoring_v3/proto/service_pb2.py:DeprecationWarning': 3,
-    'google/cloud/monitoring_v3/proto/service_service_pb2.py:DeprecationWarning': 6,
-    'pkg_resources/__init__.py:DeprecationWarning': 10,
-}
+# M11 zero-warning gate: no first-party or third-party warning is allowed.
+# Warnings remain visible; do not suppress or filter any warning category.
+LEGACY_VENDOR_WARNING_BUDGET = {}
 
 
 def verify_warning_debt(warnings):
