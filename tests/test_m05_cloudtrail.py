@@ -1,5 +1,7 @@
 """M05-D CloudTrail selectors, home regions and UTC freshness (offline)."""
 import asyncio
+import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from unittest import TestCase
 from unittest.mock import Mock, patch
@@ -134,3 +136,15 @@ class TestCloudTrailSelectors(TestCase):
         self.assertFalse(Trails.is_fresh({
             'LatestCloudWatchLogsDeliveryTime': now + timedelta(seconds=1)
         }, now=now))
+
+
+def test_trail_absence_rationale_does_not_claim_all_api_logs_are_absent():
+    path = Path(__file__).resolve().parents[1] / (
+        'ScoutSuite/providers/aws/rules/findings/cloudtrail-not-configured.json')
+    definition = json.loads(path.read_text(encoding='utf-8'))
+    assert definition['path'] == 'cloudtrail.regions.id'
+    assert definition['conditions'] == ['and', ['trails_count', 'equal', '0']]
+    assert 'Event History' in definition['rationale']
+    assert 'organization' in definition['rationale'].lower()
+    assert 'verify' in definition['remediation'].lower()
+    assert 'API activity is not logged' not in definition['rationale']
