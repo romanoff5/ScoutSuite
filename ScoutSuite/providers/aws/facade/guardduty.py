@@ -10,8 +10,8 @@ from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
 
-MAX_PAGES = 5
-MAX_DETECTORS = 100
+MAX_PAGES = 1000
+MAX_DETECTORS = 50000
 
 
 class GuardDutyPublicFacade(AWSBaseFacade):
@@ -102,5 +102,11 @@ class GuardDutyPublicFacade(AWSBaseFacade):
                 'detector_id': detector_id,
                 'status': response['Status'],
                 'finding_publishing_frequency': response.get('FindingPublishingFrequency'),
+                'created_at': response.get('CreatedAt'),
+                'updated_at': response.get('UpdatedAt'),
+                'service_role': response.get('ServiceRole'),
+                'features': response.get('Features') or [],
+                'data_sources': response.get('DataSources') or {},
+                'tags': response.get('Tags') or {},
             })
         return results
