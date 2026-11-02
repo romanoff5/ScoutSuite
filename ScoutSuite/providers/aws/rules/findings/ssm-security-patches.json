@@ -1,0 +1,21 @@
+{
+    "description": "SSM reports security non-compliant patches",
+    "rationale": "SSM reported security non-compliant patches in its last patch state; this count may overlap critical patches and must not be added to the critical count.",
+    "remediation": "Assess reported missing security updates, verify baseline approval, remediate and confirm by a fresh successful scan.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-states.html",
+        "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeInstancePatchStates.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "missing_security_patch_count",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "ssm-security-patches",
+    "evidence_policy": "ssm-security-noncompliant-v1"
+}
