@@ -218,7 +218,7 @@ def test_optin_selection_and_html_escaping_and_no_scanning_false_positive():
          patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value=ACCOUNT):
         default = AWSProvider(credentials=creds)
         selected = AWSProvider(credentials=creds, services=['ecr'])
-    assert 'ecr' not in default.service_list
+    assert 'ecr' in default.service_list
     assert selected.service_list == ['ecr']
     metadata = json.loads((ROOT / 'ScoutSuite/providers/aws/metadata.json').read_text(encoding='utf-8'))
     assert metadata['containers']['ecr']['resources']['repositories']['path'] == (

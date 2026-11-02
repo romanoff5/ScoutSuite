@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import boto3
 from botocore.stub import Stubber
@@ -113,7 +113,7 @@ def test_ecs_task_definition_stubber_and_no_environment_secrets_in_output():
             collection = TaskDefinitions(SimpleNamespace(), REGION)
             # Normalized output is intentionally not a copy of the AWS response.
             collection.facade = SimpleNamespace(
-                ecs=SimpleNamespace(get_task_definitions=return_rows(rows)))
+                ecs=SimpleNamespace(get_task_definitions=AsyncMock(return_value=rows)))
             await collection.fetch_all()
             resource = next(iter(collection.values()))
             data = json.dumps(resource)
@@ -128,9 +128,6 @@ def test_ecs_task_definition_stubber_and_no_environment_secrets_in_output():
             sdk.close()
     asyncio.run(run())
 
-
-async def return_rows(rows):
-    return rows
 
 
 def test_ecs_task_definition_denied_and_partial_list():
