@@ -10,7 +10,7 @@ from wsgiref.util import setup_testing_defaults
 import cherrypy
 from sqlitedict import SqliteDict
 
-from ScoutSuite.core.server import Server
+from ScoutSuite.core.server import Server, MAX_RESPONSE_BYTES
 
 
 def _request(app, path, query='', host='127.0.0.1:8000', origin=None):
@@ -144,7 +144,7 @@ def test_paginated_sqlite_http_preserves_scalars_and_bounds_nested_data(tmp_path
         assert len(large_meta['keys']) == 100
         assert len(json.dumps(large_meta)) < 4000
 
-        # Invalid pagination and cross-origin checks remain effective.
+        # A genuinely oversized SQLite value must not escape through /full.\n        oversized = _request(app, '/full', query=urlencode({'key': 'oversized'}))\n        assert oversized['status'] == 413\n        oversized_page = _request(app, '/page', query=urlencode(\n            {'key': 'oversized', 'page': 0, 'pagesize': 1}))\n        assert oversized_page['status'] == 413\n        header = _request(app, '/data', query=urlencode({'key': 'oversized'}))\n        assert header['status'] == 200\n        assert json.loads(header['body'])['data']['keys'] == ['payload']\n\n        # Invalid pagination and cross-origin checks remain effective.
         bad = _request(app, '/page',
                        query=urlencode({'key': 'resources', 'page': '-1', 'pagesize': 20}))
         assert bad['status'] == 400
