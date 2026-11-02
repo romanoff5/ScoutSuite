@@ -385,6 +385,9 @@ def classify_inspector2_coverage(resource):
 
 CLASSIFIERS = {
     'inspector2-account-state-v1': classify_inspector2_account,
+    # Account and individual scan enrollment share the same AWS state model.
+    # Reuse one classifier instead of duplicating semantics.
+    'inspector2-scan-type-state-v1': classify_inspector2_account,
     'inspector2-coverage-state-v1': classify_inspector2_coverage,
     'organizations-features-v1': classify_organizations_features,
     'organizations-root-scp-v1': classify_organizations_scp,
