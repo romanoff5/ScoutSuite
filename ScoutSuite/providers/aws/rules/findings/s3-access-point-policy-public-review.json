@@ -1,0 +1,19 @@
+{
+    "description": "S3 Access Point policy is classified public",
+    "rationale": "Evidence-only review candidate. Effective access is not established by this one control-plane signal; UNKNOWN or denied API responses do not match.",
+    "remediation": "Inspect the access point policy, account and bucket Block Public Access, network origin, ownership and SCP/RCP; remediate public access only if not intentional.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points.html"
+    ],
+    "dashboard_name": "S3 advanced",
+    "path": "s3.advanced.regions.id.access_points.id",
+    "conditions": [
+        "and",
+        [
+            "public_policy_review",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "public_policy_review"
+}

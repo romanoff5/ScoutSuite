@@ -18,6 +18,10 @@ class S3(AWSCompositeResources):
         self.facade.s3.regions = kwargs.get('regions')
         self['public_access_block_configuration'] = self.facade.s3.get_s3_public_access_block(self.facade.owner_id)
         await self._fetch_children(self)
+        self['advanced'] = await self.facade.s3_advanced.collect(
+            self.facade, regions=kwargs.get('regions'),
+            excluded_regions=kwargs.get('excluded_regions'),
+            partition_name=partition_name)
 
     async def finalize(self):
         account = self.get('public_access_block_configuration')
