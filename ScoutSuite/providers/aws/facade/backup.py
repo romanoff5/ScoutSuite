@@ -229,7 +229,7 @@ class BackupPublicFacade(AWSBaseFacade):
                     self.issue('partial', 'InvalidBackupSelectionIdentity')
                     selection_complete = False
                     discovery_complete = False
-                continue
+                    continue
                 selection_ids.add(selection_id)
                 try:
                     item = await run_concurrently(
@@ -239,14 +239,14 @@ class BackupPublicFacade(AWSBaseFacade):
                     self.failure('GetBackupSelection', error, partial=True)
                     selection_complete = False
                     discovery_complete = False
-                continue
+                    continue
                 if (not isinstance(item, dict) or item.get('BackupPlanId') != identifier
                         or item.get('SelectionId') != selection_id
                         or not isinstance(item.get('BackupSelection'), dict)):
                     self.issue('partial', 'MismatchedBackupSelectionDetail')
                     selection_complete = False
                     discovery_complete = False
-                continue
+                    continue
                 details.append(json_safe(item))
             result.append({
                 'selections': details, 'selection_collection_complete': selection_complete,
