@@ -4,7 +4,7 @@ A blank or old Patch Manager state is not evidence of patched EC2 hosts.
 All inventory calls are bounded and report incomplete AWS API results.
 """
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from botocore.exceptions import ClientError
 from ScoutSuite.core.run_context import get_current_run_context
@@ -52,6 +52,10 @@ def assessment(node, now=None):
     last = as_datetime(patch.get('OperationEndTime'))
     is_scan = patch.get('Operation') == 'Scan'
     age = (now - last).total_seconds() / 86400 if last else None
+    successful = as_datetime(node.get('last_successful_scan_at'))
+    success_age = (now - successful).total_seconds() / 86400 if successful else None
+    confirmed = bool(node.get('successful_scan_confirmed') is True
+                     and success_age is not None and 0 <= success_age <= SCAN_MAX_AGE_DAYS)
     recent = bool(is_scan and age is not None and 0 <= age <= SCAN_MAX_AGE_DAYS)
     counts = ('MissingCount', 'FailedCount', 'InstalledPendingRebootCount',
               'InstalledRejectedCount', 'CriticalNonCompliantCount',
@@ -68,14 +72,14 @@ def assessment(node, now=None):
     node['scan_age_days'] = round(age, 2) if is_scan and age is not None else None
     node['scan_fresh'] = recent
     node['scan_stale'] = bool(is_scan and age is not None and age > SCAN_MAX_AGE_DAYS)
-    node['scan_unverified'] = managed and not recent
+    node['scan_unverified'] = managed and not (recent and confirmed)
     node['agent_not_online'] = managed and ping != 'Online'
     node['security_noncompliant'] = critical
     node['missing_or_failed_patches'] = bool(bad)
     node['unmanaged_running_ec2'] = (node.get('ec2_state') == 'running'
                                      and node.get('ssm_managed') is False)
     node['compliance_evidence_complete'] = bool(
-        online and recent and known and node.get('patch_state_observed') is True)
+        online and recent and confirmed and known and node.get('patch_state_observed') is True)
     if node['unmanaged_running_ec2']:
         node['patch_assessment'] = 'unmanaged_running_ec2'
     elif not managed:
@@ -175,6 +179,69 @@ class SSMPublicFacade(AWSBaseFacade):
         # A successful API response can contain no state for a managed node:
         # this means no collected scan result, not patch compliance.
         return results, complete
+
+
+    async def successful_scan_commands(self, client, managed_ids):
+        """Corroborate Scan via successful per-node Run Command invocations.
+
+        Lack of accessible command history is unknown, not a clean scan. Scan
+        histories in other mechanisms/accounts can be outside these APIs.
+        """
+        if not managed_ids:
+            return {}, True
+        since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        commands, complete = await self.pages(
+            client, 'list_commands', 'Commands',
+            Filters=[{'key': 'DocumentName', 'value': 'AWS-RunPatchBaseline'},
+                     {'key': 'InvokedAfter', 'value': since}])
+        eligible = []
+        for command in commands:
+            operation = (command.get('Parameters') or {}).get('Operation')
+            if (command.get('DocumentName') == 'AWS-RunPatchBaseline'
+                    and operation == ['Scan']
+                    and isinstance(command.get('CommandId'), str)):
+                eligible.append(command['CommandId'])
+        observed = {}
+        selected_ids = set(managed_ids)
+        async def get_invocations(cid):
+            rows, ok = await self.pages(
+                client, 'list_command_invocations', 'CommandInvocations',
+                CommandId=cid, Details=True)
+            return cid, rows, ok
+
+        # Fixed-size fan-out: never launch a task for every command at once.
+        for start in range(0, len(eligible), 8):
+            batch = await asyncio.gather(*(
+                get_invocations(cid) for cid in eligible[start:start + 8]))
+            for cid, invocations, ok in batch:
+                complete = complete and ok
+                for invocation in invocations:
+                    rid = invocation.get('InstanceId')
+                    if rid not in selected_ids:
+                        continue
+                    if (invocation.get('CommandId') != cid
+                            or invocation.get('DocumentName') not in
+                            (None, 'AWS-RunPatchBaseline')):
+                        self.issue('partial', 'MismatchedScanInvocation')
+                        complete = False
+                        continue
+                    if (invocation.get('Status') != 'Success'
+                            or invocation.get('StatusDetails') not in
+                            (None, 'Success')):
+                        continue
+                    plugins = invocation.get('CommandPlugins') or []
+                    times = [as_datetime(item.get('ResponseFinishDateTime'))
+                             for item in plugins if isinstance(item, dict)
+                             and item.get('Status') == 'Success']
+                    finished = max((t for t in times if t is not None),
+                                   default=None)
+                    if finished is None:
+                        # No completion timestamp: do not fabricate one from
+                        # RequestedDateTime (which precedes the execution).
+                        continue
+                    if rid not in observed or finished > observed[rid]:
+                        observed[rid] = finished
+        return {rid: timestamp.isoformat() for rid, timestamp in observed.items()}, complete
 
     async def patch_details(self, client, node):
         state = node.get('patch_state') or {}
@@ -302,7 +369,9 @@ class SSMPublicFacade(AWSBaseFacade):
                     'private_ip_address': entry.get('PrivateIpAddress'),
                     'instance_type': entry.get('InstanceType')})
 
-        states, states_ok = await self.patch_states(ssm, managed_ids)
+        (states, states_ok), (successful_scans, commands_ok) = await asyncio.gather(
+            self.patch_states(ssm, managed_ids),
+            self.successful_scan_commands(ssm, managed_ids))
         for rid, record in states.items():
             nodes[rid]['patch_state'] = json_safe(record)
             nodes[rid]['patch_state_observed'] = True
@@ -316,6 +385,10 @@ class SSMPublicFacade(AWSBaseFacade):
                     del nodes[rid]
 
         for node in nodes.values():
+            rid = node['instance_id']
+            node['last_successful_scan_at'] = successful_scans.get(rid)
+            node['successful_scan_confirmed'] = rid in successful_scans
+            node['scan_command_history_complete'] = commands_ok
             assessment(node)
         # Query patch details for noncompliant nodes only, with bounded fanout.
         for start in range(0, len(managed_ids), 8):
@@ -328,7 +401,7 @@ class SSMPublicFacade(AWSBaseFacade):
             'collection': {
                 'managed_nodes': managed_ok, 'ec2': ec2_ok,
                 'patch_states': states_ok, 'patch_baselines': baseline_ok,
-                'patch_groups': groups_ok},
+                'patch_groups': groups_ok, 'scan_command_history': commands_ok},
             'ec2_comparison_complete': comparison,
             'scan_freshness_days': SCAN_MAX_AGE_DAYS,
             'scan_success_independently_verified': False,
