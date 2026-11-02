@@ -3,6 +3,7 @@ from ScoutSuite.providers.aws.resources.accessanalyzer.base import AccessAnalyze
 from ScoutSuite.providers.aws.resources.guardduty.base import GuardDutyPublic
 from ScoutSuite.providers.aws.resources.ecr_public.base import ECRPublic
 from ScoutSuite.providers.aws.resources.ecs_public.base import ECSPublic
+from ScoutSuite.providers.aws.resources.eks_public.base import EKSPublic
 from ScoutSuite.providers.aws.resources.inspector2.base import Inspector2
 from ScoutSuite.providers.aws.resources.securityhub.base import SecurityHubPublic
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
@@ -127,6 +128,7 @@ class AWSServicesConfig(BaseServicesConfig):
         self.guardduty = GuardDutyPublic(facade)
         self.ecr = ECRPublic(facade)
         self.ecs = ECSPublic(facade)
+        self.eks = EKSPublic(facade)
         self.inspector2 = Inspector2(facade)
         self.securityhub = SecurityHubPublic(facade)
         self.organizations = Organizations(facade)

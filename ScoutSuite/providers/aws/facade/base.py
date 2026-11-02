@@ -5,6 +5,7 @@ from ScoutSuite.providers.aws.facade.accessanalyzer import AccessAnalyzerFacade
 from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade
 from ScoutSuite.providers.aws.facade.ecr_public import ECRPublicFacade
 from ScoutSuite.providers.aws.facade.ecs_public import ECSPublicFacade
+from ScoutSuite.providers.aws.facade.eks_public import EKSPublicFacade
 from ScoutSuite.providers.aws.facade.inspector2 import Inspector2Facade
 from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
 from ScoutSuite.providers.aws.facade.organizations import OrganizationsFacade
@@ -186,6 +187,7 @@ class AWSFacade(AWSBaseFacade):
         self.guardduty = GuardDutyPublicFacade(self.session)
         self.ecr = ECRPublicFacade(self.session, self.owner_id)
         self.ecs = ECSPublicFacade(self.session, self.owner_id)
+        self.eks = EKSPublicFacade(self.session, self.owner_id)
         self.inspector2 = Inspector2Facade(self.session, self.owner_id)
         self.securityhub = SecurityHubPublicFacade(self.session)
         self.organizations = OrganizationsFacade(self.session, self.partition)

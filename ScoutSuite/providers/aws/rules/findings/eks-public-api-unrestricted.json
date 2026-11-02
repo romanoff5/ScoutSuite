@@ -1,0 +1,20 @@
+{
+    "description": "EKS Kubernetes API endpoint allows unrestricted public sources",
+    "rationale": "The EKS endpoint is public and its allowed CIDRs explicitly contain 0.0.0.0/0 or ::/0. Authentication still applies, but unrestricted network reachability increases exposure.",
+    "remediation": "Restrict the public API endpoint CIDRs to trusted management networks, or use a private endpoint with a validated access path.",
+    "references": [
+        "https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html"
+    ],
+    "dashboard_name": "Clusters",
+    "path": "eks.regions.id.clusters.id",
+    "conditions": [
+        "and",
+        [
+            "public_endpoint_unrestricted",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "UnrestrictedPublicAPI",
+    "evidence_policy": "eks-api-endpoint-v1"
+}

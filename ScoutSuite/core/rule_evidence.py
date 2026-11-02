@@ -320,6 +320,24 @@ def classify_securityhub_standard(standard):
     return 'unknown'
 
 
+def classify_eks_api_endpoint(cluster):
+    """Public endpoint exposure requires explicit CIDR evidence."""
+    if not isinstance(cluster, dict):
+        return 'unknown'
+    public = cluster.get('public_endpoint_access')
+    if public is False:
+        return 'secure'
+    if public is not True:
+        return 'unknown'
+    cidrs = cluster.get('public_access_cidrs')
+    if not isinstance(cidrs, list) or not cidrs or any(
+            not isinstance(value, str) for value in cidrs):
+        return 'unknown'
+    if any(value in ('0.0.0.0/0', '::/0') for value in cidrs):
+        return 'insecure'
+    return 'secure'
+
+
 def classify_ecs_container_insights(cluster):
     """Only explicit ECS Container Insights settings constitute evidence."""
     if not isinstance(cluster, dict):
@@ -419,6 +437,7 @@ CLASSIFIERS = {
     'guardduty-detector-state-v1': classify_guardduty_detector,
     'ecr-tag-mutability-v1': classify_ecr_tag_mutability,
     'ecs-container-insights-v1': classify_ecs_container_insights,
+    'eks-api-endpoint-v1': classify_eks_api_endpoint,
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,

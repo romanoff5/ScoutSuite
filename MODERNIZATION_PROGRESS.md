@@ -272,3 +272,14 @@ state. Only explicitly disabled Container Insights triggers a scoped warning;
 unknown/missing settings stay incomplete. Invalid/foreign/duplicate ARNs,
 malformed/denied responses and pagination limits create collection issues.
 See `docs/modernization/M10_ECS.md`. No resource mutation or live AWS test.
+
+## Task 13 / M10-G — EKS cluster inventory (2026-11-02)
+
+Public opt-in EKS `ListClusters`/`DescribeCluster`; up to 20 pages ×
+100 names and 1,000 described clusters per Region. Full ARN, version,
+endpoint/CIDR details, VPC, tags, logging, encryption, access and upgrade
+settings preserved. Only explicitly public endpoint allowing `0.0.0.0/0`
+or `::/0` is flagged. Missing access/CIDR evidence stays UNKNOWN;
+partial/denied/duplicate/capped responses create collection issues.
+See `docs/modernization/M10_EKS.md`. No Kubernetes API, credentials,
+cloud writes or live AWS assessments. Azure/GCP unchanged.

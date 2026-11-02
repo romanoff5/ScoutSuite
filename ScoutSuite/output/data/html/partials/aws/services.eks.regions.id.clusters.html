@@ -1,0 +1,33 @@
+<!-- M10-G EKS: cluster identifiers and endpoint data are escaped. -->
+<script id="services.eks.regions.id.clusters.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Amazon EKS cluster</h4>
+    <ul>
+      <li>Cluster ARN: <samp>{{cluster_arn}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Status: {{status}}</li>
+      <li>Kubernetes version: {{version}}</li>
+      <li>Endpoint: <samp>{{endpoint}}</samp></li>
+      <li>Role ARN: <samp>{{cluster_role_arn}}</samp></li>
+      <li>Public endpoint: {{public_endpoint_access}}</li>
+      <li>Private endpoint: {{private_endpoint_access}}</li>
+      <li>Unrestricted public endpoint: {{public_endpoint_unrestricted}}</li>
+    </ul>
+    <h4>Allowed public CIDRs</h4>
+    {{#each public_access_cidrs}}<p><samp>{{this}}</samp></p>{{/each}}
+    <h4>Tags</h4>
+    {{#each tags}}<p>{{@key}}: {{this}}</p>{{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.eks.regions.id.clusters",
+    $("#services\\.eks\\.regions\\.id\\.clusters\\.partial").html());
+</script>
+<script id="single_eks_cluster-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.eks.regions.id.clusters' }}
+</script>
+<script>
+  var single_eks_cluster_template = Handlebars.compile(
+    $("#single_eks_cluster-template").html());
+</script>

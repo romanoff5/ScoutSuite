@@ -314,6 +314,7 @@
       "ec2-unused-security-group.json",
       "ecr-repository-tags-mutable.json",
       "ecs-container-insights-disabled.json",
+      "eks-public-api-unrestricted.json",
       "elb-listener-allowing-cleartext.json",
       "elb-no-access-logs.json",
       "elb-older-ssl-policy.json",

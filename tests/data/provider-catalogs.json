@@ -16,6 +16,7 @@
       "ecr",
       "ecs",
       "efs",
+      "eks",
       "elasticache",
       "elb",
       "elbv2",
@@ -39,7 +40,6 @@
     "optional_declarations": [
       "cognito",
       "docdb",
-      "eks",
       "ssm"
     ],
     "metadata_services": [
@@ -131,6 +131,7 @@
       "ec2-unused-security-group.json",
       "ecr-repository-tags-mutable.json",
       "ecs-container-insights-disabled.json",
+      "eks-public-api-unrestricted.json",
       "elb-listener-allowing-cleartext.json",
       "elb-no-access-logs.json",
       "elb-older-ssl-policy.json",
@@ -269,6 +270,7 @@
       "partials/aws/services.ec2.regions.vpcs.security_groups.rule_list.html",
       "partials/aws/services.ecr.regions.id.repositories.html",
       "partials/aws/services.ecs.regions.id.clusters.html",
+      "partials/aws/services.eks.regions.id.clusters.html",
       "partials/aws/services.elasticache.regions.id.parameter_groups.html",
       "partials/aws/services.elasticache.regions.id.security_groups.html",
       "partials/aws/services.elasticache.regions.id.subnet_groups.html",
