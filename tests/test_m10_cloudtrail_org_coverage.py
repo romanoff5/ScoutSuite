@@ -2,6 +2,10 @@
 import asyncio
 import json
 from pathlib import Path
+from types import SimpleNamespace
+
+from ScoutSuite.core.processingengine import ProcessingEngine
+from ScoutSuite.core.ruleset import Ruleset
 from unittest.mock import Mock, patch
 
 import boto3
@@ -266,3 +270,39 @@ def test_account_regions_page_loop_reports_partial_without_inventing_clean_state
         finally:
             await ctx.aclose()
     asyncio.run(scenario())
+
+
+def test_rule_engine_reports_only_confirmed_account_gaps(tmp_path):
+    definition = {
+        'about': 'Synthetic isolated M10-R',
+        'rules': {'m10r-org-cloudtrail-config-gap.json': [
+            {'enabled': True, 'level': 'danger'}]},
+    }
+    ruleset_file = tmp_path / 'm10r-rules.json'
+    ruleset_file.write_text(json.dumps(definition), encoding='utf-8')
+    ctx = RunContext('aws').setup()
+    try:
+        data = fixture()
+        data['organizations']['account_regions'][MEMBER]['regions'][HOME] = 'DISABLED'
+        reconcile_cloudtrail_organization_coverage(
+            data, ['cloudtrail', 'organizations'], MASTER)
+        provider = SimpleNamespace(services=data, service_list=[
+            'cloudtrail', 'organizations'])
+        ProcessingEngine(Ruleset('aws', filename=str(ruleset_file))).run(provider)
+        finding = data['organizations']['findings']['m10r-org-cloudtrail-config-gap']
+        assert len(finding['items']) == 1
+        assert MEMBER in finding['items'][0]
+
+        # Denied Account Management access cannot yield the same finding.
+        data = fixture()
+        data['organizations']['account_regions'][MEMBER] = {
+            'regions': {}, 'collection_status': 'denied'}
+        reconcile_cloudtrail_organization_coverage(
+            data, ['cloudtrail', 'organizations'], MASTER)
+        provider = SimpleNamespace(services=data, service_list=[
+            'cloudtrail', 'organizations'])
+        ProcessingEngine(Ruleset('aws', filename=str(ruleset_file))).run(provider)
+        finding = data['organizations']['findings']['m10r-org-cloudtrail-config-gap']
+        assert not finding['items']
+    finally:
+        ctx.cleanup()
