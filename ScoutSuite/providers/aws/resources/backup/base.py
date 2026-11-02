@@ -189,6 +189,41 @@ class BackupPublic(Regions):
         elif tag_selections:
             tag_inventory['status'] = 'not_collected'
         data['resource_tag_evidence'] = tag_inventory
+        selector_keys = set()
+        for plan in data['plans'].values():
+            for detail in plan.get('selections', []):
+                selection = detail.get('BackupSelection', {}) if isinstance(detail, dict) else {}
+                if not isinstance(selection, dict):
+                    continue
+                for tag in selection.get('ListOfTags') or []:
+                    if isinstance(tag, dict) and isinstance(tag.get('ConditionKey'), str):
+                        selector_keys.add(tag['ConditionKey'])
+                conditions = selection.get('Conditions') or {}
+                if isinstance(conditions, dict):
+                    for entries in conditions.values():
+                        if not isinstance(entries, list):
+                            continue
+                        for condition in entries:
+                            if not isinstance(condition, dict):
+                                continue
+                            key = condition.get('ConditionKey')
+                            if isinstance(key, str) and key.startswith('aws:ResourceTag/'):
+                                selector_keys.add(key[len('aws:ResourceTag/'):])
+        candidates = {'tags': {}, 'status': 'not_required'}
+        if tag_selections and hasattr(backup, 'get_tagged_resource_candidates'):
+            try:
+                candidates = await backup.get_tagged_resource_candidates(region, selector_keys)
+            except Exception:
+                _issue('GetTaggedResourceCandidatesFailed')
+                candidates = {'tags': {}, 'status': 'partial'}
+        elif tag_selections:
+            candidates = {'tags': {}, 'status': 'not_collected'}
+        if tag_selections and not selector_keys:
+            candidates['status'] = 'partial'
+            _issue('UnresolvedTagSelectorKeys')
+        data['tagged_candidate_evidence'] = candidates
+        candidate_tags = candidates.get('tags', {})
+        known_tags = {**tag_inventory.get('tags', {}), **candidate_tags}
 
         for plan in data['plans'].values():
             plan_id = plan.get('backup_plan_id')
@@ -201,7 +236,7 @@ class BackupPublic(Regions):
             })
             decisions = {
                 arn: [_selection_decision(
-                    arn, detail, tag_inventory['tags'].get(arn))
+                    arn, detail, known_tags.get(arn))
                     for detail in plan.get('selections', [])]
                 for arn in protected}
             matching = sorted(
@@ -210,12 +245,27 @@ class BackupPublic(Regions):
                 arn for arn, checks in decisions.items()
                 if 'matched' not in checks and 'unknown' in checks)
             plan['tag_condition_evaluated_resource_arns'] = sorted(
-                arn for arn in protected if arn in tag_inventory['tags'])
+                arn for arn in protected if arn in known_tags)
+            selected_tagged = sorted(
+                arn for arn, tags in candidate_tags.items()
+                if any(_selection_decision(arn, detail, tags) == 'matched'
+                       for detail in plan.get('selections', [])))
+            plan['tagged_selection_candidate_arns'] = selected_tagged
+            plan['tagged_candidate_inventory_status'] = candidates['status']
+            plan['selected_tagged_resource_arns_without_reported_recovery_point'] = (
+                sorted(set(selected_tagged) - protected)
+                if status['protected_resources'] == 'complete' else [])
+            plan['tagged_resource_gap_evidence_status'] = (
+                'partial' if candidates['status'] not in ('complete', 'not_required')
+                or status['protected_resources'] != 'complete'
+                else 'candidate_only_not_opt_in_verified')
             plan['selection_unresolved_resource_arns'] = unresolved
             plan['selection_evidence_scope'] = 'observed_protected_resources_only'
             plan['selection_evaluation_status'] = (
                 'partial' if unresolved or
-                (tag_selections and tag_inventory['status'] != 'complete')
+                (tag_selections and candidates['status'] != 'complete')
+                or (tag_selections and tag_inventory['status'] != 'complete'
+                    and bool(protected))
                 else 'observed_resources_only')
             explicit = sorted({
                 arn for detail in plan.get('selections', [])
@@ -243,14 +293,17 @@ class BackupPublic(Regions):
                 'partial' if status['backup_jobs'] != 'complete'
                 or status['protected_resources'] != 'complete'
                 or not plan.get('selection_collection_complete')
-                or bool(unresolved) else 'complete')
+                or bool(unresolved)
+                or (tag_selections and candidates['status'] != 'complete')
+                else 'complete')
             plan['correlation_note'] = (
                 'Plan selections describe assignments, not successful backups. '
                 'ListProtectedResources records recovery points of any status. '
                 'Completed jobs are limited to AWS Backup job history. '
                 'Tag conditions are evaluated only for resources with verified '
-                'tag mappings; missing mappings and resources with no observed '
-                'recovery points remain unverified.')
+                'tag mappings. Tagged candidates without recovery points '
+                'are potential gaps; resource type opt-in and supported '
+                'resource coverage are not independently verified.')
 
         for test in data['restore_testing_plans'].values():
             arn = test.get('RestoreTestingPlanArn')
