@@ -184,7 +184,7 @@ def test_evidence_and_rule_evaluation_no_false_clean(tmp_path):
         assert row['evaluation_summary']['counts'] == {
             'secure': 1, 'insecure': 1, 'unknown': 1, 'not_applicable': 0}
         assert row['assessment_status'] == 'incomplete'
-        assert row['items'] == ['guardduty.regions.us-east-1.detectors.bad']
+        assert row['items'] == ['guardduty.regions.us-east-1.detectors.bad.Disabled']
     finally:
         context.cleanup()
 
