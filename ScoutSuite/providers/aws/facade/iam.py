@@ -26,10 +26,9 @@ class IAMFacade(AWSBaseFacade):
         except Exception as e:
             print_exception(f'Failed to generate credential report: {e}')
             return []
-        finally:
-            if not report_generated and n_attempts == 0:
-                print_exception(f'Failed to complete credential report generation in {n_attempts} attempts')
-                return []
+        if not report_generated and n_attempts == 0:
+            print_exception(f'Failed to complete credential report generation in {n_attempts} attempts')
+            return []
 
         try:
             report = await run_concurrently(lambda: client.get_credential_report()['Content'])
