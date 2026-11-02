@@ -391,7 +391,9 @@ def enrich_inspector_and_waf(services, selected, account_id):
                     ev['reasons'].append('inspector_account_enrollment_inactive')
                     row['m10q_inspector_not_reported'] = False
                     if service == 'ecr':
-                        row['m10q_repository_scan_gap_candidate'] = False
+                        operational = row.get('operational_image_scans') or {}
+                        if operational.get('status') != 'gap_observed':
+                            row['m10q_repository_scan_gap_candidate'] = False
                     changes['inspector_account_conflicts'] += 1
                 if service == 'ecr':
                     scan = row.get('m10q_image_scanning')
