@@ -31,3 +31,16 @@ Status: isolated migration branch created; implementation and CI verification pe
 ## Risks detected in review
 
 The existing M07 snapshot is an intentional immutability gate, not obsolete dead code. Removing it wholesale would weaken cross-provider regression control. In Azure SQL, successful SDK import does not establish that old operation groups remain callable, or that newer model fields can still be parsed by existing rule resources. New Google proto-plus types similarly require actual parser checks. These are acceptance blockers, not warning-filter issues.
+
+## Implementation evidence (2026-11-02)
+
+- Updated Cloud KMS to 3.17.0, Monitoring to 2.31.0 and Azure SQL to 4.0.0.
+- Required Google Cloud Resource Manager 1.19.0 (1.14.0 required protobuf <6), protobuf 6.33.5,
+  grpc-google-iam-v1 0.14.6, google-api-core 2.43.2 and grpcio-status 1.85.1.
+  All versions were resolved in actual CI and are pinned in combined constraints.
+- Frozen M07 hashes remain unchanged; the preservation test permits only six named provider
+  paths plus three original SDK declarations. Compatibility tests run against installed SDKs.
+- Removed CI's vendor warning budget: any warning now fails the structured warning gate.
+- Ubuntu CI #41416421474 reached pytest: 466 passed, one new test bug in instance setup;
+  corrected in the next candidate. This is NOT a completed acceptance run.
+- No master merge before both Ubuntu/Windows runs pass at the final SHA.
