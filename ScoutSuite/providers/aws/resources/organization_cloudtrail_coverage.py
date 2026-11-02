@@ -158,6 +158,21 @@ def reconcile_cloudtrail_organization_coverage(services, selected_services, scan
     collection = organizations.get('collection') or {}
     region_inventory = organizations.get('account_regions') or {}
     trails, trails_complete = _trail_inventory(cloudtrail)
+    # A restricted --regions scan is not a complete absence census. Validate
+    # scanner-account enabled Regions before allowing any negative result.
+    caller_regions = region_inventory.get(scanned_account_id)
+    caller_states = (caller_regions.get('regions')
+                     if isinstance(caller_regions, dict) else None)
+    scanned_regions = set((cloudtrail.get('regions') or {}).keys())
+    if (not isinstance(caller_regions, dict)
+            or caller_regions.get('collection_status') != 'complete'
+            or not isinstance(caller_states, dict) or not caller_states):
+        trails_complete = False
+        _issue('ScannerAccountRegionInventoryUnavailable')
+    elif not {r for r, state in caller_states.items()
+              if state in _ENABLED} <= scanned_regions:
+        trails_complete = False
+        _issue('RestrictedCloudTrailRegionCensus')
     accounts_complete = (isinstance(collection, dict)
                          and collection.get('accounts') == 'complete'
                          and isinstance(accounts, dict))
@@ -222,7 +237,7 @@ def reconcile_cloudtrail_organization_coverage(services, selected_services, scan
             status = 'gap'
             summary['accounts_with_config_gaps'] += 1
         elif (accounts_complete and complete and trails_complete and matrix
-              and not uncertain):
+              and account.get('state') == 'ACTIVE' and not uncertain):
             status = 'configured'
         else:
             status = 'unknown'
