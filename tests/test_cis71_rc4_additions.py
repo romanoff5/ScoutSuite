@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import (
     classify_efs_encryption, classify_rds_deletion_protection,
+    classify_rds_cluster_deletion_protection,
 )
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
@@ -21,17 +22,29 @@ def test_rds_deletion_protection_collected_from_existing_instance_response():
     assert name
     assert record['DeletionProtection'] is False
     assert record['StorageEncrypted'] is True
+    assert record['is_cluster_member'] is False
     _, missing = instance._parse_instance({
         'DBInstanceIdentifier': 'synthetic-unknown',
     })
     assert missing['DeletionProtection'] is None
+    assert missing['is_cluster_member'] is False
+    _, aurora = instance._parse_instance({
+        'DBInstanceIdentifier': 'synthetic-aurora-member',
+        'DBClusterIdentifier': 'synthetic-cluster', 'DeletionProtection': False})
+    assert aurora['is_cluster_member'] is True
+    assert aurora['DBClusterIdentifier'] == 'synthetic-cluster'
 
 
 def test_missing_or_invalid_evidence_never_means_secure():
-    assert classify_rds_deletion_protection({'DeletionProtection': True}) == 'secure'
-    assert classify_rds_deletion_protection({'DeletionProtection': False}) == 'insecure'
-    assert classify_rds_deletion_protection({'DeletionProtection': None}) == 'unknown'
-    assert classify_rds_deletion_protection({'DeletionProtection': 'false'}) == 'unknown'
+    assert classify_rds_deletion_protection({'is_cluster_member': False, 'DeletionProtection': True}) == 'secure'
+    assert classify_rds_deletion_protection({'is_cluster_member': False, 'DeletionProtection': False}) == 'insecure'
+    assert classify_rds_deletion_protection({'is_cluster_member': False, 'DeletionProtection': None}) == 'unknown'
+    assert classify_rds_deletion_protection({'is_cluster_member': False, 'DeletionProtection': 'false'}) == 'unknown'
+    assert classify_rds_deletion_protection({'is_cluster_member': True, 'DeletionProtection': False}) == 'not_applicable'
+    assert classify_rds_deletion_protection({'DeletionProtection': False}) == 'unknown'
+    assert classify_rds_cluster_deletion_protection({'DeletionProtection': False}) == 'insecure'
+    assert classify_rds_cluster_deletion_protection({'DeletionProtection': True}) == 'secure'
+    assert classify_rds_cluster_deletion_protection({}) == 'unknown'
     assert classify_efs_encryption({'Encrypted': True}) == 'secure'
     assert classify_efs_encryption({'Encrypted': False}) == 'insecure'
     assert classify_efs_encryption({}) == 'unknown'
@@ -55,9 +68,9 @@ def test_cis71_rules_run_normally_and_unknown_blocks_compliance_pass(tmp_path):
         service_list=['rds', 'efs'],
         services={
             'rds': {'regions': {'eu-west-1': {'vpcs': {'vpc': {'instances': {
-                'protected': {'DeletionProtection': True},
-                'unprotected': {'DeletionProtection': False},
-                'incomplete': {'DeletionProtection': None},
+                'protected': {'is_cluster_member': False, 'DeletionProtection': True},
+                'unprotected': {'is_cluster_member': False, 'DeletionProtection': False},
+                'incomplete': {'is_cluster_member': False, 'DeletionProtection': None},
             }}}}}},
             'efs': {'regions': {'eu-west-1': {'filesystems': {
                 'encrypted': {'Encrypted': True},
@@ -92,6 +105,7 @@ def test_new_rules_are_enabled_in_default_and_detailed_without_legacy_mutation()
     for filename in ('default.json', 'detailed.json'):
         data = json.loads((base / filename).read_text(encoding='utf-8'))
         for rule in ('rds-instance-deletion-protection-disabled.json',
+                     'rds-cluster-deletion-protection-disabled.json',
                      'efs-filesystem-not-encrypted.json'):
             assert data['rules'][rule][0]['enabled'] is True
     legacy = json.loads((base / 'cis-1.2.0.json').read_text(encoding='utf-8'))
