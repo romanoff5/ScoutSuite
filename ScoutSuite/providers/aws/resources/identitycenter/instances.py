@@ -33,7 +33,10 @@ class Instances(AWSResources):
                 if pskey in permissions:
                     self.issue('DuplicatePermissionSetRecord')
                     continue
-                permissions[pskey] = dict(ps, id=pskey)
+                # Assignments appear once in the instance-level index, not in each permission set.
+                policy = dict(ps, id=pskey)
+                policy.pop('assignments', None)
+                permissions[pskey] = policy
             for item in source.get('assignments', []):
                 if not isinstance(item, dict) or any(
                         not isinstance(item.get(field), str) or not item[field]

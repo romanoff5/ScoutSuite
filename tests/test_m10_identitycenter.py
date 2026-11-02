@@ -134,6 +134,7 @@ def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
         assert resources['instances_count'] == 1
         item = next(iter(resources['regions'][REGION]['instances'].values()))
         assert item['permission_sets_count'] == 1 and item['assignments_count'] == 1
+        assert 'assignments' not in next(iter(item['permission_sets'].values()))
         mapped = next(iter(item['assignments'].values()))
         assert mapped['group_members'][0]['email'] == 'admin@example.test'
         assert mapped['id'].startswith('scoutid-')
