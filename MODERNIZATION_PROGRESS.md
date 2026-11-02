@@ -1,22 +1,31 @@
 # Solo-maintainer modernization progress
 
-## CIS Foundations v7.1.0 — RC4 staging only (2026-11-02)
+## CIS Foundations v7.1.0 — RC4 candidate after RC3 evidence review (2026-11-02)
 
 - Based on immutable RC3 master at `487580203269e864665589f7ddb756c0334976b5`.
   Branch: `feature/cis-foundations-v7.1.0-rc4-staging`.
 - Maintainer-supplied PDF verified: **94 CIS v7.1.0 recommendations**;
   recorded 30 candidate-mapped IDs (33 rules), 43 manual-review IDs,
   13 partial existing checks not mapped, 8 not implemented.
-- Analyzed RC3 authenticated field evidence: 42 services, 207 rules, 121\n  triggered rule/resource pairs, zero evidence/finding mismatches; 40 unchanged\n  collection issues. Verified archive SHA-256 manifest. ECR BASIC with zero\n  repositories is a confirmed configuration observation only, not evidence\n  of missing image scans. No private customer data uploaded to git.\n- Corrected the RDS deletion-protection stage implementation: RC3 API evidence\n  shows Aurora member instances; evaluate cluster-level DeletionProtection\n  once per DB cluster, exclude member instances from standalone rule, and\n  preserve UNKNOWN/partial for inaccessible DescribeDBClusters.\n- Added four default and detailed AWS checks reusing existing SDK evidence:
-  S3 effective Block Public Access, RDS deletion protection, EFS encryption
-  at rest, and Security Hub regional subscription. UNKNOWN/denied evidence
+- Analyzed RC3 authenticated field evidence: 42 services, 207 rules, 121
+  triggered rule/resource pairs, zero evidence/finding mismatches; 40 unchanged
+  collection issues. Verified archive SHA-256 manifest. ECR BASIC with zero
+  repositories is a confirmed configuration observation only, not evidence
+  of missing image scans. No private customer data uploaded to git.
+- Corrected the RDS deletion-protection stage implementation: RC3 API evidence
+  shows Aurora member instances; evaluate cluster-level DeletionProtection
+  once per DB cluster, exclude member instances from standalone rule, and
+  preserve UNKNOWN/partial for inaccessible DescribeDBClusters.
+- Added five normal AWS checks: S3 effective Block Public Access,
+  standalone RDS deletion protection, Aurora/Multi-AZ DB cluster deletion
+  protection, EFS encryption at rest and Security Hub regional subscription. UNKNOWN/denied evidence
   is never compliant. Added synthetic rule/evidence tests and profile
   crosswalk validation with benchmark-specific IAM aging thresholds.
 - Existing CIS v1.2.0 ruleset and published RC3 remain untouched. Full
   source PDF, customer logs, account IDs and raw AWS evidence are not in git.
-- **BLOCK MERGE / BLOCK RELEASE:** await RC3 scan archive; review findings,
-  collection completeness and real-world API semantics, rerun all CI and
-  only then prepare separately versioned RC4 integration/release.
+- RC3 archive review is complete. **Release gate:** four-way branch CI,
+  merged-master CI, independently verified RC4 wheel/sdist/SBOM and immutable
+  tag. Never claim CIS certification or organization-wide compliance.
 
 
 ## RC3 field-evidence follow-up (2026-11-02; CI/release validation pending)
