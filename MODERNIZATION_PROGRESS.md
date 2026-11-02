@@ -1,5 +1,24 @@
 # Solo-maintainer modernization progress
 
+## CIS Foundations v7.1.0 — RC4 staging only (2026-11-02)
+
+- Based on immutable RC3 master at `487580203269e864665589f7ddb756c0334976b5`.
+  Branch: `feature/cis-foundations-v7.1.0-rc4-staging`.
+- Maintainer-supplied PDF verified: **94 CIS v7.1.0 recommendations**;
+  recorded 30 candidate-mapped IDs (32 rules), 43 manual-review IDs,
+  13 partial existing checks not mapped, 8 not implemented.
+- Added four default and detailed AWS checks reusing existing SDK evidence:
+  S3 effective Block Public Access, RDS deletion protection, EFS encryption
+  at rest, and Security Hub regional subscription. UNKNOWN/denied evidence
+  is never compliant. Added synthetic rule/evidence tests and profile
+  crosswalk validation with benchmark-specific IAM aging thresholds.
+- Existing CIS v1.2.0 ruleset and published RC3 remain untouched. Full
+  source PDF, customer logs, account IDs and raw AWS evidence are not in git.
+- **BLOCK MERGE / BLOCK RELEASE:** await RC3 scan archive; review findings,
+  collection completeness and real-world API semantics, rerun all CI and
+  only then prepare separately versioned RC4 integration/release.
+
+
 ## RC3 field-evidence follow-up (2026-11-02; CI/release validation pending)
 
 - Real authorized read-only scan of the prior RC1 hotfix was inspected locally,
