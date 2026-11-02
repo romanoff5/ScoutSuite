@@ -32,9 +32,9 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$(git ls-remote origin refs/heads/master | cut -f1)" = "$EXPECTED_SHA"
-          test -f docs/releases/fork-v5.14.0-m10-rc1.md
-          grep -Fq "5.14.0+romanoff5.m10rc1" ScoutSuite/__init__.py
-          if gh release view fork-v5.14.0-m10-rc1 --repo romanoff5/ScoutSuite >/dev/null 2>&1; then
+          test -f docs/releases/fork-v5.14.0-m10-rc2.md
+          grep -Fq "5.14.0+romanoff5.m10rc2" ScoutSuite/__init__.py
+          if gh release view fork-v5.14.0-m10-rc2 --repo romanoff5/ScoutSuite >/dev/null 2>&1; then
             echo "Release already exists: cannot overwrite published assets."
             exit 1
           fi
@@ -44,6 +44,12 @@ jobs:
         with:
           python-version: '3.11.18'
           check-latest: false
+      - name: Ensure release SHA includes the RC2 runtime hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse 70cf29d5579864543b6363e7a271a84216bb6837^{commit})" = "70cf29d5579864543b6363e7a271a84216bb6837"
+          git merge-base --is-ancestor 70cf29d5579864543b6363e7a271a84216bb6837 HEAD
       - name: Build pinned fork wheel and source distribution
         shell: bash
         run: |
@@ -80,13 +86,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG='fork-v5.14.0-m10-rc1'
+          TAG='fork-v5.14.0-m10-rc2'
           if gh api "repos/romanoff5/ScoutSuite/git/ref/tags/$TAG" >/tmp/existing-tag.json 2>/dev/null; then
             test "$(gh api "repos/romanoff5/ScoutSuite/git/ref/tags/$TAG" --jq '.object.sha')" = "$RELEASE_SHA"
           else
             gh api repos/romanoff5/ScoutSuite/git/refs -X POST -f "ref=refs/tags/$TAG" -f "sha=$RELEASE_SHA" >/dev/null
           fi
           gh release create "$TAG" dist/* --repo romanoff5/ScoutSuite --verify-tag --prerelease \
-            --title "ScoutSuite fork 5.14.0+romanoff5.m10rc1" \
-            --notes-file docs/releases/fork-v5.14.0-m10-rc1.md
+            --title "ScoutSuite fork 5.14.0+romanoff5.m10rc2" \
+            --notes-file docs/releases/fork-v5.14.0-m10-rc2.md
           gh release view "$TAG" --repo romanoff5/ScoutSuite --json tagName,isPrerelease,url
