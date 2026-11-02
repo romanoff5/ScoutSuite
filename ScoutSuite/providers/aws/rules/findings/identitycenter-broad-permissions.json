@@ -1,0 +1,21 @@
+{
+    "description": "IAM Identity Center account assignment uses broad or wildcard permissions",
+    "rationale": "The assigned permission set includes broad AWS managed policies or explicit inline service/action wildcards (or NotAction Allow). This is heuristic candidate evidence, not a proof of effective access or a complete least-privilege audit.",
+    "remediation": "Review the permission set's inline, AWS managed, customer-managed references and permission boundary, and restrict actions to approved work requirements.",
+    "references": [
+        "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_ListAccountAssignments.html",
+        "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_GetInlinePolicyForPermissionSet.html"
+    ],
+    "dashboard_name": "IAM Identity Center assignments",
+    "path": "identitycenter.regions.id.instances.id.permission_sets.id.assignments.id",
+    "conditions": [
+        "and",
+        [
+            "broad_permissions_candidate",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "BroadPermissionsCandidate",
+    "evidence_policy": "identitycenter-broad-assignment-v1"
+}
