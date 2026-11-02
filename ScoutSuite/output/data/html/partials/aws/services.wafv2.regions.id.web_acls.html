@@ -48,6 +48,12 @@
             <p>Actual request traffic independently verified: {{m10q_protected_targets.traffic_routing_through_waf_verified}}</p>
             <p>Target resource existence observed: {{m10q_protected_targets.independent_target_existence_confirmed}}</p>
             <p>Independent WAF attachment verified: {{m10q_protected_targets.independent_waf_attachment_verified}}</p>
+            <p>WAF-observed requests (not proof of complete ingress coverage): {{m10q_protected_targets.observed_request_processing}}</p>
+            <p>CloudWatch evidence: {{operational_traffic.status}}, completeness: {{operational_traffic.completeness}}</p>
+            <p>UTC window: {{operational_traffic.window_start}} – {{operational_traffic.window_end}}</p>
+            <p>Allowed / blocked / counted: {{operational_traffic.metrics.AllowedRequests}} / {{operational_traffic.metrics.BlockedRequests}} / {{operational_traffic.metrics.CountedRequests}}</p>
+            <p>CAPTCHA / challenge: {{operational_traffic.metrics.CaptchaRequests}} / {{operational_traffic.metrics.ChallengeRequests}}</p>
+            {{#each operational_traffic.reasons}}<p>Telemetry: {{this}}</p>{{/each}}
             <p>Real request inspection verified: {{m10q_protected_targets.inspection_applied_to_requests_verified}}</p>
             <p>WAF attachment evidence: {{m10q_protected_targets.association_evidence_source}}</p>
             {{#each m10q_protected_targets.verified_resource_arns}}<p>Discovered target: <samp>{{this}}</samp></p>{{/each}}
