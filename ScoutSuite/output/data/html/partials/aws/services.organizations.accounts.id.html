@@ -11,6 +11,24 @@
       <li>Joined via: {{joined_method}}</li>
       <li>Joined at: {{joined_timestamp}}</li>
       <li>Organization path(s): <ul>{{#each paths}}<li>{{this}}</li>{{/each}}</ul></li>
+      <li>SCP context collection: {{scp_context.collection_status}}</li>
+      <li>Effective permissions verified: {{scp_context.effective_permissions_verified}}</li>
+      <li>SCP inheritance path: <ul>{{#each scp_context.ancestor_path}}<li><samp>{{this}}</samp></li>{{/each}}</ul></li>
+      <li>Attached SCPs by target:
+        {{#each scp_context.attached_policies_by_target}}
+          <p>Target: <samp>{{@key}}</samp></p>
+          <ul>{{#each this}}<li>{{name}} / <samp>{{id}}</samp> / <samp>{{arn}}</samp></li>{{/each}}</ul>
+        {{/each}}
+      </li>
+      <li>Policy versions:
+        {{#each scp_context.policy_documents}}
+          <p>Policy <samp>{{@key}}</samp>; Version: {{Version}}</p>
+          {{#each Statement}}
+            <p>SID: {{Sid}}; Effect: {{Effect}}; Action: {{Action}}; NotAction: {{NotAction}};
+              Resource: {{Resource}}; NotResource: {{NotResource}}</p>
+          {{/each}}
+        {{/each}}
+      </li>
     </ul>
   </div>
 </script>
