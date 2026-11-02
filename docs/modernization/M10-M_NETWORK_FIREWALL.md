@@ -35,3 +35,7 @@ finding of absence and not compliance.
 
 Ensure the audit role can call the enumerated `network-firewall:List*` and
 `network-firewall:Describe*` APIs plus `ec2:DescribeRouteTables`.
+
+AWS-managed groups are not directly enumerated in this slice. Policies retain
+unresolved rule-group ARNs, and `rule_group_references_resolved=false` records
+incomplete policy-to-rule-group coverage rather than claiming all rules inspected.
