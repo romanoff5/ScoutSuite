@@ -86,6 +86,7 @@ class Organizations(AWSResources):
             'arn': raw.get('Arn'), 'email': raw.get('Email'),
             'state': state, 'legacy_status': raw.get('Status'),
             'joined_method': raw.get('JoinedMethod'), 'joined_timestamp': joined_at,
+            'paths': list(raw.get('Paths') or []),
         }
 
     async def fetch_all(self, **kwargs):
