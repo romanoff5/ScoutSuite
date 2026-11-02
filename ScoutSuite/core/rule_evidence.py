@@ -701,7 +701,127 @@ def classify_m10q_s3_target_reference(point):
     return 'unknown'
 
 
+def classify_macie_session(region):
+    if not isinstance(region, dict) or region.get('session_verified') is not True:
+        return 'unknown'
+    if region.get('session_status') == 'ENABLED':
+        return 'secure'
+    if region.get('session_status') in ('NOT_ENABLED', 'PAUSED'):
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_macie_configuration(region):
+    if classify_macie_session(region) == 'insecure':
+        return 'not_applicable'
+    if (classify_macie_session(region) != 'secure'
+            or region.get('automated_discovery_verified') is not True):
+        return 'unknown'
+    if region.get('automated_discovery_status') == 'ENABLED':
+        return 'secure'  # Configuration only, not successful classification.
+    if (region.get('automated_discovery_status') == 'DISABLED'
+            and region.get('jobs_complete') is True
+            and type(region.get('jobs_count')) is int and region['jobs_count'] >= 0):
+        return 'insecure' if region['jobs_count'] == 0 else 'secure'
+    return 'unknown'
+
+
+def classify_macie_bucket(bucket):
+    if isinstance(bucket, dict) and bucket.get('coverage_status') in (
+            'ERROR', 'STALE_ACTIVITY', 'NO_RECENT_ACTIVITY_EVIDENCE', 'NO_MONITORING_CONFIGURED'):
+        return 'insecure'
+    # Recent activity does not establish that objects were classified successfully.
+    return 'unknown'
+
+
+def classify_macie_recency(job):
+    if not isinstance(job, dict):
+        return 'unknown'
+    if job.get('type') == 'ONE_TIME':
+        return 'not_applicable'
+    if job.get('type') != 'SCHEDULED':
+        return 'unknown'
+    if job.get('stale') is True:
+        return 'insecure'
+    age = job.get('last_run_age_days')
+    if type(age) in (int, float) and 0 <= age <= 45:
+        return 'secure'  # Run recency only, not successful classification.
+    return 'unknown'
+
+
+def classify_macie_execution(job):
+    if not isinstance(job, dict):
+        return 'unknown'
+    if job.get('execution_issue') is True:
+        return 'insecure'
+    if job.get('execution_success_evidence') is True:
+        return 'secure'  # No reported execution errors, not content coverage.
+    return 'unknown'
+
+
+# These published policies cover multiple rules, so bind each to its exact
+# filename/path/observed field instead of guessing from unrelated resource flags.
+SCOPED_POLICIES = {
+    'networkfirewall-m10-m-v1': {
+        'networkfirewall-broad-pass-rule.json': ('rule_groups', 'broad_pass'),
+        'networkfirewall-stateless-default-pass.json': ('policies', 'stateless_default_pass'),
+        'networkfirewall-fragment-default-pass.json': ('policies', 'stateless_fragment_default_pass'),
+        'networkfirewall-logging-disabled.json': ('firewalls', 'logging_disabled'),
+        'networkfirewall-no-route-references.json': ('firewalls', 'no_endpoint_routes'),
+        'networkfirewall-routes-not-ready.json': ('firewalls', 'routing_not_ready'),
+    },
+    'bedrock-m10-r-v1': {
+        'bedrock-invocation-logging-review.json': (None, 'invocation_logging_review'),
+        'bedrock-agent-no-explicit-guardrail-review.json': ('agents', 'no_explicit_guardrail_review'),
+    },
+}
+
+
+def _classify_scoped_review(resource, field):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    if field in ('no_endpoint_routes', 'routing_not_ready'):
+        state = resource.get('routing_status')
+        if state not in ('endpoint_referenced', 'inactive_or_unready', 'no_endpoint_routes'):
+            return 'unknown'
+        bad = 'no_endpoint_routes' if field == 'no_endpoint_routes' else 'inactive_or_unready'
+        return 'insecure' if state == bad else 'secure'  # Routing references only.
+    verified = {
+        'logging_disabled': 'logging_complete',
+        'broad_pass': 'detail_complete',
+        'stateless_default_pass': 'detail_complete',
+        'stateless_fragment_default_pass': 'detail_complete',
+        'invocation_logging_review': 'logging_verified',
+        'no_explicit_guardrail_review': 'detail_verified',
+    }[field]
+    if resource.get(verified) is not True:
+        return 'unknown'
+    if resource.get(field) is True:
+        return 'insecure'
+    if field == 'logging_disabled' and isinstance(resource.get('logging_destinations'), list):
+        return 'secure' if resource['logging_destinations'] else 'unknown'
+    if field in ('stateless_default_pass', 'stateless_fragment_default_pass'):
+        actions = resource.get(field.replace('_pass', '_actions'))
+        if isinstance(actions, list) and actions and all(isinstance(x, str) for x in actions):
+            return 'insecure' if 'aws:pass' in actions else 'secure'
+    if (field == 'no_explicit_guardrail_review'
+            and isinstance(resource.get('guardrail_identifier'), str) and resource['guardrail_identifier']):
+        return 'secure'  # Explicit attachment, not validated runtime effectiveness.
+    if field == 'invocation_logging_review':
+        config = resource.get('logging_config')
+        if isinstance(config, dict) and any(config.get(k) is True for k in (
+                'text_enabled', 'image_enabled', 'embedding_enabled', 'audio_enabled', 'video_enabled')):
+            return 'secure'
+    # A negative heuristic (e.g. no broad signature) is not verified protection.
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'macie-session-v1': classify_macie_session,
+    'macie-no-classification-v1': classify_macie_configuration,
+    'macie-bucket-coverage-v1': classify_macie_bucket,
+    'macie-job-recency-v1': classify_macie_recency,
+    'macie-job-execution-v1': classify_macie_execution,
     'm10q-s3-target-reference-v2': classify_m10q_s3_target_reference,
     'm10q-ec2-inspector-coverage-v1': classify_m10q_ec2_inspector,
     'm10q-ecr-image-scan-evidence-v1': classify_m10q_ecr_image_scanning,
@@ -754,7 +874,21 @@ def evaluate_rule_evidence(rule, services):
     policy = getattr(rule, 'evidence_policy', None)
     if policy is None:
         return None
-    if policy not in CLASSIFIERS:
+    if policy in SCOPED_POLICIES:
+        binding = SCOPED_POLICIES[policy].get(getattr(rule, 'filename', None))
+        if binding is None:
+            raise ValueError('Unexpected scoped rule evidence filename')
+        kind, field = binding
+        service = 'networkfirewall' if policy == 'networkfirewall-m10-m-v1' else 'bedrock'
+        expected_path = service + '.regions.id' + ('.' + kind + '.id' if kind else '')
+        if rule.path != expected_path:
+            raise ValueError('Unexpected rule evidence path')
+
+        def classifier(resource):
+            return _classify_scoped_review(resource, field)
+    elif policy in CLASSIFIERS:
+        classifier = CLASSIFIERS[policy]
+    else:
         raise ValueError('Unsupported rule evidence policy: ' + str(policy))
 
     counts = {key: 0 for key in ('secure', 'insecure', 'unknown', 'not_applicable')}
@@ -774,7 +908,7 @@ def evaluate_rule_evidence(rule, services):
             raise ValueError('Unexpected rule evidence path')
         parts = parts[:-1]
     for path, resource in _walk_resources(services, parts):
-        status = CLASSIFIERS[policy](resource)
+        status = classifier(resource)
         counts[status] += 1
         if status == 'unknown':
             unknown_paths.append(path)

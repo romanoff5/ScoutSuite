@@ -107,12 +107,18 @@ def main():
         finally:
             sys.argv = old_argv
         from ScoutSuite.core.ruleset import Ruleset
+        from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
         from ScoutSuite.output.html import ScoutReport
         from ScoutSuite import ERRORS_LIST
         ERRORS_LIST.clear()
         for provider in ('aws', 'azure', 'gcp'):
             rules = Ruleset(cloud_provider=provider, filename='default.json')
             assert rules.rules
+            for definitions in rules.rules.values():
+                for rule in definitions:
+                    if getattr(rule, 'evidence_policy', None):
+                        summary = evaluate_rule_evidence(rule, {})
+                        assert summary['assessment_status'] == 'not_applicable', rule.filename
             with tempfile.TemporaryDirectory() as report_dir:
                 report = ScoutReport(provider, 'synthetic', report_dir)
                 output = report.save(SimpleNamespace(services={}, service_list=[]), {}, force_write=True)
@@ -123,7 +129,8 @@ def main():
         result.update(package_version=dist.version, packaged_files_verified=count,
                       runtime_requirements_verified=len(declared),
                       installed_archive_sha256=origin['archive_info']['hashes']['sha256'])
-        result['checks'] += ['all-source-assets-sha256', 'installed-cli-entry', 'aws-azure-gcp-rules-and-reports']
+        result['checks'] += ['all-source-assets-sha256', 'installed-cli-entry',
+                            'aws-azure-gcp-rules-and-reports', 'installed-rule-evidence-policies']
     guard.assert_no_violations()
     args.output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(result))

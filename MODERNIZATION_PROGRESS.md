@@ -1,5 +1,22 @@
 # Solo-maintainer modernization progress
 
+## RC1 runtime correction — Task 14 / M10 (2026-11-02)
+
+- Implemented the 13 published Network Firewall/Macie/Bedrock evidence policies
+  missing from RC1's evaluator; normalized SSM/Network Firewall diagnostic codes
+  without relaxing report metadata validation. Unknown collection stays partial.
+- Added 38 synthetic regressions and installed-wheel policy execution checks.
+  Final focused Windows/Python 3.11.9 gate: **159 passed**, no warnings, including
+  AWS/Azure/GCP contracts and JSON/SQLite preservation; flake8 and diff checks pass.
+  Full guarded suite on RC1 dependencies: **672 passed, 1 failed**, 34 subtests;
+  unrelated failure is OS symlink privilege (`WinError 1314`), not suppressed.
+- Local wheel build 1 is used by the external user launcher with a pinned hash,
+  explicit repair provenance and offline installed-byte/runtime checks. Published
+  RC1 assets and stable installation remain unchanged. No cloud run was made.
+- Implementation branch: `fix/rc1-scanner-runtime`; integration SHA and installed
+  verification are recorded in the follow-up evidence entry after those steps.
+  See [repair details and rollback](docs/releases/RC1_RUNTIME_HOTFIX1.md).
+
 Current policy: local implementation and offline validation, commit/push only to
 `romanoff5/ScoutSuite`, then automatic integration of passing assigned slices into
 the fork's actual default branch. No upstream PR, mandatory human review or

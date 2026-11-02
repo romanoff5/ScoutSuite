@@ -19,6 +19,17 @@ from asyncio_throttle import Throttler
 _active_context: ContextVar[Optional['RunContext']] = ContextVar('scoutsuite_context', default=None)
 
 
+def safe_collection_issue_code(reason: str) -> str:
+    """Encode diagnostic codes for the bounded report schema, never raw SDK messages."""
+    from hashlib import sha256
+    import re
+
+    value = re.sub(r'[^A-Za-z0-9_.-]', '_', reason)
+    if len(value) > 64:
+        value = value[:47] + '-' + sha256(reason.encode('utf-8')).hexdigest()[:16]
+    return value or 'UnknownError'
+
+
 def get_current_run_context() -> Optional['RunContext']:
     """Execution-scoped resources; never stored on the event loop."""
     return _active_context.get()

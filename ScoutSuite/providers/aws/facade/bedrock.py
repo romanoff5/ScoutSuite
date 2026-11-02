@@ -5,22 +5,17 @@ GetKnowledgeBaseDocuments, GetAgentActionGroup (schema/payload), or
 GetModelInvocationJob (request/response content).
 """
 from datetime import datetime
-from hashlib import sha256
-import re
 
 from botocore.exceptions import ClientError
 
-from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.core.run_context import get_current_run_context, safe_collection_issue_code
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
 def safe_issue_code(reason):
-    """RunContext issue IDs are strict; retain distinction for long errors."""
-    value = re.sub(r'[^A-Za-z0-9_.-]', '_', reason)
-    if len(value) > 64:
-        value = value[:47] + '-' + sha256(reason.encode('utf-8')).hexdigest()[:16]
-    return value or 'UnknownError'
+    """Compatibility entry point for Bedrock resource diagnostics."""
+    return safe_collection_issue_code(reason)
 
 
 PAGE_SIZE = 100

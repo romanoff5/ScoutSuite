@@ -7,7 +7,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 from botocore.exceptions import ClientError
-from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.core.run_context import get_current_run_context, safe_collection_issue_code
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
@@ -130,7 +130,7 @@ class SSMPublicFacade(AWSBaseFacade):
     def issue(status, reason):
         ctx = get_current_run_context()
         if ctx is not None:
-            ctx.record_collection_issue(status, 'ssm', reason)
+            ctx.record_collection_issue(status, 'ssm', safe_collection_issue_code(reason))
 
     def failure(self, name, exc):
         code = (exc.response.get('Error', {}).get('Code')
