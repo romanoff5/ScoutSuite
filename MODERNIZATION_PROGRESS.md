@@ -5,9 +5,9 @@
 - Based on immutable RC3 master at `487580203269e864665589f7ddb756c0334976b5`.
   Branch: `feature/cis-foundations-v7.1.0-rc4-staging`.
 - Maintainer-supplied PDF verified: **94 CIS v7.1.0 recommendations**;
-  recorded 30 candidate-mapped IDs (32 rules), 43 manual-review IDs,
+  recorded 30 candidate-mapped IDs (33 rules), 43 manual-review IDs,
   13 partial existing checks not mapped, 8 not implemented.
-- Added four default and detailed AWS checks reusing existing SDK evidence:
+- Analyzed RC3 authenticated field evidence: 42 services, 207 rules, 121\n  triggered rule/resource pairs, zero evidence/finding mismatches; 40 unchanged\n  collection issues. Verified archive SHA-256 manifest. ECR BASIC with zero\n  repositories is a confirmed configuration observation only, not evidence\n  of missing image scans. No private customer data uploaded to git.\n- Corrected the RDS deletion-protection stage implementation: RC3 API evidence\n  shows Aurora member instances; evaluate cluster-level DeletionProtection\n  once per DB cluster, exclude member instances from standalone rule, and\n  preserve UNKNOWN/partial for inaccessible DescribeDBClusters.\n- Added four default and detailed AWS checks reusing existing SDK evidence:
   S3 effective Block Public Access, RDS deletion protection, EFS encryption
   at rest, and Security Hub regional subscription. UNKNOWN/denied evidence
   is never compliant. Added synthetic rule/evidence tests and profile
