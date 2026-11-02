@@ -1,0 +1,20 @@
+{
+    "description": "S3 directory Access Point references a same-account bucket missing from verified bucket inventory",
+    "rationale": "The Access Point returned an explicit same-account bucket owner and a target absent from a completed corresponding S3 bucket enumeration. This is an inventory consistency gap; missing identities with denied, unselected or incomplete bucket APIs remain unknown. It does not prove public exposure.",
+    "remediation": "Verify target bucket/account/region, S3 Control Access Point ownership and stale inventory; re-enumerate with complete AWS permissions. Reconcile or retire stale access points only after change approval.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points.html"
+    ],
+    "dashboard_name": "S3 directory Access Point",
+    "path": "s3.advanced.regions.id.directory_access_points.id",
+    "conditions": [
+        "and",
+        [
+            "m10q_bucket_target_not_reported",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "M10QDirectoryTargetUnresolved",
+    "evidence_policy": "m10q-s3-target-reference-v2"
+}

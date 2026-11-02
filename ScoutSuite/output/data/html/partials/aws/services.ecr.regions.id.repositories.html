@@ -29,6 +29,8 @@
             <p>Inspector evidence: {{m10q_image_scanning.inspector_enrollment}}</p>
             <p>Image scan execution verified: {{m10q_image_scanning.image_level_scan_execution_verified}}</p>
             <p>Image scan reason: {{m10q_image_scanning.reason}}</p>
+            <p>Configuration only: {{m10q_image_scanning.configuration_only}}</p>
+            <p>Effective per-image scan freshness: {{m10q_image_scanning.effective_scan_freshness}}</p>
             {{#each m10q_inspector.coverage_record_ids}}<p>Coverage record: <samp>{{this}}</samp></p>{{/each}}
             {{#each m10q_inspector.reasons}}<p>Reason: {{this}}</p>{{/each}}
         </div>

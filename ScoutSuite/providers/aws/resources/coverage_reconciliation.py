@@ -407,4 +407,8 @@ def reconcile_m10q_coverage(services, selected_services, account_id=None):
         source = _source(services, name, selected)
         if source is not None:
             source['m10q_reconciliation'] = summary
+    from ScoutSuite.providers.aws.resources.coverage_reconciliation_deep import (
+        reconcile_m10q_deep)
+    summary['deep'] = reconcile_m10q_deep(services, selected, account_id)
+    summary['version'] = 2
     return summary
