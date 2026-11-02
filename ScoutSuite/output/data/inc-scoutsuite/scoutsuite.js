@@ -1304,6 +1304,13 @@ function toggleName(name) {
     }
 }
 
+// The report sanitizer strips inline on* handlers, so S3 ACL grantee names
+// toggle through delegation instead of onclick.
+document.addEventListener('click', function (event) {
+    const cell = event.target && event.target.closest && event.target.closest('[data-scout-toggle-name]')
+    if (cell) toggleName(cell)
+})
+
 /**
  * Add one or multiple
  * @param group

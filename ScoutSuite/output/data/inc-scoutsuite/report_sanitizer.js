@@ -9,7 +9,10 @@
         'showObject', 'updateHash', 'hideList', 'showRowWithItems',
         'findAndShowEC2Object', 'showIAMManagedPolicy', 'showIAMInlinePolicy',
         'showS3Object', 'showMainDashboard', 'hidePopup',
-        'showNamespacedResources', 'copyCode', 'toggleVisibility'
+        'showNamespacedResources', 'copyCode', 'toggleVisibility',
+        // Settings menu (metadata partial): first-party, argument-free actions.
+        'showLastRunDetails', 'showResourcesDetails', 'downloadExceptions',
+        'exportSummary', 'showAbout'
     ]);
     const DANGEROUS_TAGS = new Set([
         'script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet',

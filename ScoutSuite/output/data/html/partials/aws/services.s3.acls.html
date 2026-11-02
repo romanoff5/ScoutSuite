@@ -15,7 +15,7 @@
                 </tr>
                 {{#each grantees}}
                 <tr>
-                  <td width="20%" class="text-center bucket-name table-hover" onclick="toggleName(this)">{{DisplayName}}</td>
+                  <td width="20%" class="text-center bucket-name table-hover" data-scout-toggle-name>{{DisplayName}}</td>
                   <td width="20%" class="text-center">
                     {{#if permissions.read}}
                     <i id="{{../../resource_path}}.grantees.{{@key}}.read" class="fa fa-check"></i>

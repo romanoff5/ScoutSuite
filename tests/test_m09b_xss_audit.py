@@ -131,6 +131,14 @@ def check_legacy_js_action_parser_rejects_code_injection_and_malicious_urls():
         "data:text/html,<script>alert(1)</script>"
     ];
     for (const attack of attacks) assert.strictEqual(parse(attack), null, attack);
+    // Settings menu actions must survive sanitization (argument-free only).
+    for (const name of ['showLastRunDetails', 'showResourcesDetails', 'downloadExceptions',
+                        'exportSummary', 'showAbout']) {
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(parse('javascript:' + name + '()'))),
+                               {name: name, args: []});
+        assert.strictEqual(parse('javascript:' + name + '();alert(1)'), null);
+    }
+    assert.strictEqual(parse('javascript:toggleTheme()'), null);
     assert.strictEqual(safe('javascript:alert(1)'), false);
     assert.strictEqual(safe('JaVaScRiPt:alert(1)'), false);
     assert.strictEqual(safe('data:text/html,payload'), false);
