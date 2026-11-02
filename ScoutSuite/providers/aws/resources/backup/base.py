@@ -113,6 +113,16 @@ class BackupPublic(Regions):
                 if isinstance(arn, str) and arn.startswith('arn:')
                 and not any(c in arn for c in '*?[')
                 and _matches_selection(arn, detail)})
+            plan['observed_backup_jobs'] = [
+                {'BackupJobId': j.get('BackupJobId'),
+                 'State': j.get('State'),
+                 'MessageCategory': j.get('MessageCategory'),
+                 'StatusMessage': j.get('StatusMessage'),
+                 'ResourceArn': j.get('ResourceArn'),
+                 'CreationDate': j.get('CreationDate'),
+                 'CompletionDate': j.get('CompletionDate')}
+                for j in jobs if isinstance(j.get('CreatedBy'), dict)
+                and j['CreatedBy'].get('BackupPlanId') == plan_id]
             plan['matching_protected_resource_arns'] = matching
             plan['observed_completed_backup_resource_arns'] = completed
             plan['completed_job_resource_arns_with_recovery_point'] = sorted(

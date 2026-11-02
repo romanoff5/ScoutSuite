@@ -12,6 +12,41 @@
       <li>Last execution date: {{last_execution_date}}</li>
       <li>Creator request ID: {{creator_request_id}}</li>
     </ul>
+    <h4>Backup selections ({{selection_count}})</h4>
+    <p>Selections inventory complete: {{selection_collection_complete}}</p>
+    {{#each selections}}<ul>
+      <li>ID: {{SelectionId}}; plan ID: {{BackupPlanId}}</li>
+      <li>Name: {{BackupSelection.SelectionName}}</li>
+      <li>IAM role ARN: <samp>{{BackupSelection.IamRoleArn}}</samp></li>
+      {{#each BackupSelection.Resources}}<li>Include ARN/pattern: <samp>{{this}}</samp></li>{{/each}}
+      {{#each BackupSelection.NotResources}}<li>Exclude ARN/pattern: <samp>{{this}}</samp></li>{{/each}}
+      {{#each BackupSelection.ListOfTags}}
+        <li>Tag: {{ConditionType}} {{ConditionKey}} = {{ConditionValue}}</li>{{/each}}
+      {{#each BackupSelection.Conditions.StringEquals}}
+        <li>StringEquals: {{ConditionKey}} = {{ConditionValue}}</li>{{/each}}
+      {{#each BackupSelection.Conditions.StringLike}}
+        <li>StringLike: {{ConditionKey}} = {{ConditionValue}}</li>{{/each}}
+      {{#each BackupSelection.Conditions.StringNotEquals}}
+        <li>StringNotEquals: {{ConditionKey}} = {{ConditionValue}}</li>{{/each}}
+      {{#each BackupSelection.Conditions.StringNotLike}}
+        <li>StringNotLike: {{ConditionKey}} = {{ConditionValue}}</li>{{/each}}
+    </ul>{{/each}}
+    <h4>Protection evidence and observed execution</h4>
+    <p>Correlation completeness: {{correlation_status}}</p>
+    <p>{{correlation_note}}</p>
+    {{#each matching_protected_resource_arns}}
+      <p>Selected ARN with reported recovery point: <samp>{{this}}</samp></p>{{/each}}
+    {{#each completed_job_resource_arns_with_recovery_point}}
+      <p>Completed job and recovery point: <samp>{{this}}</samp></p>{{/each}}
+    {{#each explicit_resource_arns_without_reported_recovery_point}}
+      <p>Selected ARN without reported recovery point (review): <samp>{{this}}</samp></p>{{/each}}
+    <h4>Recent observed backup jobs</h4>
+    {{#each observed_backup_jobs}}<ul>
+      <li>Job ID: {{BackupJobId}}; state: {{State}}; message category: {{MessageCategory}}</li>
+      <li>Resource: <samp>{{ResourceArn}}</samp></li>
+      <li>Created / completed: {{CreationDate}} / {{CompletionDate}}</li>
+      <li>Status: {{StatusMessage}}</li>
+    </ul>{{/each}}
     <h4>Backup rules ({{rule_count}})</h4>
     {{#each rules}}
       <ul>
