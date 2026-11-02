@@ -40,6 +40,7 @@
         <li>Account: {{account_id}}</li>
         <li>Permission set: {{permission_set_name}} <samp>{{permission_set_arn}}</samp></li>
         <li>Principal: {{principal_type}} {{principal_name}} ({{principal_id}})</li>
+        <li>Principal ARN: <samp>{{principal_arn}}</samp>; revision: {{principal_revision}}</li>
         <li>Username: {{principal_username}}; primary email: {{principal_email}}</li>
         {{#each principal_emails}}<li>Principal email: {{Value}} (primary: {{Primary}})</li>{{/each}}
         <li>Identity resolution: {{identity_resolution_status}}</li>
@@ -49,6 +50,8 @@
         {{#each group_members}}
           <li>Group member: {{name}} ({{principal_id}}) — {{username}} / {{email}}
             ({{resolution_status}}), membership ID: {{membership_id}}</li>
+          <li>Member ARN: <samp>{{principal_arn}}</samp>; revision: {{revision}}</li>
+          <li>Membership ARN: <samp>{{membership_arn}}</samp></li>
           {{#each emails}}<li>Group member email: {{Value}} (primary: {{Primary}})</li>{{/each}}
         {{/each}}
       </ul>

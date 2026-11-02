@@ -25,6 +25,7 @@ PERMISSION = 'arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890a
 ACCOUNT = '000000000000'
 GROUP = '11111111-1111-1111-1111-111111111111'
 USER = '22222222-2222-2222-2222-222222222222'
+MEMBERSHIP = '33333333-3333-3333-3333-333333333333'
 STORE = 'd-1234567890'
 ADMIN = 'arn:aws:iam::aws:policy/AdministratorAccess'
 
@@ -91,13 +92,18 @@ def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
                      'AccountId': ACCOUNT, 'MaxResults': PAGE_SIZE})
                 b.add_response('describe_group', {
                     'GroupId': GROUP, 'DisplayName': 'Security Administrators',
-                    'IdentityStoreId': STORE}, {'IdentityStoreId': STORE, 'GroupId': GROUP})
+                    'GroupArn': 'arn:aws:identitystore:::group/' + GROUP,
+                    'Revision': '2', 'IdentityStoreId': STORE}, {'IdentityStoreId': STORE, 'GroupId': GROUP})
                 b.add_response('list_group_memberships', {'GroupMemberships': [{
-                    'MembershipId': 'membership-1', 'IdentityStoreId': STORE,
-                    'GroupId': GROUP, 'MemberId': {'UserId': USER}}]},
+                    'MembershipId': MEMBERSHIP,
+                    'MembershipArn': 'arn:aws:identitystore:::membership/' + MEMBERSHIP,
+                    'IdentityStoreId': STORE, 'GroupId': GROUP,
+                    'MemberId': {'UserId': USER}}]},
                     {'IdentityStoreId': STORE, 'GroupId': GROUP, 'MaxResults': PAGE_SIZE})
                 b.add_response('describe_user', {
                     'UserId': USER, 'IdentityStoreId': STORE,
+                    'UserArn': 'arn:aws:identitystore:::user/' + USER,
+                    'Revision': '3',
                     'UserName': 'synthetic-admin', 'DisplayName': '<admin & member>',
                     'Emails': [{'Value': 'admin@example.test', 'Primary': True},
                                {'Value': 'secondary@example.test', 'Primary': False}]},
@@ -122,7 +128,9 @@ def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
         assert raw['group_members_complete'] is True
         assert raw['group_members'][0]['email'] == 'admin@example.test'
         assert raw['group_members'][0]['emails'][1]['Value'] == 'secondary@example.test'
-        assert raw['group_members'][0]['membership_id'] == 'membership-1'
+        assert raw['group_members'][0]['membership_id'] == MEMBERSHIP
+        assert raw['group_members'][0]['membership_arn'].endswith(MEMBERSHIP)
+        assert raw['group_members'][0]['principal_arn'].endswith(USER)
         assert raw['permission_boundary']['ManagedPolicyArn'].endswith('ReadOnlyAccess')
         assert raw['account_id'] == ACCOUNT and raw['permission_set_arn'] == PERMISSION
         source = SimpleNamespace(

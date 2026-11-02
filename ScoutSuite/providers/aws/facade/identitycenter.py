@@ -120,6 +120,8 @@ class IdentityCenterFacade(AWSBaseFacade):
         else:
             item = {'principal_id': identifier, 'principal_type': kind,
                     'resolution_status': 'resolved',
+                    'principal_arn': response.get('UserArn' if kind == 'USER' else 'GroupArn'),
+                    'revision': response.get('Revision'),
                     'name': response.get('DisplayName') or response.get('UserName'),
                     'username': response.get('UserName'),
                     'email': self._email(response) if kind == 'USER' else None,
@@ -156,7 +158,8 @@ class IdentityCenterFacade(AWSBaseFacade):
                     or row.get('GroupId') != group_id or row.get('IdentityStoreId') != store):
                 self.issue('partial', 'GroupMembershipIdentityIncomplete')
                 complete = False
-            members.append(dict(user, membership_id=membership_id, group_id=group_id))
+            members.append(dict(user, membership_id=membership_id,
+                                membership_arn=row.get('MembershipArn'), group_id=group_id))
         result = {'members': members, 'members_complete': complete}
         membership_cache[key] = result
         return result
@@ -253,6 +256,8 @@ class IdentityCenterFacade(AWSBaseFacade):
                     'account_id': account, 'permission_set_arn': arn,
                     'permission_set_name': record['name'],
                     'principal_id': principal, 'principal_type': kind,
+                    'principal_arn': identity.get('principal_arn'),
+                    'principal_revision': identity.get('revision'),
                     'principal_name': identity.get('name'),
                     'principal_username': identity.get('username'),
                     'principal_email': identity.get('email'),
