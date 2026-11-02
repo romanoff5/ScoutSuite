@@ -147,10 +147,11 @@ class Server:
     @cherrypy.tools.json_out()
     def page(self, key=None, page=None, pagesize=None):
         """
-        Return a page of the data at the requested key. Doesn't returns nested dictionaries and lists.
+        Return a bounded page with scalars intact and nested containers as metadata.
         For example, if you set pagesize=10 and page=2, it should return element 10-19
         If one of the value is a dictionary, it will return {'type': 'dict', 'keys': <Array of all the keys>}
-        If one of the value is a list, it will return {'type': 'list', 'count': <number of elements in the list>}
+        If one of the values is a list, return {'type': 'list', 'length': <count>}.
+        Scalar values (including false, zero and null) are preserved.
 
         Can be found at GET /api/page?key=<KEY>&page=<PAGE>&pagesize=<PAGESIZE>
         :param key:                     Key of the requested information, separated by the character '¤'.
@@ -256,20 +257,29 @@ class Server:
 
     @staticmethod
     def strip_nested_data(data):
-        """
-        Strip nested lists and dictionaries from the provided object to reduce its size.
+        """Return a shallow paginated view without dropping scalar values.
 
-        :param data:                    The object to strip.
-        :return:                        The input data stripped of its nested lists and dictionaries.
+        Only the selected page is examined. Nested containers are represented
+        by metadata, not returned in full; a separate /full request retrieves
+        a selected resource when its serialized size fits the HTTP limit.
         """
-        if not isinstance(data, dict):
-            return data
+        def preview(value):
+            if isinstance(value, (dict, SqliteDict)):
+                # Avoid materializing unbounded child-key arrays in a page.
+                from itertools import islice
+                keys = list(islice(value.keys(), MAX_PAGE_SIZE + 1))
+                truncated = len(keys) > MAX_PAGE_SIZE
+                result = {'type': 'dict', 'keys': keys[:MAX_PAGE_SIZE]}
+                if truncated:
+                    result.update(length=len(value), truncated=True)
+                return result
+            if isinstance(value, list):
+                return {'type': 'list', 'length': len(value)}
+            return value
 
-        result = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                result[k] = {'type': 'dict', 'keys': list(v.keys())}
-            elif isinstance(v, list):
-                result[k] = {'type': 'list', 'length': len(v)}
-        return result
+        if isinstance(data, dict):
+            return {key: preview(value) for key, value in data.items()}
+        if isinstance(data, list):
+            return [preview(value) for value in data]
+        return data
 

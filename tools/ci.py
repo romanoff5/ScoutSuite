@@ -17,7 +17,8 @@ import zipfile
 
 
 SOURCE = Path(__file__).resolve().parents[1]
-PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'xss_browser', 'packaging')
+PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests',
+          'sqlite_http', 'xss_browser', 'packaging')
 CLI_CASES = {'test_empty', 'test_aws_provider', 'test_gcp_provider', 'test_azure_provider',
              'test_unauthenticated', 'test_keyboardinterrupted'}
 ACTIONLINT = {
@@ -80,9 +81,18 @@ class Pipeline:
             preserved = ('HOME,USERPROFILE,APPDATA,LOCALAPPDATA,AWS_EC2_METADATA_DISABLED,'
                          'PYTHONDONTWRITEBYTECODE,PIP_DISABLE_PIP_VERSION_CHECK,PIP_CACHE_DIR,'
                          'SOURCE_DATE_EPOCH,PIP_NO_INDEX,UV_OFFLINE')
-            command = ['sudo', '-n', '--preserve-env=' + preserved,
-                       'unshare', '--net', '--', 'runuser', '--preserve-environment',
-                       '-u', os.environ['USER'], '--'] + command
+            if self.phase == 'sqlite_http':
+                # Enable only loopback inside a fresh, otherwise empty network
+                # namespace. Preserve the offline guard for every other gate.
+                command = ['sudo', '-n', '--preserve-env=' + preserved,
+                           'unshare', '--net', '--', 'bash', '-c',
+                           'ip link set lo up && user="$1" && shift && '
+                           'exec runuser --preserve-environment -u "$user" -- "$@"',
+                           '--', os.environ['USER'], *command]
+            else:
+                command = ['sudo', '-n', '--preserve-env=' + preserved,
+                           'unshare', '--net', '--', 'runuser', '--preserve-environment',
+                           '-u', os.environ['USER'], '--'] + command
         print('+ ' + ' '.join(command), flush=True)
         subprocess.run(command, cwd=cwd or self.root, env=self.env, check=True)
 
@@ -205,6 +215,15 @@ class Pipeline:
                                 json.loads((self.root / 'fixtures.json').read_text(encoding='utf-8')))
         self.write('test-execution', data)
         print(json.dumps(data, sort_keys=True), flush=True)
+
+    def sqlite_http(self):
+        """Run true HTTP/TCP integration inside a loopback-only net namespace.
+
+        Pytest stays socket-blocked; this isolated external gate gets no
+        external interface and never receives cloud credentials.
+        """
+        self.run([python_at(self.root, 'test'), '-I', '-B',
+                  SOURCE / 'tools/verify_sqlite_http.py'], cwd=SOURCE)
 
     def xss_browser(self):
         """Run real browser/parser XSS checks with OS network isolation.
