@@ -1,0 +1,23 @@
+<!-- M10-O: offline escaped Handlebars; no untrusted HTML sinks. -->
+<script id="services.ssm.regions.id.ec2_instances.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>EC2 reconciliation with SSM</h4>
+    <p>EC2 instance: <samp>{{instance_id}}</samp></p>
+<p>State: {{instance_state}}; Type: {{instance_type}}; Launched: {{launch_time}}</p>
+<p>Instance profile: <samp>{{iam_instance_profile_arn}}</samp></p>
+<p>SSM registration observed: {{ssm_managed}}</p>
+<p>SSM coverage: <strong>{{ssm_coverage_status}}</strong></p>
+<p>Patch health if managed: {{patch_health}}</p>
+<p>Note: not observed in SSM does not confirm that SSM Agent is absent.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions.id.ec2_instances", $("#services\\.ssm\\.regions\\.id\\.ec2_instances\\.partial").html());
+</script>
+<script id="single_ssm_ec2_instances-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions.id.ec2_instances' }}
+</script>
+<script>
+  var single_ssm_ec2_instances_template = Handlebars.compile($("#single_ssm_ec2_instances-template").html());
+</script>
