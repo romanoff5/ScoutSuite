@@ -26,7 +26,7 @@ def test_complete_94_control_inventory_and_no_false_certification():
     assert status_counts == {
         'candidate': 30, 'manual_review': 43,
         'partial_existing_unmapped': 13, 'not_implemented': 8}
-    assert len(profile['rules']) == len(profile['control_mappings']) == 32
+    assert len(profile['rules']) == len(profile['control_mappings']) == 33
     mapped = {}
     for rule_filename, entries in profile['control_mappings'].items():
         assert rule_filename in profile['rules']
@@ -50,6 +50,7 @@ def test_rc4_scoped_rules_registered_in_default_and_detailed():
         ruleset = json.loads((AWS / 'rulesets' / name).read_text(encoding='utf-8'))
         for rule in (
             'rds-instance-deletion-protection-disabled.json',
+            'rds-cluster-deletion-protection-disabled.json',
             'efs-filesystem-not-encrypted.json',
             's3-bucket-public-access-block-incomplete.json',
             'securityhub-region-not-subscribed.json',
