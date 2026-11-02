@@ -1,0 +1,20 @@
+{
+    "description": "S3 bucket is not protected by all effective Block Public Access settings",
+    "rationale": "At least one of the four observed effective account-or-bucket Block Public Access settings is false. Effective flags indicate preventative configuration, not a full assessment of object-level permissions or network access. Inaccessible settings remain unknown rather than compliant.",
+    "remediation": "Review the account-level and bucket-level Block Public Access settings, document any explicit exceptions, and enable appropriate protections. Inspect S3 Access Points, MRAP, object ACLs and resource policies separately.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+    ],
+    "dashboard_name": "Buckets",
+    "path": "s3.buckets.id",
+    "conditions": [
+        "and",
+        [
+            "effective_bpa_review",
+            "equal",
+            "missing"
+        ]
+    ],
+    "evidence_policy": "cis71-s3-bpa-v1",
+    "id_suffix": "EffectivePublicAccessBlock"
+}
