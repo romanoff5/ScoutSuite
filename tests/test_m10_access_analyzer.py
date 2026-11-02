@@ -210,7 +210,7 @@ def test_security_rule_end_to_end_with_incomplete_evidence(tmp_path):
         context.cleanup()
 
 
-def test_new_service_requires_explicit_opt_in():
+def test_access_analyzer_in_default_aws_scan():
     fake_config = lambda credentials: SimpleNamespace(
         credentials=credentials, iam={}, accessanalyzer={}, s3={})
     credentials = SimpleNamespace(session=object())
@@ -219,7 +219,7 @@ def test_new_service_requires_explicit_opt_in():
          patch('ScoutSuite.providers.aws.provider.get_aws_account_id', return_value='000000000000'):
         default = AWSProvider(credentials=credentials)
         explicit = AWSProvider(credentials=credentials, services=['accessanalyzer'])
-    assert 'accessanalyzer' not in default.service_list
+    assert 'accessanalyzer' in default.service_list
     assert explicit.service_list == ['accessanalyzer']
 
 

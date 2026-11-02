@@ -1,4 +1,4 @@
-# M10-E — Public ECR private-repository inventory (opt-in)
+# M10-E — Public ECR private-repository inventory (default AWS scan)
 
 ECR is included in the ordinary AWS scan without `--services`. Public ECR support is available without the optional private
 provider modules. When a separately installed proprietary ECR extension
@@ -40,7 +40,7 @@ account-scoping and rule-engine tests; actual offline HTML parser/browser,
 packaging, Windows/Ubuntu tests and Azure/GCP preservation are required
 before merging. No live AWS scan is claimed.
 
-Revert this service slice to roll back. Omit `--services ecr` to avoid
+Revert this service slice to roll back. Explicitly exclude ECR to avoid
 new collection API calls.
 
 ## M10-H registry-scanning extension

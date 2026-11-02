@@ -305,3 +305,20 @@ with a strictly sanitized report (no environment values or logging tokens);
 EKS evaluates `audit` control-plane logging from DescribeCluster.
 Collection failures stay explicit, and no resource modification is used.
 See M10_ECR.md, M10_ECS.md and M10_EKS.md for scope and limits.
+
+## M10 default AWS selection — 2026-11-02
+
+**All eight implemented M10 AWS services are included in standard `scout aws` scans**:
+`accessanalyzer`, `guardduty`, `securityhub`, `organizations`,
+`inspector2`, `ecr`, `ecs`, and `eks`. This supersedes earlier
+opt-in-only implementation notes. The public CLI/API still supports explicit
+service selection and skipped services; no new service must be separately
+selected merely to run its existing rules. Keep all service registrations,
+metadata, default rule definitions and output schemas intact.
+
+If API permissions are absent, an AWS account is not an Organizations
+management/delegated administrator, or a regional API is unsupported, the
+result must be explicitly denied/unsupported/partial/unknown; never turn
+these cases into clean findings or disable collection silently. Read-only
+scoping and collection limits remain unchanged. No new cloud writes, Azure/GCP
+modernization or changes to local report replay are introduced.

@@ -1,7 +1,7 @@
-# M10-C — public Security Hub regional inventory (opt-in)
+# M10-C — public Security Hub regional inventory (default AWS scan)
 
-Only explicit `--services securityhub` enables this read-only slice. It does
-not change legacy default service selection and does not access findings,
+Ordinary `scout aws` runs include this read-only service. It does
+not access findings,
 account/member lists, policies, controls or organization configuration.
 
 ## APIs and completeness
@@ -36,5 +36,5 @@ status evidence, rule processing, catalog, HTML escaping, and installed
 wheel/sdist tests. Existing Azure/GCP preservation gates remain mandatory.
 Live AWS execution is out of scope.
 
-Revert the M10-C changes or omit `securityhub` from `--services`
+Revert the M10-C changes or explicitly exclude `securityhub` from the scan
 to avoid all newly introduced collection calls.

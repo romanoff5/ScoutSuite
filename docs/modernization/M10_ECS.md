@@ -1,4 +1,4 @@
-# M10-F — public ECS regional cluster metadata (opt-in)
+# M10-F — public ECS regional cluster metadata (default AWS scan)
 
 ECS runs in the standard AWS scan without requiring `--services`. A separately installed proprietary ECS
 extension retains historical precedence. Azure/GCP are not modernized.
