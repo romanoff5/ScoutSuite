@@ -182,3 +182,31 @@ API docs:
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListMembers.html
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html
 - https://docs.aws.amazon.com/inspector/v2/APIReference/API_DescribeOrganizationConfiguration.html
+
+
+### Optional independent inventory reconciliation
+
+When the user explicitly selects `inspector2` together with other AWS
+services in **the same assessment**, M10-E also correlates already collected
+resource identifiers without issuing any extra AWS API requests:
+- `ec2`: EC2 instance IDs vs Inspector `AWS_EC2_INSTANCE` coverage.
+- `ecr`: repository ARNs vs `AWS_ECR_REPOSITORY` coverage.
+- `awslambda`: function ARNs vs `AWS_LAMBDA_FUNCTION` coverage.
+- `organizations`: active account IDs vs Inspector regional member accounts
+  and the delegated administrator ID, but only when both source inventories
+  are explicitly complete.
+
+The per-region `resource_reconciliation` section preserves the full
+identifiers not seen in Inspector, counts and explicit source scope.
+`comparison_verified=false` and `source_inventory_complete=false` remain
+until independent enumeration completeness and resource eligibility can
+actually be established. Missing coverage **does not** automatically prove a
+vulnerability: a resource might not be eligible for that Inspector scan type.
+The mismatch is reported as `ResourceInventoryGapUnverified`, not PASS.
+The organization report separates `organization_roster_compared`,
+`organization_roster_verified` and the full list
+`aws_org_accounts_missing_from_inspector_members`; a mismatch records
+`OrganizationRosterGap` and never claims organizational completeness.
+
+No code in the cross-service reconciliation requests credentials, AWS
+secrets, vulnerability findings or additional cloud API permissions.
