@@ -97,6 +97,22 @@
                 "parameters": {
                     "cols": 2,
                     "path": "services.ssm.regions.id.parameters"
+                },
+                "patch_baselines": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.baselines"
+                },
+                "patch_groups": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.patch_groups"
+                },
+                "managed_nodes": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.managed_nodes"
+                },
+                "ec2_instances": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.ec2_instances"
                 }
             }
         },
