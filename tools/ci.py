@@ -71,6 +71,48 @@ def python_at(root, name):
     return str(root / name / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python'))
 
 
+
+# Exact warning debt for pinned legacy Azure/GCP distributions.
+# Warnings remain visible; do not use filterwarnings to silence them.
+# Every unrecognized warning, including first-party warnings, fails CI.
+# Remove entries only after an independently validated SDK migration.
+LEGACY_VENDOR_WARNING_BUDGET = {
+    'azure/mgmt/sql/models/_models_py3.py:DeprecationWarning': 2,
+    'google/cloud/kms_v1/gapic/enums.py:DeprecationWarning': 4,
+    'google/cloud/kms_v1/gapic/key_management_service_client.py:DeprecationWarning': 4,
+    'google/cloud/kms_v1/gapic/key_management_service_client.py:UserWarning': 1,
+    'google/cloud/kms_v1/gapic/transports/key_management_service_grpc_transport.py:DeprecationWarning': 2,
+    'google/cloud/kms_v1/proto/resources_pb2.py:DeprecationWarning': 104,
+    'google/cloud/kms_v1/proto/service_pb2.py:DeprecationWarning': 12,
+    'google/cloud/monitoring_v3/gapic/enums.py:DeprecationWarning': 1,
+    'google/cloud/monitoring_v3/gapic/service_monitoring_service_client.py:DeprecationWarning': 4,
+    'google/cloud/monitoring_v3/gapic/transports/service_monitoring_service_grpc_transport.py:DeprecationWarning': 2,
+    'google/cloud/monitoring_v3/proto/notification_pb2.py:DeprecationWarning': 1,
+    'google/cloud/monitoring_v3/proto/service_pb2.py:DeprecationWarning': 3,
+    'google/cloud/monitoring_v3/proto/service_service_pb2.py:DeprecationWarning': 6,
+    'pkg_resources/__init__.py:DeprecationWarning': 10,
+}
+
+
+def verify_warning_debt(warnings):
+    """Enforce zero first-party or unexpected warnings, without hiding vendor warnings."""
+    if not isinstance(warnings, dict):
+        raise AssertionError('Missing structured warning evidence')
+    unrecognized = sorted(set(warnings) - set(LEGACY_VENDOR_WARNING_BUDGET))
+    if unrecognized:
+        raise AssertionError('New or first-party warnings: ' + ', '.join(unrecognized))
+    exceeded = {
+        name: count for name, count in warnings.items()
+        if type(count) is not int or count < 0
+        or count > LEGACY_VENDOR_WARNING_BUDGET[name]
+    }
+    if exceeded:
+        raise AssertionError('Legacy warning budget exceeded: ' + ', '.join(sorted(exceeded)))
+    return {'observed': sum(warnings.values()),
+            'vendor_warning_budget': sum(LEGACY_VENDOR_WARNING_BUDGET.values()),
+            'first_party_warnings': 0}
+
+
 def verify_execution(junit, manifest):
     """Missing bodies, skipped results and incomplete fixture verification fail CI."""
     cases = list(ET.fromstring(junit).iter('testcase'))
@@ -82,10 +124,12 @@ def verify_execution(junit, manifest):
     for module in ('test_offline', 'test_cli_assertions', 'test_characterization'):
         assert any(module in case.attrib.get('classname', '') for case in cases), 'Missing M01 gate: ' + module
     assert manifest['exitstatus'] == 0
+    warning_gate = verify_warning_debt(manifest['warnings'])
     assert manifest['cases'] and all(row['test_status'] == 'verified' and row['fixture_status'] == 'valid'
                                      for row in manifest['cases']), 'Incomplete fixture verification'
     return {'junit_cases': len(cases), 'cli_bodies': len(cli),
             'verified_fixture_cases': len(manifest['cases']), 'warnings': manifest['warnings'],
+            'warning_gate': warning_gate,
             'untested_rules': {name: len(keys) for name, keys in manifest['untested'].items()}}
 
 
