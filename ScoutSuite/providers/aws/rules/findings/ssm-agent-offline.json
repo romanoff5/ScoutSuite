@@ -1,0 +1,21 @@
+{
+    "description": "SSM managed node has lost agent connectivity",
+    "rationale": "An observed ConnectionLost agent is not evidence of a missing agent binary. Last ping and SSM registration status are preserved for diagnosis.",
+    "remediation": "Check SSM Agent service, IAM instance profile, Systems Manager endpoint connectivity, VPC DNS and instance state.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-states.html",
+        "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeInstancePatchStates.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "agent_connection_lost",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "ssm-agent-offline",
+    "evidence_policy": "ssm-agent-connectivity-v1"
+}
