@@ -90,7 +90,15 @@ class SSMPatchPublic(Regions):
                     and status.get('managed_nodes') == 'complete'
                     and status.get('baselines') == 'complete'
                     and node['baseline_resolution'] == 'resolved')
-            by_ec2 = {value['instance_id'] for value in nodes.values()}
+                node['patch_scan_needs_review'] = (
+                    node.get('patch_state_collection') == 'complete'
+                    and node.get('scan_evidence_collection') == 'complete'
+                    and node.get('agent_online_recent') is True
+                    and (node.get('successful_scan_fresh') is False
+                         or node.get('patch_snapshot_fresh') is False))
+                node['agent_connection_lost'] = (
+                    node.get('agent_status') == 'ConnectionLost')
+            by_ec2 = {value['instance_id']: value for value in nodes.values()}
             for item in instances.values():
                 registered = item['instance_id'] in by_ec2
                 item['ssm_managed'] = (
@@ -105,9 +113,9 @@ class SSMPatchPublic(Regions):
                         'stopped', 'stopping', 'terminated', 'shutting-down') else
                     'unknown')
                 item['patch_health'] = (
-                    next((node['patch_health'] for node in nodes.values()
-                          if node['instance_id'] == item['instance_id']), None)
-                    if registered else None)
+                    by_ec2[item['instance_id']]['patch_health'] if registered else None)
+                item['running_unmanaged'] = (
+                    item['ssm_coverage_status'] == 'unmanaged_unverified_agent')
             # Unknown region or denied enumeration cannot produce a PASS.
             data = {
                 'id': region, 'name': region, 'region': region,
