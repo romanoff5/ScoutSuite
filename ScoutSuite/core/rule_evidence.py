@@ -320,7 +320,35 @@ def classify_guardduty_detector(detector):
     return 'unknown'
 
 
+def classify_organizations_features(organization):
+    """All-features is the prerequisite for organization policy governance."""
+    if not isinstance(organization, dict):
+        return 'unknown'
+    value = organization.get('feature_set')
+    if value == 'ALL':
+        return 'secure'
+    if value == 'CONSOLIDATED_BILLING':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_organizations_scp(root):
+    """Never turn missing/transitioning SCP evidence into a clean result."""
+    if not isinstance(root, dict):
+        return 'unknown'
+    status = root.get('scp_status')
+    if status == 'ENABLED':
+        return 'secure'
+    if status in ('DISABLED', 'NOT_ENABLED'):
+        return 'insecure'
+    if status == 'NOT_APPLICABLE':
+        return 'not_applicable'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'organizations-features-v1': classify_organizations_features,
+    'organizations-root-scp-v1': classify_organizations_scp,
     'guardduty-detector-state-v1': classify_guardduty_detector,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
