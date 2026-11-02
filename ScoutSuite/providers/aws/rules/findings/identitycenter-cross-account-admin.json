@@ -1,0 +1,21 @@
+{
+    "description": "IAM Identity Center principal has administrator candidates across multiple AWS accounts",
+    "rationale": "The same instance-scoped user/group principal has administrator-level permission set assignments to at least two AWS accounts. This indicates an elevated blast-radius candidate; cross-account access alone is not a vulnerability.",
+    "remediation": "Validate the business need for each account, principal group membership and role; separate privileged functions and reduce account scope using least privilege and time-bounded access.",
+    "references": [
+        "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_ListAccountAssignments.html",
+        "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_GetInlinePolicyForPermissionSet.html"
+    ],
+    "dashboard_name": "IAM Identity Center assignments",
+    "path": "identitycenter.regions.id.instances.id.permission_sets.id.assignments.id",
+    "conditions": [
+        "and",
+        [
+            "cross_account_admin_candidate",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "CrossAccountAdminCandidate",
+    "evidence_policy": "identitycenter-cross-account-admin-v1"
+}
