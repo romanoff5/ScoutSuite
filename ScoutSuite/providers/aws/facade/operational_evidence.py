@@ -298,13 +298,13 @@ async def collect_backup_rpo(facade, region, arns, jobs):
         elif not complete:
             entry['reasons'].append('recovery_point_history_incomplete')
         elif entry['age_minutes'] is not None and entry['age_minutes'] > rpo:
-            entry['state'] = 'gap_observed'
-            entry['reasons'].append('latest_point_exceeds_rpo')
+            entry['state'] = 'rpo_review_candidate'
+            entry['reasons'].append('last_snapshot_timestamp_exceeds_rpo_pitr_not_excluded')
         elif entry['max_observed_gap_minutes'] is not None and entry['max_observed_gap_minutes'] > rpo:
-            entry['state'] = 'gap_observed'
-            entry['reasons'].append('observed_point_gap_exceeds_rpo')
+            entry['state'] = 'rpo_review_candidate'
+            entry['reasons'].append('snapshot_interval_exceeds_rpo_pitr_not_excluded')
         elif entry['age_minutes'] is not None and entry['age_minutes'] <= rpo:
-            # Positive observation, but not continuous-time or PITR proof.
+            # PITR creation dates and historic gap cannot confirm ongoing RPO.
             entry['state'] = 'fresh_point_observed'
         output['resources'][arn] = entry
     if len(arns) > BACKUP_MAX_RESOURCES:
