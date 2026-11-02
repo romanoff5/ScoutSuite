@@ -1,0 +1,20 @@
+<!-- M10-C Organizations. Escaped text only, no inline URLs or AWS email addresses. -->
+<script id="services.organizations.roots.id.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4 class="list-group-item-heading">{{name}}</h4></div>
+  <div class="list-group-item"><h4>Organizations inventory</h4>
+    <ul>
+      <li>Root ID: <samp>{{id}}</samp></li>
+      <li>ARN: <samp>{{arn}}</samp></li>
+      <li>SCP status: {{scp_status}}</li>
+    </ul>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.organizations.roots.id", $("#services\\.organizations\\.roots\\.id\.partial").html());
+</script>
+<script id="single_organizations_root-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.organizations.roots.id' }}
+</script>
+<script>
+  var single_organizations_root_template = Handlebars.compile($("#single_organizations_root-template").html());
+</script>
