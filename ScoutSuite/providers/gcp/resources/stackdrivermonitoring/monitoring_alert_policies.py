@@ -30,6 +30,6 @@ class MonitoringAlertPolicies(Resources):
         for alert_policy in alert_policies:
             for condition in alert_policy.conditions:
                 if condition.condition_threshold.filter == 'metric.type=\"logging.googleapis.com/user/<Log Metric ' \
-                                                           'Name>\"' and alert_policy.enabled.value:
+                                                           'Name>\"' and bool(getattr(alert_policy.enabled, 'value', alert_policy.enabled)):
                     return True
         return False
