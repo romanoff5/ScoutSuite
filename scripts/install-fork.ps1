@@ -8,6 +8,7 @@ param(
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'),
     [string]$ExpectedSha256,
     [string]$ConstraintsPath,
+    [string]$WheelhousePath,
     [string]$PythonCommand = 'py'
 )
 Set-StrictMode -Version Latest
@@ -88,7 +89,12 @@ try {
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
         throw 'Failed to create isolated RC2 environment'
     }
-    & $venvPython -m pip install --disable-pip-version-check -c $ConstraintsPath $WheelPath
+    if ($WheelhousePath) {
+        $WheelhousePath = (Resolve-Path -LiteralPath $WheelhousePath -ErrorAction Stop).Path
+        & $venvPython -m pip install --disable-pip-version-check --no-index --find-links $WheelhousePath -c $ConstraintsPath $WheelPath
+    } else {
+        & $venvPython -m pip install --disable-pip-version-check -c $ConstraintsPath $WheelPath
+    }
     if ($LASTEXITCODE -ne 0) { throw 'Pinned RC2 wheel installation failed' }
     & $venvPython -m pip check
     if ($LASTEXITCODE -ne 0) { throw 'RC2 dependency consistency check failed' }
