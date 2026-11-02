@@ -191,6 +191,18 @@
                 "control_id": "7.4.2",
                 "coverage": "candidate"
             }
+        ],
+        "s3-bucket-public-access-block-incomplete.json": [
+            {
+                "control_id": "3.1.4",
+                "coverage": "candidate"
+            }
+        ],
+        "securityhub-region-not-subscribed.json": [
+            {
+                "control_id": "5.16",
+                "coverage": "candidate"
+            }
         ]
     },
     "rules": {
@@ -379,6 +391,18 @@
             }
         ],
         "bedrock-invocation-logging-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-bucket-public-access-block-incomplete.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "securityhub-region-not-subscribed.json": [
             {
                 "enabled": true,
                 "level": "warning"
