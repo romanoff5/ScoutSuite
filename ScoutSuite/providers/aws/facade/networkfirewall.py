@@ -42,6 +42,25 @@ def broad_pass(group, kind):
     return False
 
 
+
+def reconcile_group_references(policies, groups):
+    """Record managed/foreign/missing group references instead of claiming full coverage."""
+    known = {group['arn'] for group in groups}
+    complete = True
+    for policy in policies:
+        references = (policy.get('stateful_group_refs') or []) + (
+            policy.get('stateless_group_refs') or [])
+        missing = sorted({item.get('ResourceArn') for item in references
+                          if isinstance(item, dict) and
+                          isinstance(item.get('ResourceArn'), str) and
+                          item['ResourceArn'] not in known})
+        policy['unresolved_rule_group_arns'] = missing
+        policy['group_reference_coverage_complete'] = (
+            policy.get('detail_complete') is True and not missing)
+        complete = complete and policy['group_reference_coverage_complete']
+    return complete
+
+
 class NetworkFirewallFacade(AWSBaseFacade):
     def __init__(self, session, account_id):
         super().__init__(session)
@@ -220,6 +239,10 @@ class NetworkFirewallFacade(AWSBaseFacade):
                 'detail_complete': valid, 'rule_group': raw if valid else None,
                 'metadata': meta if valid else None,
                 'broad_pass': bool(valid and broad_pass(raw, kind))})
+        references_complete = reconcile_group_references(
+            result['policies'], result['rule_groups'])
+        if not references_complete:
+            self.issue('partial', 'FirewallPolicy:RuleGroupReferencesUnresolved')
         for item in frows:
             arn = item['FirewallArn']
             reply = await self.one(client, 'describe_firewall', FirewallArn=arn)
@@ -271,6 +294,8 @@ class NetworkFirewallFacade(AWSBaseFacade):
                                      route_complete and item['detail_complete']))
         result['collection'] = {
             'firewalls': fc, 'policies': pc, 'rule_groups': gc,
+            'rule_group_references_resolved': references_complete and pc,
+            'managed_rule_groups_enumerated': False,
             'routing': route_complete and fc,
             'inspection_verified': False,
             'scope': 'account_region_vpc_routes_only',
