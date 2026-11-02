@@ -41,12 +41,14 @@ def run_http_checks():
         }
         with SqliteDict(str(db_path)) as db:
             db['account_id'] = 'synthetic'
-            db['services'] = {'ec2': {'instances_count': 2400, 'findings': {},
-                                      'instances': resources}}
-            db['scalars'] = [0, False, None, 'hello', {'a': 1}, [1, 2]]
-            db['large'] = {'container': {'k%06d' % i: i for i in range(25000)},
-                           'value': 0}
-            db['oversized'] = {'payload': 'X' * (MAX_RESPONSE_BYTES + 1)}
+            db['services'] = {'ec2': {
+                'instances_count': 2400, 'findings': {},
+                'instances': resources,
+                'scalars': [0, False, None, 'hello', {'a': 1}, [1, 2]],
+                'large': {'container': {'k%06d' % i: i for i in range(25000)},
+                          'value': 0},
+                'oversized': {'payload': 'X' * (MAX_RESPONSE_BYTES + 1)},
+            }}
             db.commit()
 
         api = Server(str(db_path))
@@ -97,20 +99,20 @@ def run_http_checks():
                 assert full['active'] is True
                 assert full['count'] == 0 and full['notes'] is None
                 assert full['events'] == [1, False, None]
-                assert request('page', {'key': 'scalars', 'page': 0, 'pagesize': 6}) == [
+                assert request('page', {'key': 'services¤ec2¤scalars', 'page': 0, 'pagesize': 6}) == [
                     0, False, None, 'hello', {'type': 'dict', 'keys': ['a']},
                     {'type': 'list', 'length': 2}]
-                metadata = request('page', {'key': 'large', 'page': 0, 'pagesize': 2})
+                metadata = request('page', {'key': 'services¤ec2¤large', 'page': 0, 'pagesize': 2})
                 assert metadata['value'] == 0
                 assert metadata['container']['type'] == 'dict'
                 assert metadata['container']['truncated'] is True
                 assert len(metadata['container']['keys']) == 100
                 assert metadata['container']['length'] == 25000
                 assert len(json.dumps(metadata)) < 4000
-                request('full', {'key': 'oversized'}, expected=413)
-                request('page', {'key': 'oversized', 'page': 0, 'pagesize': 1},
+                request('full', {'key': 'services¤ec2¤oversized'}, expected=413)
+                request('page', {'key': 'services¤ec2¤oversized', 'page': 0, 'pagesize': 1},
                         expected=413)
-                assert request('data', {'key': 'oversized'}) == {
+                assert request('data', {'key': 'services¤ec2¤oversized'}) == {
                     'type': 'dict', 'keys': ['payload']}
                 request('page', {'key': base_key, 'page': '-1', 'pagesize': 10},
                         expected=400)
