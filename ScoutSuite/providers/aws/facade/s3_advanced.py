@@ -22,6 +22,8 @@ UNSUPPORTED_CODES = {'NotImplemented', 'NotImplementedException',
 POLICY_ABSENT_CODES = {'NoSuchAccessPointPolicy', 'NoSuchMultiRegionAccessPointPolicy',
                        'NoSuchBucketPolicy', 'NoSuchAccessGrantsInstanceResourcePolicy'}
 PAGE_SIZE = 100
+MAX_PAGES = 1000
+MAX_ITEMS = 100000
 REGION_CONCURRENCY = 4
 
 
@@ -80,7 +82,7 @@ class S3AdvancedFacade:
                      input_token='NextToken', output_token='NextToken',
                      page_size='MaxResults', **params):
         items, seen, token = [], set(), None
-        while True:
+        for _ in range(MAX_PAGES):
             args = dict(params)
             args[page_size] = PAGE_SIZE
             if token:
@@ -92,6 +94,13 @@ class S3AdvancedFacade:
             if not isinstance(page, list):
                 self._issue('failed', operation + 'MalformedItems', region)
                 return items, False
+            if any(not isinstance(row, dict) for row in page):
+                self._issue('partial', operation + 'MalformedRow', region)
+                return items, False
+            if len(items) + len(page) > MAX_ITEMS:
+                items.extend(page[:MAX_ITEMS - len(items)])
+                self._issue('partial', operation + 'ItemLimit', region)
+                return items, False
             items.extend(page)
             next_token = response.get(output_token)
             if not next_token:
@@ -101,6 +110,8 @@ class S3AdvancedFacade:
                 return items, False
             seen.add(next_token)
             token = next_token
+        self._issue('partial', operation + 'PageLimit', region)
+        return items, False
 
     def _index(self, items, region, collection, key_field, *, name_field=None):
         index, complete = {}, True
