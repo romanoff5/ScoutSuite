@@ -123,6 +123,7 @@ class IdentityCenterFacade(AWSBaseFacade):
                     'name': response.get('DisplayName') or response.get('UserName'),
                     'username': response.get('UserName'),
                     'email': self._email(response) if kind == 'USER' else None,
+                    'emails': response.get('Emails', []) if kind == 'USER' else [],
                     'description': response.get('Description') if kind == 'GROUP' else None,
                     'external_ids': response.get('ExternalIds', [])}
         cache[key] = item
@@ -150,7 +151,12 @@ class IdentityCenterFacade(AWSBaseFacade):
             user = await self._identity(client, store, 'USER', identifier, identity_cache)
             if user['resolution_status'] != 'resolved':
                 complete = False
-            members.append(user)
+            membership_id = row.get('MembershipId')
+            if (not isinstance(membership_id, str) or not membership_id
+                    or row.get('GroupId') != group_id or row.get('IdentityStoreId') != store):
+                self.issue('partial', 'GroupMembershipIdentityIncomplete')
+                complete = False
+            members.append(dict(user, membership_id=membership_id, group_id=group_id))
         result = {'members': members, 'members_complete': complete}
         membership_cache[key] = result
         return result
@@ -238,6 +244,7 @@ class IdentityCenterFacade(AWSBaseFacade):
                     'principal_name': identity.get('name'),
                     'principal_username': identity.get('username'),
                     'principal_email': identity.get('email'),
+                    'principal_emails': identity.get('emails', []),
                     'principal_external_ids': identity.get('external_ids'),
                     'identity_resolution_status': identity['resolution_status'],
                     'group_members': members['members'],
