@@ -1,0 +1,21 @@
+{
+    "description": "Amazon Inspector delegated organization member account scanning is disabled or suspended",
+    "rationale": "A member discovered via the regional Inspector2 delegated administrator relationship has confirmed DISABLED or SUSPENDED account-level scanning. This is not an AWS Organizations-wide audit; members outside Inspector associations are not inferred.",
+    "remediation": "Verify organization and member association, inspect the Inspector account state and affected scan-type configuration, and enable or resume applicable scanning under approved change management.",
+    "references": [
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListMembers.html",
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html"
+    ],
+    "dashboard_name": "Inspector members",
+    "path": "inspector2.regions.id.organization.members.id",
+    "conditions": [
+        "and",
+        [
+            "inactive",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Disabled",
+    "evidence_policy": "inspector2-member-state-v1"
+}
