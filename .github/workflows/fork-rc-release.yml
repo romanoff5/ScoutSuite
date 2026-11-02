@@ -59,6 +59,7 @@ jobs:
           python -m twine check dist/*
           test "$(find dist -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
           test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 1
+          cp constraints/combined-py311.txt dist/runtime-py311.constraints.txt
       - name: Install the wheel in a clean isolated environment and smoke-test it
         shell: bash
         run: |
