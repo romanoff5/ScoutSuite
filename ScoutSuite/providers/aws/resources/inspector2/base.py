@@ -62,6 +62,13 @@ class Inspector2(Regions):
             # accounts in AWS Organizations.
             data['organization'] = organization
             for account in data.get('accounts', {}).values():
+                account['coverage_summary'] = {
+                    'status': data['coverage_summary']['status'],
+                    'inventory_complete': data['coverage_summary']['inventory_complete'],
+                    'collected_records': data['coverage_summary']['collected_records'],
+                    'inspector_reported_records': data['coverage_summary']['inspector_reported_records'],
+                    'aws_resource_inventory_compared': False,
+                }
                 account['organization'] = {
                     'role': organization.get('role'),
                     'status': organization.get('status'),
