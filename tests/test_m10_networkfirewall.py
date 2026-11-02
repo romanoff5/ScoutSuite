@@ -111,7 +111,7 @@ def test_full_stubber_inventory_unknown_vs_referenced_routing():
                     'FirewallArn': FW,
                     'LoggingConfiguration': {'LogDestinationConfigs': []}},
                     {'FirewallArn': FW})
-                routes = ([{'VpcEndpointId': 'vpce-123', 'State': 'active',
+                routes = ([{'GatewayId': 'vpce-123', 'State': 'active',
                             'DestinationCidrBlock': '0.0.0.0/0'}]
                           if route_present else
                           [{'GatewayId': 'igw-123', 'State': 'active',
