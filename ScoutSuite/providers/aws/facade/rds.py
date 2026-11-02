@@ -162,8 +162,7 @@ class RDSFacade(AWSBaseFacade):
         except Exception as e:
             print_exception(f'Failed to get RDS parameter groups: {e}')
             parameter_groups = []
-        finally:
-            return parameter_groups
+        return parameter_groups
 
     async def _get_and_set_db_parameters(self, parameter_group: {}, region: str):
         name = parameter_group['DBParameterGroupName']
