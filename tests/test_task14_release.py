@@ -6,8 +6,8 @@ from ScoutSuite import __version__
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = "fork-v5.14.0-m10-rc2"
-VERSION = "5.14.0+romanoff5.m10rc2"
+TAG = "fork-v5.14.0-m10-rc3"
+VERSION = "5.14.0+romanoff5.m10rc3"
 
 
 def test_unique_fork_version_and_manifest_generator_syntax():
@@ -60,7 +60,7 @@ def test_stable_venv_and_external_client_toolkit_are_never_mutated_by_install():
     assert "Get-FileHash" in wrapper
     assert "ForkRc1" in select
     assert ".venv-scout-fork-rc2" in select + wrapper
-    assert "5.14.0+romanoff5.m10rc2" in wrapper
+    assert "5.14.0+romanoff5.m10rc3" in wrapper
 
 
 def test_release_notes_explicitly_disclaim_unverified_controls_and_containers():
@@ -83,7 +83,7 @@ def test_rc2_release_pins_installable_dependency_closure_and_runtime_hotfix():
     assert "runtime_constraints_sha256" in generator
     assert "70cf29d5579864543b6363e7a271a84216bb6837" in flow
     assert "merge-base --is-ancestor" in flow
-    assert "fork-v5.14.0-m10-rc2" in flow
+    assert "fork-v5.14.0-m10-rc3" in flow
     assert "fork-v5.14.0-m10-rc1" not in flow
     assert "No real client AWS scanning" in (ROOT / "docs/releases" / (TAG + ".md")).read_text(encoding="utf-8")
 
