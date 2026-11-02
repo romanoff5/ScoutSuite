@@ -25,6 +25,9 @@ This document contains only aggregate observations and rule names.
   Center, SSM baseline detail, Backup, Security Hub, S3 directory access
   points, Bedrock and Inspector coverage statistics. A successful
   process exit is **not** evidence of all-account coverage.
+- CloudTrail trail-absence rationale wrongly implied no API activity
+  logging at all despite separately observed Event History. Corrected
+  wording distinguishes Event History from durable trail/Lake delivery.
 - One manually repeated S3 MRAP call from the scanned Region yielded
   `PermanentRedirect`; the integrated collector already uses the
   required `us-west-2` control-plane endpoint. No change to the
