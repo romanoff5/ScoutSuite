@@ -553,3 +553,13 @@ calls. See `docs/modernization/M10_WAFV2.md`.
   evidence are stored outside this repository under the customer's private
   `results/codex-review` and `reports/scout-fork` directories. No customer
   data or credentials were used for development fixtures or committed here.
+- The fix branch was reconciled with the independent Macie change using merge
+  commit `f0a80ac4829968ad6b99f061e8d2302e5597e953`; its combined
+  [Offline CI run](https://github.com/romanoff5/ScoutSuite/actions/runs/41501772190)
+  passed all four Windows/Ubuntu Python 3.11/3.14 jobs. The earlier
+  [fix-only CI run](https://github.com/romanoff5/ScoutSuite/actions/runs/41500978332)
+  also passed all four jobs. Branch `fix/rc5-rds-snapshot-cache` was pushed at
+  `f0a80ac4829968ad6b99f061e8d2302e5597e953`; remote default branch
+  `master` was fast-forwarded and verified at the same SHA. No PR or upstream
+  push was made. The published RC5 tag/wheel still contains the defect; a
+  future release requires fresh packaging and live acceptance.
