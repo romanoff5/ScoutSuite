@@ -1,0 +1,763 @@
+{
+  "schema_version": 1,
+  "benchmark": {
+    "id": "cis-aws-foundations",
+    "version": "7.1.0",
+    "reference_date": "2026-10-02",
+    "reference_source": "maintainer-provided licensed PDF; not redistributed"
+  },
+  "scope": "This is an implementation inventory, NOT CIS compliance results. Candidate mappings never certify a recommendation. Manual controls still require human assessment.",
+  "profile_file": "cis-foundations-7.1.0-partial.json",
+  "controls": [
+    {
+      "id": "2.1.1",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.1.2",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.1.3",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.1.4",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.1.5",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.1.6",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.2",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.3",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.4",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-root-account-with-active-keys.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.5",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-root-account-no-mfa.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.6",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-root-account-no-hardware-mfa.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.7",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.8",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-password-policy-minimum-length.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.9",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-password-policy-reuse-enabled.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.10",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-user-without-mfa.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.11",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-unused-credentials-not-disabled.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.12",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-user-no-key-rotation.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.13",
+      "section": "2",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.14",
+      "section": "2",
+      "status": "candidate",
+      "candidate_rules": [
+        "iam-managed-policy-allows-full-privileges.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.15",
+      "section": "2",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.16",
+      "section": "2",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.17",
+      "section": "2",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.18",
+      "section": "2",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.19",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.20",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "2.21",
+      "section": "2",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.1.1",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "s3-bucket-allowing-cleartext.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.1.2",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "s3-bucket-no-mfa-delete.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.1.3",
+      "section": "3",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.1.4",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "s3-bucket-public-access-block-incomplete.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.1.5",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "s3-bucket-no-default-encryption.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.2.1",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "rds-instance-storage-not-encrypted.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.2.2",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "rds-instance-no-minor-upgrade.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.2.3",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "rds-instance-publicly-accessible.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.2.4",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "rds-instance-single-az.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.2.5",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "rds-instance-deletion-protection-disabled.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "3.3.1",
+      "section": "3",
+      "status": "candidate",
+      "candidate_rules": [
+        "efs-filesystem-not-encrypted.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.1",
+      "section": "4",
+      "status": "candidate",
+      "candidate_rules": [
+        "cloudtrail-not-configured.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.2",
+      "section": "4",
+      "status": "candidate",
+      "candidate_rules": [
+        "cloudtrail-no-log-file-validation.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.3",
+      "section": "4",
+      "status": "candidate",
+      "candidate_rules": [
+        "config-recorder-not-configured.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.4",
+      "section": "4",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.5",
+      "section": "4",
+      "status": "candidate",
+      "candidate_rules": [
+        "cloudtrail-no-encryption-with-kms.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.6",
+      "section": "4",
+      "status": "candidate",
+      "candidate_rules": [
+        "kms-cmk-rotation-disabled.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.7",
+      "section": "4",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.8",
+      "section": "4",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.9",
+      "section": "4",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "4.10",
+      "section": "4",
+      "status": "candidate",
+      "candidate_rules": [
+        "elb-no-access-logs.json",
+        "elbv2-no-access-logs.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.1",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.2",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.3",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.4",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.5",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.6",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.7",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.8",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.9",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.10",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.11",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.12",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.13",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.14",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.15",
+      "section": "5",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "5.16",
+      "section": "5",
+      "status": "candidate",
+      "candidate_rules": [
+        "securityhub-region-not-subscribed.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.1.1",
+      "section": "6",
+      "status": "candidate",
+      "candidate_rules": [
+        "ec2-ebs-default-encryption-disabled.json",
+        "ec2-ebs-volume-not-encrypted.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.1.2",
+      "section": "6",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.2",
+      "section": "6",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.3",
+      "section": "6",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.4",
+      "section": "6",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.5",
+      "section": "6",
+      "status": "candidate",
+      "candidate_rules": [
+        "ec2-default-security-group-with-rules.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.6",
+      "section": "6",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.7",
+      "section": "6",
+      "status": "candidate",
+      "candidate_rules": [
+        "ec2-instance-imdsv1-enabled.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "6.8",
+      "section": "6",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.1.1",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.1.2",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.1.3",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.1.4",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.1.5",
+      "section": "7",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.1.6",
+      "section": "7",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.2.1",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.2.2",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.2.3",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.2.4",
+      "section": "7",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.2.5",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.2.6",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.3.1",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.3.2",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.4.1",
+      "section": "7",
+      "status": "partial_existing_unmapped",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.4.2",
+      "section": "7",
+      "status": "candidate",
+      "candidate_rules": [
+        "bedrock-invocation-logging-review.json"
+      ],
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.4.3",
+      "section": "7",
+      "status": "manual_review",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.4.4",
+      "section": "7",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.5.1",
+      "section": "7",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.5.2",
+      "section": "7",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.5.3",
+      "section": "7",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    },
+    {
+      "id": "7.5.4",
+      "section": "7",
+      "status": "not_implemented",
+      "evidence_verified": false,
+      "compliance_verified": false
+    }
+  ]
+}
