@@ -228,8 +228,9 @@ def test_default_aws_selection_and_safe_report_templates():
         narrow = AWSProvider(credentials=credentials, services=['eks'])
     for service in ('ecr', 'ecs', 'eks'):
         assert service in default.service_list
-    for service in ('inspector2', 'organizations', 'accessanalyzer'):
-        assert service not in default.service_list
+    for service in ('accessanalyzer', 'guardduty', 'securityhub',
+                    'organizations', 'inspector2', 'ecr', 'ecs', 'eks'):
+        assert service in default.service_list
     assert narrow.service_list == ['eks']
     for filename in ('services.ecr.regions.id.registry_scanning.html',
                      'services.ecs.regions.id.task_definitions.html'):
