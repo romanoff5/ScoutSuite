@@ -716,6 +716,13 @@
         }
     },
     "storage": {
+        "backup": {
+            "resources": {
+                "regions": {"cols": 2, "path": "services.backup.regions"},
+                "vaults": {"cols": 2, "path": "services.backup.regions.id.vaults"},
+                "plans": {"cols": 2, "path": "services.backup.regions.id.plans"}
+            }
+        },
         "efs": {
             "hidden": true,
             "resources": {

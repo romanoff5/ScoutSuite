@@ -1,0 +1,20 @@
+{
+    "description": "AWS Backup vault does not have Vault Lock enabled",
+    "rationale": "The observed Backup vault explicitly reports Locked=false. Vault Lock can help protect recovery points against premature deletion; this rule does not prove backups are missing, ineffective, or required to be immutable under a particular benchmark.",
+    "remediation": "Review the vault ARN and retention requirements. Evaluate AWS Backup Vault Lock (governance/compliance mode), retention ranges, cross-account recovery and restore testing; confirm the chosen operational mode before enabling.",
+    "references": [
+        "https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html"
+    ],
+    "dashboard_name": "Backup vaults",
+    "path": "backup.regions.id.vaults.id",
+    "conditions": [
+        "and",
+        [
+            "unlocked",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "VaultLockDisabled",
+    "evidence_policy": "backup-vault-lock-v1"
+}
