@@ -135,11 +135,11 @@ class NetworkFirewallFacade(AWSBaseFacade):
         matches = []
         for table in tables:
             for route in table.get('Routes') or []:
-                if route.get('VpcEndpointId') in ids:
+                if route.get('GatewayId') in ids:
                     matches.append({
                         'route_table_id': table.get('RouteTableId'),
                         'associations': table.get('Associations') or [],
-                        'endpoint_id': route.get('VpcEndpointId'),
+                        'endpoint_id': route.get('GatewayId'),
                         'destination_ipv4': route.get('DestinationCidrBlock'),
                         'destination_ipv6': route.get('DestinationIpv6CidrBlock'),
                         'destination_prefix_list_id': route.get('DestinationPrefixListId'),
