@@ -300,3 +300,60 @@ class BackupPublicFacade(AWSBaseFacade):
                 result.complete = False
             result.append(record)
         return result
+
+    async def get_resource_tags(self, region, arns):
+        """Verified current tags for observed ARNs, not a complete resource census.
+
+        GetResources excludes never-tagged and unsupported resources. Missing rows
+        must remain unknown, never be interpreted as an empty tag set.
+        """
+        unique = sorted({arn for arn in arns if isinstance(arn, str) and arn.startswith('arn:')})
+        result = {'tags': {}, 'status': 'complete', 'requested_arns': len(unique)}
+        if not unique:
+            return result
+        client = AWSFacadeUtils.get_client('resourcegroupstaggingapi', self.session, region)
+        if client is None:
+            self.issue('partial', 'ResourceTagsClientUnavailable')
+            result['status'] = 'partial'
+            return result
+        try:
+            for index in range(0, len(unique), 100):
+                batch = unique[index:index + 100]
+                try:
+                    page = await run_concurrently(
+                        lambda batch=batch: client.get_resources(ResourceARNList=batch))
+                except Exception as error:
+                    self.failure('GetResourceTags', error, partial=True)
+                    result['status'] = 'partial'
+                    continue
+                rows = page.get('ResourceTagMappingList') if isinstance(page, dict) else None
+                if not isinstance(rows, list):
+                    result['status'] = 'partial'
+                    self.issue('partial', 'MalformedResourceTagsPage')
+                    continue
+                requested = set(batch)
+                for row in rows:
+                    if not isinstance(row, dict) or row.get('ResourceARN') not in requested:
+                        result['status'] = 'partial'
+                        self.issue('partial', 'MalformedResourceTagIdentity')
+                        continue
+                    arn, tags = row['ResourceARN'], row.get('Tags')
+                    if (arn in result['tags'] or not isinstance(tags, list)
+                            or any(not isinstance(tag, dict)
+                                   or not isinstance(tag.get('Key'), str)
+                                   or not isinstance(tag.get('Value'), str) for tag in tags)):
+                        result['status'] = 'partial'
+                        self.issue('partial', 'MalformedResourceTags')
+                        continue
+                    result['tags'][arn] = {tag['Key']: tag['Value'] for tag in tags}
+                # GetResources with ResourceARNList has no pagination parameters.
+                if page.get('PaginationToken'):
+                    result['status'] = 'partial'
+                    self.issue('partial', 'UnexpectedResourceTagPagination')
+        finally:
+            close = getattr(client, 'close', None)
+            if callable(close):
+                close()
+        result['verified_arns'] = len(result['tags'])
+        result['unknown_arns'] = [arn for arn in unique if arn not in result['tags']]
+        return result
