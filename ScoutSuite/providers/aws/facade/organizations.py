@@ -3,6 +3,8 @@
 Global service endpoint: commercial us-east-1, GovCloud us-gov-west-1,
 China cn-northwest-1. No cross-account traversal or policy-document access.
 """
+import asyncio
+
 from botocore.exceptions import ClientError
 
 from ScoutSuite.core.run_context import get_current_run_context
@@ -29,9 +31,10 @@ _UNSUPPORTED = frozenset(('UnsupportedOperation', 'UnsupportedOperationException
 
 
 class OrganizationsFacade(AWSBaseFacade):
-    def __init__(self, session, partition):
+    def __init__(self, session, partition, owner_id=None):
         super().__init__(session)
         self.partition = partition
+        self.owner_id = owner_id
 
     @staticmethod
     def _issue(status, reason):
@@ -152,4 +155,99 @@ class OrganizationsFacade(AWSBaseFacade):
             rows, status = await self._list(client, operation, field, pages, limit)
             result[label] = rows
             result['collection'][label] = status
+        return result
+
+
+    async def get_account_region_inventory(self, accounts, management_id=None):
+        """M10-R. Per-account Region status; never assume roles or mutate accounts.
+
+        account:ListRegions requires organizational trusted access and read
+        permissions for member AccountId. Its denial is recorded as unknown.
+        Bounded concurrency, pagination, account count, and token detection.
+        """
+        MAX_REGION_ACCOUNTS = 2000
+        MAX_REGION_PAGES = 20
+        result = {}
+        if not isinstance(accounts, dict):
+            return result
+        active = [(account_id, account) for account_id, account in sorted(accounts.items())
+                  if isinstance(account, dict) and account.get('state') not in
+                  ('SUSPENDED', 'CLOSED', 'PENDING_CLOSURE')]
+        region = HOME_REGIONS.get(self.partition)
+        if not region:
+            self._issue('unsupported', 'AccountRegionsUnknownPartition')
+            return result
+        client = AWSFacadeUtils.get_client('account', self.session, region)
+        if client is None:
+            self._issue('failed', 'AccountRegionsClientUnavailable')
+            return result
+
+        semaphore = asyncio.Semaphore(8)
+
+        async def one(account_id):
+            async with semaphore:
+                record = {'regions': {}, 'collection_status': 'complete'}
+                # AWS forbids specifying management AccountId explicitly;
+                # delegated admins also cannot query it as a member account.
+                if account_id == management_id and self.owner_id != management_id:
+                    record['collection_status'] = 'not_collected'
+                    self._issue('partial', 'AccountRegionsManagementRequiresManagementCredentials')
+                    return account_id, record
+                params = {'MaxResults': 50}
+                if account_id != self.owner_id:
+                    params['AccountId'] = account_id
+                visited = set()
+                for _ in range(MAX_REGION_PAGES):
+                    try:
+                        response = await run_concurrently(
+                            lambda params=dict(params): client.list_regions(**params))
+                    except Exception as error:
+                        status, reason = self._error_status(error)
+                        record['collection_status'] = status
+                        self._issue(status, 'AccountListRegions' + reason + ':' + account_id)
+                        break
+                    batch = response.get('Regions') if isinstance(response, dict) else None
+                    if not isinstance(batch, list):
+                        record['collection_status'] = 'partial'
+                        self._issue('partial', 'AccountListRegionsMalformed:' + account_id)
+                        break
+                    bad = False
+                    for item in batch:
+                        if not isinstance(item, dict):
+                            bad = True
+                            break
+                        name, status = item.get('RegionName'), item.get('RegionOptStatus')
+                        if (not isinstance(name, str) or not name
+                                or status not in ('ENABLED', 'DISABLED', 'ENABLING',
+                                                  'DISABLING', 'ENABLED_BY_DEFAULT')
+                                or name in record['regions']):
+                            bad = True
+                            break
+                        record['regions'][name] = status
+                    if bad:
+                        record['collection_status'] = 'partial'
+                        self._issue('partial', 'AccountListRegionsInvalidRow:' + account_id)
+                        break
+                    token = response.get('NextToken')
+                    if token is None:
+                        break
+                    if not isinstance(token, str) or not token or token in visited:
+                        record['collection_status'] = 'partial'
+                        self._issue('partial', 'AccountListRegionsInvalidToken:' + account_id)
+                        break
+                    visited.add(token)
+                    params['NextToken'] = token
+                else:
+                    record['collection_status'] = 'partial'
+                    self._issue('partial', 'AccountListRegionsPageLimit:' + account_id)
+                return account_id, record
+
+        # Do not silently omit accounts beyond the explicit collection bound.
+        for account_id, _ in active[MAX_REGION_ACCOUNTS:]:
+            result[account_id] = {'regions': {}, 'collection_status': 'not_collected'}
+        if len(active) > MAX_REGION_ACCOUNTS:
+            self._issue('partial', 'AccountListRegionsAccountLimit')
+        for account_id, record in await asyncio.gather(
+                *(one(account_id) for account_id, _ in active[:MAX_REGION_ACCOUNTS])):
+            result[account_id] = record
         return result
