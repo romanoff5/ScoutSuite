@@ -1,0 +1,20 @@
+{
+    "description": "WAFv2 Web ACL permits requests by default with no effective rules",
+    "rationale": "A Web ACL explicitly allows unmatched traffic, has zero rules, and is not managed by Firewall Manager. This ACL provides no filtering by its own rule set. Other network controls and application protections were not assessed.",
+    "remediation": "Review the Web ACL ARN and attached resources; add an appropriate tested rule set or use a restrictive default action. Confirm whether the Web ACL is actively associated with resources.",
+    "references": [
+        "https://docs.aws.amazon.com/waf/latest/developerguide/web-acl.html"
+    ],
+    "dashboard_name": "Web ACLs",
+    "path": "wafv2.regions.id.web_acls.id",
+    "conditions": [
+        "and",
+        [
+            "unprotected_allow_all",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "AllowAllNoRules",
+    "evidence_policy": "wafv2-empty-allow-v1"
+}

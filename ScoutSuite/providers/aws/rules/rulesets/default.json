@@ -1501,6 +1501,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "wafv2-web-acl-empty-allow.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

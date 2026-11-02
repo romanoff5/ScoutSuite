@@ -35,7 +35,8 @@
       "ses",
       "sns",
       "sqs",
-      "vpc"
+      "vpc",
+      "wafv2"
     ],
     "optional_declarations": [
       "cognito",
@@ -80,7 +81,8 @@
       "sqs",
       "ssm",
       "summaries",
-      "vpc"
+      "vpc",
+      "wafv2"
     ],
     "default_rule_keys": [
       "accessanalyzer-analyzer-inactive.json",
@@ -246,7 +248,8 @@
       "vpc-routing-tables-with-peering.json",
       "vpc-subnet-with-bad-acls.json",
       "vpc-subnet-with-default-acls.json",
-      "vpc-subnet-without-flow-log.json"
+      "vpc-subnet-without-flow-log.json",
+      "wafv2-web-acl-empty-allow.json"
     ],
     "templates": [
       "partials/aws/left_menu_for_region.html",
@@ -331,6 +334,7 @@
       "partials/aws/services.vpc.regions.id.vpcs.id.network_acls.html",
       "partials/aws/services.vpc.regions.id.vpcs.id.peering_connections.html",
       "partials/aws/services.vpc.regions.id.vpcs.id.subnets.html",
+      "partials/aws/services.wafv2.regions.id.web_acls.html",
       "summaries/aws/services.ec2.external_attack_surface.html",
       "summaries/aws/services.elb.external_attack_surface.html",
       "summaries/aws/services.elbv2.external_attack_surface.html",

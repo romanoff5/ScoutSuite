@@ -338,3 +338,7 @@ selection does not assert live-tested estate-wide coverage.
 
 No Azure/GCP collector modernization, new AWS write operations, vulnerability
 finding payload requests, or changes to configured collection caps.
+
+## M10-J — AWS WAFv2 regional and CloudFront Web ACL inventories (2026-11-02)
+
+Adds the public `wafv2` service to the default AWS scan, with bounded read-only `ListWebACLs`, `GetWebACL` and `GetLoggingConfiguration`. Regional Web ACLs are collected for selected Regions and CLOUDFRONT scope only in `us-east-1`. Preserves full ARN/ID/name, priority-ordered rule names and type summaries, logging destinations, scope and default action without retaining raw rule statements/request bodies. Empty ALLOW ACLs not managed by Firewall Manager are flagged; missing/ambiguous management, details, logging and API responses remain partial/unknown. CloudFront scope is not claimed if `us-east-1` is not scanned. See `docs/modernization/M10_WAFV2.md`. No AWS writes or Azure/GCP modernization.

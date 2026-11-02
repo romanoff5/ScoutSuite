@@ -543,6 +543,18 @@
                     "path": "services.inspector2.regions.id.organization.members"
                 }
             }
+        },
+        "wafv2": {
+            "resources": {
+                "regions": {
+                    "cols": 2,
+                    "path": "services.wafv2.regions"
+                },
+                "web_acls": {
+                    "cols": 2,
+                    "path": "services.wafv2.regions.id.web_acls"
+                }
+            }
         }
     },
     "database": {

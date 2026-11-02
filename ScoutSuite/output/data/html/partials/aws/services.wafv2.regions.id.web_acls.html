@@ -1,0 +1,38 @@
+<!-- M10-J: all Web ACL data escapes through Handlebars. -->
+<script id="services.wafv2.regions.id.web_acls.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>WAFv2 Web ACL</h4>
+    <ul>
+      <li>Web ACL ARN: <samp>{{web_acl_arn}}</samp></li>
+      <li>Web ACL ID: <samp>{{web_acl_id}}</samp></li>
+      <li>Region: {{region}}; Scope: {{scope}}</li>
+      <li>Default action: {{default_action}}</li>
+      <li>Rule count: {{rule_count}}</li>
+      <li>Managed by Firewall Manager: {{managed_by_firewall_manager}}</li>
+      <li>Logging status: {{logging_status}}</li>
+    </ul>
+    <h4>Rule inventory</h4>
+    {{#each rules}}
+      <p>Rule: {{name}} (priority {{priority}})</p>
+      <p>Statement types: {{statement_types}}</p>
+      <p>Managed rule group: {{managed_group_vendor}} / {{managed_group_name}}</p>
+      <p>Referenced group ARN: <samp>{{rule_group_arn}}</samp></p>
+    {{/each}}
+    <h4>Logging destinations</h4>
+    {{#each log_destinations}}
+      <p><samp>{{this}}</samp></p>
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.wafv2.regions.id.web_acls",
+    $("#services\\.wafv2\\.regions\\.id\\.web_acls\\.partial").html());
+</script>
+<script id="single_wafv2_web_acl-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.wafv2.regions.id.web_acls' }}
+</script>
+<script>
+  var single_wafv2_web_acl_template = Handlebars.compile(
+    $("#single_wafv2_web_acl-template").html());
+</script>
