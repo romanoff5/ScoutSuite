@@ -5,6 +5,8 @@ GetKnowledgeBaseDocuments, GetAgentActionGroup (schema/payload), or
 GetModelInvocationJob (request/response content).
 """
 from datetime import datetime
+from hashlib import sha256
+import re
 
 from botocore.exceptions import ClientError
 
@@ -12,6 +14,14 @@ from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
+
+def safe_issue_code(reason):
+    """RunContext issue IDs are strict; retain distinction for long errors."""
+    value = re.sub(r'[^A-Za-z0-9_.-]', '_', reason)
+    if len(value) > 64:
+        value = value[:47] + '-' + sha256(reason.encode('utf-8')).hexdigest()[:16]
+    return value or 'UnknownError'
+
 
 PAGE_SIZE = 100
 MAX_PAGES = 250
@@ -43,7 +53,7 @@ class BedrockFacade(AWSBaseFacade):
     def issue(self, status, reason):
         ctx = get_current_run_context()
         if ctx is not None:
-            ctx.record_collection_issue(status, 'bedrock', reason)
+            ctx.record_collection_issue(status, 'bedrock', safe_issue_code(reason))
 
     def failure(self, operation, error):
         code = (error.response.get('Error', {}).get('Code')
@@ -77,7 +87,7 @@ class BedrockFacade(AWSBaseFacade):
             if not valid:
                 return rows, False
             items = page.get(key)
-            if (not isinstance(items, list) or len(items) > MAX_ITEMS or
+            if (not isinstance(items, list) or len(items) > PAGE_SIZE or
                     any(not isinstance(x, dict) for x in items)):
                 self.issue('partial', operation + ':MalformedPage')
                 return rows, False

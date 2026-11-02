@@ -4,7 +4,7 @@ import asyncio
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.resources.regions import Regions
 from ScoutSuite.providers.utils import get_non_provider_id
-from ScoutSuite.providers.aws.facade.bedrock import select
+from ScoutSuite.providers.aws.facade.bedrock import select, safe_issue_code
 
 
 FIELDS = {
@@ -56,7 +56,7 @@ class BedrockPublic(Regions):
     def issue(reason):
         ctx = get_current_run_context()
         if ctx is not None:
-            ctx.record_collection_issue('partial', 'bedrock', reason)
+            ctx.record_collection_issue('partial', 'bedrock', safe_issue_code(reason))
 
     async def fetch_all(self, regions=None, excluded_regions=None,
                         partition_name='aws', **kwargs):

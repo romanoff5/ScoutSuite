@@ -90,7 +90,7 @@ def test_pagination_repeated_token_and_denied_are_incomplete():
                 fake, 'list_agents', 'agentSummaries')
             assert rows == [] and not complete and fake.list_agents.call_count == 2
             assert any(i['scope'] == 'bedrock' and
-                       i['reason_code'] == 'list_agents:InvalidToken'
+                       i['reason_code'] == 'list_agents_InvalidToken'
                        for i in ctx.collection_issues)
             sdk = client('bedrock-agent')
             try:
