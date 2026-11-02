@@ -372,3 +372,16 @@ Adds the public `wafv2` service to the default AWS scan, with bounded read-only 
 - Follow-ups: backup selections/assignment coverage, vault access policies,
   vault tags, recovery-point resilience, backup audit evidence and restore
   test coverage. These were not evaluated by M10-K.
+
+## M10-J2 — WAFv2 associations (2026-11-02)
+
+Extended default-scan WAFv2 to discover actual Regional Web ACL associations
+via `ListResourcesForWebACL` (ALB, API Gateway REST stages, AppSync, Cognito,
+App Runner, Verified Access, Amplify) and CloudFront distributions via
+`ListDistributionsByWebACLId` (full WAF ARN, up to 100 pages × 100).
+Explicit `associated`/`unused_candidate`/`unknown` with per-type
+completeness; access denied, malformed/foreign, duplicate, capped and looping
+responses cannot be classified as unused. Full associated ARN and CF
+ID/domain/status retained for remediation. Added scoped unused-candidate
+finding and synthetic SDK/security/regression tests; no writes or live cloud
+calls. See `docs/modernization/M10_WAFV2.md`.

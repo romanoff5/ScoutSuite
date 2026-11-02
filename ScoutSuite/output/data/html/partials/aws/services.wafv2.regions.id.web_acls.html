@@ -11,7 +11,23 @@
       <li>Rule count: {{rule_count}}</li>
       <li>Managed by Firewall Manager: {{managed_by_firewall_manager}}</li>
       <li>Logging status: {{logging_status}}</li>
+      <li>Association state: {{association_status}}</li>
+      <li>Association scope complete: {{association_scope_complete}}</li>
+      <li>Confirmed associated resources: {{associated_resource_count}}</li>
     </ul>
+    <h4>Associated resources</h4>
+    {{#each associated_resources}}
+      <p>{{resource_type}}: <samp>{{resource_arn}}</samp></p>
+      {{#if distribution_id}}
+        <p>CloudFront ID: <samp>{{distribution_id}}</samp>;
+        Domain: <samp>{{domain_name}}</samp>;
+        Status: {{distribution_status}}</p>
+      {{/if}}
+    {{/each}}
+    <h4>Types checked</h4>
+    {{#each checked_resource_types}}<p>{{this}}</p>{{/each}}
+    <h4>Association checks incomplete</h4>
+    {{#each unknown_resource_types}}<p>{{this}}</p>{{/each}}
     <h4>Rule inventory</h4>
     {{#each rules}}
       <p>Rule: {{name}} (priority {{priority}})</p>

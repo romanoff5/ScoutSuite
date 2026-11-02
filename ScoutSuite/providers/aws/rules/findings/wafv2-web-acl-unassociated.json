@@ -1,0 +1,21 @@
+{
+    "description": "WAFv2 Web ACL has no associations in the inspected supported resource types",
+    "rationale": "No resource associations were returned by complete AWS WAFv2 regional resource-type checks, or a complete CloudFront Web ACL lookup. This is an unused-ACL candidate, not proof of zero associations across unsupported/new resource types or accounts. Review before deleting to avoid service disruption.",
+    "remediation": "Validate the Web ACL ARN, scope, service ownership and any out-of-scope resource integrations. Remove unused Web ACLs only after change review; associate intended resources and validate protection where needed.",
+    "references": [
+        "https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-associating-aws-resource.html",
+        "https://docs.aws.amazon.com/cloudfront/latest/APIReference/API_ListDistributionsByWebACLId.html"
+    ],
+    "dashboard_name": "Web ACLs",
+    "path": "wafv2.regions.id.web_acls.id",
+    "conditions": [
+        "and",
+        [
+            "unused_candidate",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "UnusedCandidate",
+    "evidence_policy": "wafv2-association-v1"
+}
