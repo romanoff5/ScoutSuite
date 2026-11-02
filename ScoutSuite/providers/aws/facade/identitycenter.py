@@ -4,6 +4,7 @@ Collection completeness is explicit at every API boundary. This is configuration
 evidence, not an IAM policy simulator or proof of effective authorization.
 """
 import json
+from datetime import datetime
 
 from botocore.exceptions import ClientError
 
@@ -29,6 +30,10 @@ REQUIRED_ROWS = {
     'GroupMemberships': ('MembershipId', 'GroupId', 'MemberId'),
 }
 STRING_ROWS = {'PermissionSets', 'AccountIds'}
+
+
+def _timestamp(value):
+    return value.isoformat() if isinstance(value, datetime) else value
 
 
 class IdentityCenterFacade(AWSBaseFacade):
@@ -224,7 +229,7 @@ class IdentityCenterFacade(AWSBaseFacade):
                 instance = {
                     'id': arn, 'name': raw.get('Name') or arn, 'arn': arn, 'region': region,
                     'identity_store_id': store_id, 'owner_account_id': raw.get('OwnerAccountId'),
-                    'status': raw.get('Status'), 'created_date': raw.get('CreatedDate'),
+                    'status': raw.get('Status'), 'created_date': _timestamp(raw.get('CreatedDate')),
                     'permission_sets': {}, 'collection': {'permission_sets': 'not_collected'},
                 }
                 result['instances'][arn] = instance
@@ -316,7 +321,7 @@ class IdentityCenterFacade(AWSBaseFacade):
                         'description': ps_details.get('Description'),
                         'session_duration': ps_details.get('SessionDuration'),
                         'relay_state': ps_details.get('RelayState'),
-                        'created_date': ps_details.get('CreatedDate'),
+                        'created_date': _timestamp(ps_details.get('CreatedDate')),
                         'managed_policies': policies, 'customer_managed_policies': customer,
                         'inline_policy': parsed_inline, 'inline_policy_raw': inline,
                         'permissions_boundary': boundary, 'provisioned_account_ids': account_ids,
