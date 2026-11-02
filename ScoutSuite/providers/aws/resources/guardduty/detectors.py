@@ -32,4 +32,10 @@ class Detectors(AWSResources):
             'id': key, 'detector_id': detector_id, 'region': self.region,
             'name': detector_id, 'status': state, 'disabled': state == 'DISABLED',
             'finding_publishing_frequency': item.get('finding_publishing_frequency'),
+            'created_at': item.get('created_at'),
+            'updated_at': item.get('updated_at'),
+            'service_role': item.get('service_role'),
+            'features': item.get('features') or [],
+            'data_sources': item.get('data_sources') or {},
+            'tags': item.get('tags') or {},
         }
