@@ -1,0 +1,21 @@
+{
+    "description": "Running EC2 instance is not observed as an SSM managed node",
+    "rationale": "The running EC2 instance is missing from a successfully completed DescribeInstanceInformation enumeration. Agent absence is NOT proven; IAM, network, activation or registration may be the cause.",
+    "remediation": "Validate SSM Agent installation, instance profile/Default Host Management Configuration, endpoints, networking and registration.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-states.html",
+        "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeInstancePatchStates.html"
+    ],
+    "dashboard_name": "EC2 patch management",
+    "path": "ssm.regions.id.ec2_instances.id",
+    "conditions": [
+        "and",
+        [
+            "running_unmanaged",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "ssm-running-ec2-unmanaged",
+    "evidence_policy": "ssm-ec2-management-coverage-v1"
+}
