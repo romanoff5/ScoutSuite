@@ -1722,6 +1722,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "rds-cluster-deletion-protection-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
