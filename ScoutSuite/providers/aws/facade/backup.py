@@ -255,6 +255,10 @@ class BackupPublicFacade(AWSBaseFacade):
         result.complete = response.complete
         return result
 
+    async def get_rpo_evidence(self, region, resource_arns, jobs):
+        from ScoutSuite.providers.aws.facade.operational_evidence import collect_backup_rpo
+        return await collect_backup_rpo(self, region, resource_arns, jobs)
+
     async def get_protected_resources(self, region):
         return await self._list_evidence(
             region, 'list_protected_resources', 'Results', 'ListProtectedResources')

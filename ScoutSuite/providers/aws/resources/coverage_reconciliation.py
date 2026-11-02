@@ -210,18 +210,22 @@ def _ecr(services, selected, inspector, account_id):
                             scanning['scan_on_push'] = push
                             scanning['status'] = 'scan_on_push' if push else 'not_scan_on_push'
             repository['m10q_inspector'] = inspector_evidence
+            operational = repository.get('operational_image_scans')
+            observed = isinstance(operational, dict)
             repository['m10q_image_scanning'] = {
                 **scanning,
-                'image_level_scan_execution_verified': False,
-                'image_inventory_available': False,
-                'status': 'unverified',
+                'image_level_scan_execution_verified': bool(observed and operational.get('image_level_scan_execution_verified')),
+                'image_inventory_available': bool(observed and operational.get('census_complete')),
+                'status': operational.get('status', 'unverified') if observed else 'unverified',
                 'inspector_enrollment': inspector_evidence['state'],
-                'reason': 'no_image_level_scan_results_collected',
+                'reason': 'per_image_api_evidence' if observed else 'no_image_level_scan_results_collected',
+                'operational_evidence': operational if observed else None,
             }
             # Report a specific gap, without claiming images exist or are unscanned.
             repo_gap = (inspector_evidence['state'] in ('not_reported', 'inactive_reported')
                         and scanning['status'] in ('not_scan_on_push', 'not_matched'))
-            repository['m10q_repository_scan_gap_candidate'] = repo_gap
+            repository['m10q_repository_scan_gap_candidate'] = (
+                repo_gap or (observed and operational.get('status') == 'gap_observed'))
             total += 1
     return total
 
@@ -298,6 +302,8 @@ def _s3(services, selected, backup_regions):
                 else:
                     evidence['state'] = 'partial_evidence'
                     evidence['reasons'].append('backup_job_or_recovery_point_not_correlated')
+        operational = backup_regions.get(region, {}).get('operational_rpo', {}) if isinstance(backup_regions, dict) and isinstance(region, str) else {}
+        evidence['operational_rpo'] = operational.get('resources', {}).get(arn) if isinstance(operational, dict) and arn else None
         bucket['m10q_backup'] = evidence
         bucket['m10q_backup_evidence_gap'] = evidence['state'] in (
             'not_reported', 'partial_evidence')
@@ -357,6 +363,7 @@ def _waf(services, selected):
                 state = 'no_supported_association_observed'
             else:
                 state = 'unknown'
+            traffic = acl.get('operational_traffic') or {}
             acl['m10q_protected_targets'] = {
                 'state': state, 'verified_resource_arns': sorted(set(observed)),
                 'waf_association_arns': sorted({
@@ -369,6 +376,8 @@ def _waf(services, selected):
                     'api_gateway': False,
                 },
                 'traffic_routing_through_waf_verified': False,
+                'observed_request_processing': traffic.get('requests_observed') is True,
+                'request_processing_evidence_status': traffic.get('status', 'unknown'),
                 'scope_note': ('API Gateway resources have no independent inventory. '
                                'A WAF association is not evidence of request traffic.'),
             }

@@ -167,7 +167,15 @@ class BackupPublic(Regions):
         protected = {
             item['ResourceArn'] for item in data['protected_resources'].values()
             if isinstance(item.get('ResourceArn'), str)}
-        jobs = data['backup_jobs'].values()
+        jobs = list(data['backup_jobs'].values())
+        if hasattr(backup, 'get_rpo_evidence'):
+            try:
+                data['operational_rpo'] = await backup.get_rpo_evidence(region, protected, jobs)
+            except Exception:
+                _issue('RPOOperationalCollectionFailed')
+                data['operational_rpo'] = {'status': 'unknown', 'resources': {}}
+        else:
+            data['operational_rpo'] = {'status': 'unknown', 'resources': {}}
         tag_selections = any(
             bool(detail.get('BackupSelection', {}).get('ListOfTags')
                  or detail.get('BackupSelection', {}).get('Conditions'))
@@ -296,6 +304,10 @@ class BackupPublic(Regions):
                 or bool(unresolved)
                 or (tag_selections and candidates['status'] != 'complete')
                 else 'complete')
+            rpo_resources = data['operational_rpo'].get('resources', {})
+            plan['operational_rpo_evidence'] = [
+                rpo_resources[arn] for arn in sorted(set(matching) | set(explicit) |
+                                                     set(selected_tagged)) if arn in rpo_resources]
             plan['correlation_note'] = (
                 'Plan selections describe assignments, not successful backups. '
                 'ListProtectedResources records recovery points of any status. '

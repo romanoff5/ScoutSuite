@@ -52,6 +52,12 @@
       <p>Completed job and recovery point: <samp>{{this}}</samp></p>{{/each}}
     {{#each explicit_resource_arns_without_reported_recovery_point}}
       <p>Selected ARN without reported recovery point (review): <samp>{{this}}</samp></p>{{/each}}
+    <h4>Operational RPO evidence (observed window; not a continuous SLA attestation)</h4>
+    {{#each operational_rpo_evidence}}
+      <p>Resource: <samp>{{resource_arn}}</samp>; status: {{state}}; last available recovery point: {{latest_available_point_at}}; age (min): {{age_minutes}}; maximum observed interval (min): {{max_observed_gap_minutes}}</p>
+      {{#each reasons}}<p>Limitation: {{this}}</p>{{/each}}
+      {{#each failed_job_ids}}<p>Failed job: {{this}}</p>{{/each}}
+    {{/each}}
     <h4>Recent observed backup jobs</h4>
     {{#each observed_backup_jobs}}<ul>
       <li>Job ID: {{BackupJobId}}; state: {{State}}; message category: {{MessageCategory}}</li>

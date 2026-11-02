@@ -27,6 +27,10 @@ class ECRPublicFacade(AWSBaseFacade):
         if context is not None:
             context.record_collection_issue(status, 'ecr', reason)
 
+    async def get_image_scan_evidence(self, region, repository_name):
+        from ScoutSuite.providers.aws.facade.operational_evidence import collect_ecr_images
+        return await collect_ecr_images(self, region, repository_name)
+
     async def get_registry_scanning(self, region):
         """Registry-level scanning policy. An unavailable policy is unknown."""
         if (not isinstance(self.owner_id, str)

@@ -29,6 +29,9 @@
             <p>Inspector evidence: {{m10q_image_scanning.inspector_enrollment}}</p>
             <p>Image scan execution verified: {{m10q_image_scanning.image_level_scan_execution_verified}}</p>
             <p>Image scan reason: {{m10q_image_scanning.reason}}</p>
+            <p>Operational scan status: {{operational_image_scans.status}}, digest census complete: {{operational_image_scans.census_complete}}</p>
+            <p>Total / verified / unverified: {{operational_image_scans.total_images}} / {{operational_image_scans.verified_images}} / {{operational_image_scans.unverified_images}}</p>
+            {{#each operational_image_scans.images}}<p>Digest: <samp>{{digest}}</samp>; tags: {{tags}}; scan state: {{state}}; API status: {{scan_status}}; last success: {{last_scan_completed_at}}; reason: {{reason}}</p>{{/each}}
             <p>Configuration only: {{m10q_image_scanning.configuration_only}}</p>
             <p>Effective per-image scan freshness: {{m10q_image_scanning.effective_scan_freshness}}</p>
             {{#each m10q_inspector.coverage_record_ids}}<p>Coverage record: <samp>{{this}}</samp></p>{{/each}}

@@ -122,4 +122,6 @@ class WebACLs(AWSResources):
             'visibility_config': raw.get('visibility_config') or {},
             'logging_status': raw.get('logging_status'),
             'log_destinations': raw.get('log_destinations') or [],
+            'operational_traffic': raw.get('operational_traffic') or {
+                'status': 'unknown', 'requests_observed': False},
         }

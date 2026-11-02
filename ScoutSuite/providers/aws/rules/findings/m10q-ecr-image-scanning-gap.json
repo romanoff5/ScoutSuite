@@ -1,7 +1,7 @@
 {
-    "description": "ECR repository has neither observed active Inspector coverage nor enabling registry scan configuration",
-    "rationale": "Inspector reports absent/inactive enrollment while the repository is not matched by enhanced scanning rules or BASIC scanOnPush is false. This is a candidate gap in scanning enrollment. Neither Inspector ACTIVE nor scanOnPush alone verifies that any particular image was scanned; image-level scan results were not collected.",
-    "remediation": "Enable and validate Inspector enhanced scanning or an appropriate ECR basic scanning policy; inspect actual image scan statuses and last scans separately.",
+    "description": "ECR repository image scanning enrollment or observed per-image scan failure",
+    "rationale": "A repository may lack matching scan enrollment, or an enumerated ECR image digest has an explicit failed, ineligible or unsupported scan status. Other unknown statuses and missing read permissions are not reported as confirmed failures. All images successfully scanned requires a complete digest census and per-image completed scan time.",
+    "remediation": "Inspect per-digest ECR DescribeImageScanFindings statuses; fix failed or unsupported scans and enable appropriate Basic or Enhanced scanning. Re-run read-only evidence collection.",
     "references": [
         "https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-scanning.html"
     ],

@@ -49,6 +49,10 @@ class WAFv2PublicFacade(AWSBaseFacade):
                 and pieces[5].startswith(expected + '/webacl/')
                 and len(pieces[5].split('/')) == 4)
 
+    async def get_traffic_evidence(self, region, acl):
+        from ScoutSuite.providers.aws.facade.operational_evidence import collect_waf_traffic
+        return await collect_waf_traffic(self, region, acl)
+
     async def get_web_acls(self, region):
         """List exact Web ACLs; missing detail/logging data is never inferred clean."""
         if not isinstance(self.owner_id, str) or not (
@@ -160,7 +164,10 @@ class WAFv2PublicFacade(AWSBaseFacade):
                     self.failure('GetLoggingConfiguration', error, partial=True)
                 associations = await discover_associations(
                     self, client, region, scope, arn)
+                traffic = await self.get_traffic_evidence(region, {
+                    'scope': scope, 'visibility_config': web_acl.get('VisibilityConfig')})
                 collected.append({
+                    'operational_traffic': traffic,
                     **associations,
                     'name': name, 'id': identifier, 'arn': arn, 'scope': scope,
                     'region': region, 'default_action': web_acl.get('DefaultAction'),
