@@ -33,11 +33,28 @@
   with tag object `c8dd5770cc80a6a21122319a5406b55c43193203`. All six
   GitHub asset SHA256 digests match the published `SHA256SUMS` (wheel
   `2019b98635c4ea90c26f7cca3f6a9ecfd1f72e0ed035fd85acd39ff99c18377b`).
-- Not done: RC7 was not installed into the scanner toolkit and no live AWS
-  field acceptance was run; both remain the owner's authorized step. No PR,
-  upstream push or PyPI/container publication. A later push of this record
-  re-triggers the release workflow, whose guard correctly refuses to
+- No PR, upstream push or PyPI/container publication. A later push of this
+  record re-triggers the release workflow, whose guard correctly refuses to
   overwrite the existing RC7 release.
+- Owner-authorized field acceptance (same day): the published RC7 was
+  installed side by side with `install-fork.ps1 -FromRelease` (provenance
+  `git_sha` `c8dd5770cc80a6a21122319a5406b55c43193203`, wheel hash as above,
+  `pip check` clean), selected with `select-scanner.ps1 -Mode Fork`, and run
+  through `invoke-selected-scout.ps1` against the previously assessed single
+  account and Region after a matching `sts get-caller-identity` preflight.
+  Exit 0 in 52 s. Compared with the RC5 hotfix run: 212 rules in both,
+  `tools/audit_scan_evidence.py --fail-on-discrepancy` reported 0
+  discrepancies for both, collection issues 41 -> 17 (24 resolved: deferred
+  AWS Backup job/restore history, S3 directory access points and SSM
+  default-baseline details, plus one S3 `RuleEvidenceUnknown`; none new),
+  incomplete rules 82 -> 50. The only finding delta is
+  `m10q-s3-backup-evidence-gap` 0 -> 1: the Region's AWS Backup census is
+  verified empty, so the bucket moved from UNKNOWN to `not_reported`
+  (`job_history_status: not_assessed`) - the intended RC7 correction. Residual
+  issues remain explicit (Bedrock enforced-guardrail and Organizations/
+  Identity Center/Security Hub denials, Macie generic denial, CloudTrail
+  organization scope, Inspector coverage). Raw evidence stays in the
+  customer's private report directory, outside this repository.
 
 ## Post-RC6 review: S3 backup evidence gap with deferred AWS Backup history (2026-11-02)
 
