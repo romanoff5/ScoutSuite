@@ -208,3 +208,21 @@ findings; bounded pagination; explicit access/partial states; account emails exc
 See [M10-C scope and rollback](docs/modernization/M10_ORGANIZATIONS.md).
 M10 remains partially delivered (Organizations does not include policy contents,
 OU hierarchy, effective SCP evaluation, or organization-wide proof).
+
+## M10 report evidence completeness correction (2026-11-02)
+
+Branch: `fix/m10-report-evidence-completeness-20261102`. Owner requirement: security reports must retain actionable
+diagnostic evidence, including account/contact emails, full ARNs, resource
+names, status/reason, timestamps, tags, policy type status and OU paths.
+Do not blanket-anonymize local reports. Secrets remain prohibited.
+Rules codified in `AGENTS.md`.
+
+Organizations now persists management/account emails, management ARN,
+joined timestamps, OU paths, root policy types and deprecated status only
+as secondary context. Access Analyzer keeps tags, timestamps, last-analyzed
+resource and configuration when returned by ListAnalyzers. GuardDuty keeps
+feature/data-source configuration, service-role and lifecycle metadata;
+Security Hub keeps status reasons, providers and controls-updatable state.
+Fixed low M10 pagination caps are raised, with explicit partial state on
+exhaustion. New synthetic scale and SQLite-preservation regression tests.
+Windows/Ubuntu offline CI required before integration. No live credentials.
