@@ -85,10 +85,13 @@ existing reporting schemas are preserved. No new network calls or write APIs.
    objects, including missing metadata, denial and unknown classification.
 3. Windows/Ubuntu Python 3.11/3.14 guarded offline CI, package parity and
    XSS/SQLite/reporting tests on the final candidate SHA.
-4. **Wait for the user's RC3 real scan report.** Reconcile any mismatched
-   findings/evidence, API response contracts and collection gaps in this
-   staging branch. No merge or RC4 tag before that analysis.
-5. After approval of code quality gates and real RC3 evidence review, update
-   release version/tag to an immutable RC4, merge validated work to fork
-   `master`, run four-way CI on the merged SHA and independently build,
-   verify and publish RC4.
+4. **RC3 scan review completed (2026-11-02):** the archive's 117 manifest entries
+   matched SHA256 and size; RC3 fixed the ECR BASIC finding count drift,
+   with zero ECR repositories and zero remaining evidence/finding mismatches;
+   40 collection issues persist. Aurora member instances exposed a new
+   potential false-positive in the staged RDS deletion protection rule,
+   which has been split into instance and cluster evaluations. No client
+   files or identifiers were committed.
+5. Release identifiers are now pinned to immutable RC4. After all branch
+   CI gates pass, merge into fork `master`, validate four-way CI on the
+   combined SHA, and independently build, verify and publish RC4.
