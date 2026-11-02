@@ -7,6 +7,7 @@ from ScoutSuite.providers.aws.services import AWSServicesConfig
 from ScoutSuite.providers.aws.resources.vpc.base import put_cidr_name
 from ScoutSuite.providers.aws.resources.inspector2.reconciliation import reconcile_inspector_inventory
 from ScoutSuite.providers.aws.resources.coverage_reconciliation import reconcile_m10q_coverage
+from ScoutSuite.providers.aws.resources.organization_cloudtrail_coverage import reconcile_cloudtrail_organization_coverage
 from ScoutSuite.providers.aws.utils import ec2_classic, get_aws_account_id, get_partition_name
 from ScoutSuite.providers.base.configs.browser import combine_paths, get_object_at, get_value_at
 from ScoutSuite.providers.base.provider import BaseProvider
@@ -125,6 +126,9 @@ class AWSProvider(BaseProvider):
         # M10-Q: report-only correlation after every selected AWS collector
         # finalized; never instantiate additional AWS SDK clients.
         reconcile_m10q_coverage(self.services, self.service_list, self.account_id)
+
+        # M10-S: organization account x Region CloudTrail coverage.
+        reconcile_cloudtrail_organization_coverage(self.services, self.service_list, self.account_id)
 
         super().preprocessing()
 

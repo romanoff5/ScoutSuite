@@ -9,6 +9,21 @@
       <li>Management account ID: <samp>{{management_account_id}}</samp></li>
       <li>Management account ARN: <samp>{{management_account_arn}}</samp></li>
       <li>Management account e-mail: <samp>{{management_account_email}}</samp></li>
+      {{#if m10s_cloudtrail_summary}}
+      <li><strong>M10-S organization CloudTrail coverage</strong></li>
+      <li>Account census complete: {{m10s_cloudtrail_summary.accounts_inventory_complete}}</li>
+      <li>CloudTrail census complete: {{m10s_cloudtrail_summary.cloudtrail_inventory_complete}}</li>
+      <li>Active accounts: {{m10s_cloudtrail_summary.active_accounts}}</li>
+      <li>Configuration gaps in accounts: {{m10s_cloudtrail_summary.accounts_with_config_gaps}}</li>
+      <li>Accounts with unknown coverage: {{m10s_cloudtrail_summary.accounts_unknown}}</li>
+      <li>Enabled regions: {{m10s_cloudtrail_summary.known_enabled_regions}}</li>
+      <li>Configured regions: {{m10s_cloudtrail_summary.configured_regions}}</li>
+      <li>Regions with configuration gaps: {{m10s_cloudtrail_summary.gap_regions}}</li>
+      <li>Region coverage unknown: {{m10s_cloudtrail_summary.unknown_regions}}</li>
+      <li>All accounts configured: {{m10s_cloudtrail_summary.all_accounts_configured}}</li>
+      <li>Per-account delivery verified: {{m10s_cloudtrail_summary.per_account_delivery_verified}}</li>
+      <li>Organization trails: <ul>{{#each m10s_cloudtrail_summary.organization_trail_arns}}<li><samp>{{this}}</samp></li>{{/each}}</ul></li>
+      {{/if}}
       {{#if available_policy_types}}
       <li>Deprecated organization-level policy summary (root states are authoritative):
         <ul>{{#each available_policy_types}}<li>{{type}}: {{status}}</li>{{/each}}</ul>

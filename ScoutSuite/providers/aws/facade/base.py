@@ -202,7 +202,7 @@ class AWSFacade(AWSBaseFacade):
         self.networkfirewall = NetworkFirewallFacade(self.session, self.owner_id)
         self.ssm = SSMPublicFacade(self.session)
         self.identitycenter = IdentityCenterFacade(self.session, self.owner_id)
-        self.organizations = OrganizationsFacade(self.session, self.partition)
+        self.organizations = OrganizationsFacade(self.session, self.partition, self.owner_id)
 
         # Instantiate facades for proprietary services
         try:

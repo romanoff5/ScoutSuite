@@ -11,6 +11,21 @@
       <li>Joined via: {{joined_method}}</li>
       <li>Joined at: {{joined_timestamp}}</li>
       <li>Organization path(s): <ul>{{#each paths}}<li>{{this}}</li>{{/each}}</ul></li>
+      {{#if m10s_cloudtrail_coverage}}
+      <li><strong>M10-S CloudTrail organization logging</strong></li>
+      <li>Configuration assessment: {{m10s_cloudtrail_coverage.state}}</li>
+      <li>Region inventory: {{m10s_cloudtrail_coverage.region_inventory_status}}</li>
+      <li>Account delivery verified: {{m10s_cloudtrail_coverage.delivery_verified}} (configuration is not delivery evidence)</li>
+      <li>Configuration gaps: {{m10s_cloudtrail_coverage.gap_region_count}}</li>
+      <li>Regions:
+        <ul>{{#each m10s_cloudtrail_coverage.regions}}
+          <li>{{region}} ({{region_opt_status}}): {{configuration_state}} — {{reason}}
+            {{#if trail_arns}}<ul>{{#each trail_arns}}<li><samp>{{this}}</samp></li>{{/each}}</ul>{{/if}}
+          </li>
+        {{/each}}</ul>
+      </li>
+      {{/if}}
+
       <li>SCP context collection: {{scp_context.collection_status}}</li>
       <li>Effective permissions verified: {{scp_context.effective_permissions_verified}}</li>
       <li>SCP inheritance path: <ul>{{#each scp_context.ancestor_path}}<li><samp>{{this}}</samp></li>{{/each}}</ul></li>
