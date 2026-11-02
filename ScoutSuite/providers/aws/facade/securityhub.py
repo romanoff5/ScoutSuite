@@ -23,6 +23,9 @@ class SecurityHubPublicFacade(AWSBaseFacade):
         converted to a verified empty/secure subscriptions inventory.
         """
         context = get_current_run_context()
+        if not hasattr(self, 'hub_states'):
+            self.hub_states = {}
+        self.hub_states[region] = 'unknown'
 
         def issue(state, reason):
             if context is not None:
@@ -37,6 +40,7 @@ class SecurityHubPublicFacade(AWSBaseFacade):
         except ClientError as error:
             code = error.response.get('Error', {}).get('Code', '')
             if code == 'ResourceNotFoundException':
+                self.hub_states[region] = 'not_subscribed'
                 issue('not_applicable', 'HubNotSubscribed')
             elif code in DENIED_CODES:
                 issue('denied', 'DescribeHubDenied')
@@ -53,6 +57,7 @@ class SecurityHubPublicFacade(AWSBaseFacade):
         if not isinstance(arn, str) or not arn.startswith('arn:'):
             issue('failed', 'MalformedHub')
             return None
+        self.hub_states[region] = 'enabled'
         result = {
             'hub_arn': arn,
             'auto_enable_controls': hub.get('AutoEnableControls'),
