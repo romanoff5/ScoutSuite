@@ -1459,6 +1459,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "inspector2-member-account-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
