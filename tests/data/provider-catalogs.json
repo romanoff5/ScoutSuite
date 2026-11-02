@@ -242,6 +242,7 @@
       "networkfirewall-stateless-default-pass.json",
       "organizations-features-not-enabled.json",
       "organizations-root-scp-not-enabled.json",
+      "rds-cluster-deletion-protection-disabled.json",
       "rds-instance-backup-disabled.json",
       "rds-instance-ca-certificate-deprecated.json",
       "rds-instance-deletion-protection-disabled.json",
