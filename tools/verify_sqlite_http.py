@@ -50,9 +50,11 @@ def run_http_checks():
             db.commit()
 
         api = Server(str(db_path))
-        application = cherrypy.Application(api, script_name='/api')
+        # Mirror the production /api mount, including WSGI PATH_INFO routing.
+        tree = cherrypy._cptree.Tree()
+        tree.mount(api, '/api')
         opener = build_opener(ProxyHandler({}))
-        with make_server('127.0.0.1', 0, application,
+        with make_server('127.0.0.1', 0, tree,
                          handler_class=QuietHandler) as httpd:
             port = httpd.server_port
             cherrypy.server.socket_port = port
