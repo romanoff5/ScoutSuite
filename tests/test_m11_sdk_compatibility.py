@@ -86,7 +86,8 @@ def test_gcp_monitoring_request_envelopes_and_bool_policy():
         request={'name': 'projects/demo'})
     assert checks[0].display_name == 'web'
     assert policies[0].enabled is True
-    result = MonitoringAlertPolicies._parse_alert_policy(None, policies)
+    collector = MonitoringAlertPolicies.__new__(MonitoringAlertPolicies)
+    result = collector._parse_alert_policy(policies)
     assert len(result) == 8
     assert all(not enabled for enabled in result.values())
 
