@@ -1,6 +1,5 @@
 """Task 14 fork release safety contracts, no network or real AWS scan."""
 import ast
-import json
 from pathlib import Path
 
 from ScoutSuite import __version__
