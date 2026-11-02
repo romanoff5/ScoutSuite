@@ -41,6 +41,11 @@ The existing M07 snapshot is an intentional immutability gate, not obsolete dead
 - Frozen M07 hashes remain unchanged; the preservation test permits only six named provider
   paths plus three original SDK declarations. Compatibility tests run against installed SDKs.
 - Removed CI's vendor warning budget: any warning now fails the structured warning gate.
-- Ubuntu CI #41416421474 reached pytest: 466 passed, one new test bug in instance setup;
-  corrected in the next candidate. This is NOT a completed acceptance run.
+- CI #41417478498 passed on Ubuntu Python 3.11.18 and Windows Python 3.11.9:
+  **496 passed, 34 subtests passed, zero warnings** on the combined M10/M11 code;
+  also lint, dependencies, real SQLite HTTP, XSS browser, packaging and preservation gates.
+  Both jobs succeeded before the final Azure SQL signature-contract expansion.
+- Subsequent compatibility hardening binds each of the 12 Azure SQL facade operations
+  to the installed SDK's real callable signature with credentials and network disabled.
+  The strict acceptance gate is the latest branch SHA, not merely this earlier successful run.
 - No master merge before both Ubuntu/Windows runs pass at the final SHA.
