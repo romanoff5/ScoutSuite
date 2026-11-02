@@ -30,6 +30,7 @@ class MaciePublic(Regions):
                 'id': region, 'name': region, 'region': region,
                 'session_status': status,
                 'session_verified': raw.get('session_verified', False),
+                'session_status_source': raw.get('session_status_source'),
                 'not_enabled': status in ('NOT_ENABLED', 'PAUSED'),
                 'service_role': raw.get('service_role'),
                 'session_created_at': raw.get('session_created_at'),

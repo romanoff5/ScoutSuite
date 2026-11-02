@@ -53,11 +53,17 @@ def is_macie_session_not_enabled(error):
     """
     if not isinstance(error, ClientError):
         return False
-    details = error.response.get('Error', {})
-    code = details.get('Code')
-    if code == 'ResourceNotFoundException':
+    if error.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
         return True
-    if code != 'AccessDeniedException':
+    return is_macie_disabled_message(error)
+
+
+def is_macie_disabled_message(error):
+    """AccessDeniedException carrying only the exact Macie service-state message."""
+    if not isinstance(error, ClientError):
+        return False
+    details = error.response.get('Error', {})
+    if details.get('Code') != 'AccessDeniedException':
         return False
     message = details.get('Message', '')
     if not isinstance(message, str):
@@ -136,9 +142,25 @@ class MacieFacade(AWSBaseFacade):
             result.complete = False
         return result
 
+    async def _disabled_by_list_findings_probe(self, client):
+        """Classify-only fallback when IAM denies GetMacieSession.
+
+        Audit roles may allow ListFindings, which answers a disabled account with
+        AccessDeniedException "Macie is not enabled.". The response is discarded:
+        no finding IDs are kept, logged or returned. Any other outcome is UNKNOWN.
+        """
+        try:
+            await run_concurrently(lambda: client.list_findings(maxResults=1))
+        except ClientError as error:
+            return is_macie_disabled_message(error)
+        except Exception:
+            return False
+        return False
+
     async def get_region(self, region):
         result = {
             'session_status': 'UNKNOWN', 'session_verified': False,
+            'session_status_source': None,
             'automated_discovery_status': 'UNKNOWN',
             'automated_discovery_verified': False,
             'classification_scope_id': None, 'excluded_bucket_names': [],
@@ -153,8 +175,13 @@ class MacieFacade(AWSBaseFacade):
             session = await run_concurrently(client.get_macie_session)
         except ClientError as error:
             if is_macie_session_not_enabled(error):
-                result['session_status'] = 'NOT_ENABLED'
-                result['session_verified'] = True
+                result.update(session_status='NOT_ENABLED', session_verified=True,
+                              session_status_source='GetMacieSession')
+                return result
+            if (error.response.get('Error', {}).get('Code') in DENIED
+                    and await self._disabled_by_list_findings_probe(client)):
+                result.update(session_status='NOT_ENABLED', session_verified=True,
+                              session_status_source='ListFindings')
                 return result
             self.failure('GetMacieSession', error)
             return result
@@ -167,6 +194,7 @@ class MacieFacade(AWSBaseFacade):
 
         result.update({
             'session_status': session['status'], 'session_verified': True,
+            'session_status_source': 'GetMacieSession',
             'session_created_at': date(session.get('createdAt')),
             'session_updated_at': date(session.get('updatedAt')),
             'service_role': session.get('serviceRole'),

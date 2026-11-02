@@ -11,9 +11,15 @@ AWS scans; `--skip-services macie` disables it.
   AccessDenied or any other error is UNKNOWN, **not** NOT_ENABLED.
   The service-disabled result has `session_verified: true`, triggers
   `macie-session-not-enabled`, and does not attempt jobs/buckets collection.
-  A CLI `macie2 list-findings` failure with the same explicit message is
-  independent corroborating evidence; the scanner itself does **not** call
-  `ListFindings` or retrieve sensitive finding IDs.
+  `session_status_source` records which call established the state.
+- `macie2:ListFindings` (RC8, classify-only): called with `maxResults=1`
+  **only** when IAM denies `GetMacieSession`. Field audit roles were denied
+  `GetMacieSession` and `ListClassificationJobs` while `ListFindings` returned
+  `AccessDeniedException: Macie is not enabled.`; that exact message yields a
+  verified NOT_ENABLED with `session_status_source: ListFindings`. The response
+  is discarded: no finding IDs are kept, logged, returned or written to the
+  report. A successful call, another denial, throttling or any other error
+  leaves the state UNKNOWN with the original `GetMacieSessionDenied` issue.
 - `macie2:GetAutomatedDiscoveryConfiguration` and
   `macie2:GetClassificationScope`: automated discovery and bucket exclusions.
 - `macie2:ListClassificationJobs` and
