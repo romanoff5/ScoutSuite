@@ -1,0 +1,20 @@
+{
+    "description": "AWS Organizations member account has an observed CloudTrail management logging configuration gap",
+    "rationale": "Complete per-account Region inventory and complete CloudTrail inventory show at least one enabled Region lacking an effective organization trail recording unrestricted read and write management events. This is a configuration gap, not proof that other account-specific trails or centralized logging are absent.",
+    "remediation": "Review the member account ID and enabled Regions, verify organization trail home Region and opt-in status, enable logging and comprehensive read/write management selectors, and validate delivery separately with per-account evidence.",
+    "references": [
+        "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/creating-trail-organization.html",
+        "https://docs.aws.amazon.com/accounts/latest/APIReference/API_ListRegions.html"
+    ],
+    "dashboard_name": "AWS Organizations accounts",
+    "path": "organizations.accounts.id",
+    "conditions": [
+        "and",
+        [
+            "m10s_cloudtrail_config_gap",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "M10SOrgCloudTrailConfiguration"
+}

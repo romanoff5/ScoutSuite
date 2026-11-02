@@ -227,6 +227,7 @@
       "m10q-s3-access-point-bucket-unresolved.json",
       "m10q-s3-backup-evidence-gap.json",
       "m10q-s3-directory-access-point-target-unresolved.json",
+      "m10s-org-cloudtrail-config-gap.json",
       "macie-bucket-coverage-issue.json",
       "macie-job-execution-issue.json",
       "macie-job-stale.json",
