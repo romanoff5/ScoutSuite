@@ -357,3 +357,80 @@ class BackupPublicFacade(AWSBaseFacade):
         result['verified_arns'] = len(result['tags'])
         result['unknown_arns'] = [arn for arn in unique if arn not in result['tags']]
         return result
+
+    async def get_tagged_resource_candidates(self, region, tag_keys):
+        """Enumerate tagged candidates, including resources without recovery points.
+
+        TagFilters are server-side *superset* filters; exact selection logic is
+        evaluated after retrieval. Untagged and unsupported resources remain
+        outside the tagging API inventory.
+        """
+        keys = sorted({key for key in tag_keys if isinstance(key, str) and key})
+        result = {'tags': {}, 'status': 'complete', 'tag_keys': keys}
+        if not keys:
+            result['status'] = 'not_applicable'
+            return result
+        client = AWSFacadeUtils.get_client('resourcegroupstaggingapi', self.session, region)
+        if client is None:
+            self.issue('partial', 'CandidateResourceTagsClientUnavailable')
+            result['status'] = 'partial'
+            return result
+        try:
+            for key in keys:
+                token, seen = None, set()
+                for page_number in range(MAX_PAGES):
+                    params = {'TagFilters': [{'Key': key}], 'ResourcesPerPage': PAGE_SIZE}
+                    if token:
+                        params['PaginationToken'] = token
+                    try:
+                        response = await run_concurrently(
+                            lambda params=params: client.get_resources(**params))
+                    except Exception as error:
+                        self.failure('ListTaggedResourceCandidates', error, partial=True)
+                        result['status'] = 'partial'
+                        break
+                    rows = response.get('ResourceTagMappingList') if isinstance(response, dict) else None
+                    if not isinstance(rows, list) or len(rows) > PAGE_SIZE:
+                        self.issue('partial', 'MalformedTaggedCandidatePage')
+                        result['status'] = 'partial'
+                        break
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            result['status'] = 'partial'
+                            continue
+                        arn, tags = row.get('ResourceARN'), row.get('Tags')
+                        if (not isinstance(arn, str) or not arn.startswith('arn:')
+                                or not isinstance(tags, list)
+                                or any(not isinstance(x, dict)
+                                       or not isinstance(x.get('Key'), str)
+                                       or not isinstance(x.get('Value'), str) for x in tags)):
+                            self.issue('partial', 'MalformedTaggedCandidate')
+                            result['status'] = 'partial'
+                            continue
+                        if arn not in result['tags'] and len(result['tags']) >= MAX_ITEMS:
+                            self.issue('partial', 'TaggedCandidateItemLimit')
+                            result['status'] = 'partial'
+                            return result
+                        normalized = {x['Key']: x['Value'] for x in tags}
+                        if arn in result['tags'] and result['tags'][arn] != normalized:
+                            self.issue('partial', 'InconsistentTaggedCandidate')
+                            result['status'] = 'partial'
+                        result['tags'][arn] = normalized
+                    next_token = response.get('PaginationToken')
+                    if not next_token:
+                        break
+                    if not isinstance(next_token, str) or next_token in seen:
+                        self.issue('partial', 'TaggedCandidateInvalidToken')
+                        result['status'] = 'partial'
+                        break
+                    seen.add(next_token)
+                    token = next_token
+                else:
+                    self.issue('partial', 'TaggedCandidatePageLimit')
+                    result['status'] = 'partial'
+        finally:
+            close = getattr(client, 'close', None)
+            if callable(close):
+                close()
+        result['candidate_count'] = len(result['tags'])
+        return result
