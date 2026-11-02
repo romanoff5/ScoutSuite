@@ -16,5 +16,5 @@
         ]
     ],
     "id_suffix": "ScanUnverified",
-    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+    "evidence_policy": "ssm-scan-unverified-v1"
 }
