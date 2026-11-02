@@ -46,6 +46,8 @@ image, WAF effectiveness or compliance is made. Run the new offline evidence
 audit after each read-only scan; it does not replace independent security
 verification or eliminate genuine AWS permissions gaps.
 
+Stable .venv-scout untouched.
+
 No real client AWS scanning is performed by CI or installer. No container image
 is published. Azure/GCP SDK modernization remains deferred. Stable .venv-scout
 untouched. Public checksums are integrity evidence, not signed provenance.
