@@ -12,7 +12,8 @@ from botocore.stub import Stubber
 
 from ScoutSuite.core.run_context import RunContext
 from ScoutSuite.providers.aws.facade.macie import (
-    MacieFacade, PAGE_SIZE, PageRows, STALE_DAYS, bucket_coverage)
+    MacieFacade, PAGE_SIZE, PageRows, STALE_DAYS, bucket_coverage,
+    is_macie_session_not_enabled)
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.resources.macie.base import MaciePublic
 
@@ -107,18 +108,30 @@ def test_not_enabled_is_distinct_from_denied():
                                       http_status_code=404, expected_params={})
                 stub.add_client_error('get_macie_session',
                                       service_error_code='AccessDeniedException',
+                                      service_message='Macie is not enabled.',
+                                      http_status_code=403, expected_params={})
+                stub.add_client_error('get_macie_session',
+                                      service_error_code='AccessDeniedException',
+                                      service_message='Not authorized to perform macie2:GetMacieSession',
                                       http_status_code=403, expected_params={})
                 with patch.object(AWSFacadeUtils, 'get_client', return_value=client):
                     facade = MacieFacade(object())
                     missing = await facade.get_region(REGION)
+                    service_disabled = await facade.get_region(REGION)
                     denied = await facade.get_region(REGION)
                 stub.assert_no_pending_responses()
             assert missing['session_verified'] is True
             assert missing['session_status'] == 'NOT_ENABLED'
+            assert service_disabled['session_verified'] is True
+            assert service_disabled['session_status'] == 'NOT_ENABLED'
+            assert service_disabled['jobs_complete'] is False
+            assert service_disabled['buckets_complete'] is False
             assert denied['session_verified'] is False
             assert denied['session_status'] == 'UNKNOWN'
-            assert any(issue['scope'] == 'macie' and issue['status'] == 'denied'
-                       for issue in ctx.collection_issues)
+            denied_issues = [i for i in ctx.collection_issues
+                             if i['scope'] == 'macie' and i['status'] == 'denied']
+            assert len(denied_issues) == 1
+            assert denied_issues[0]['reason_code'] == 'GetMacieSessionDenied'
         finally:
             await ctx.aclose()
             client.close()
@@ -235,3 +248,28 @@ def test_no_classification_configured_requires_verified_complete_inventory():
     assert asyncio.run(check('DISABLED', True)) is True
     assert asyncio.run(check('ENABLED', True)) is False
     assert asyncio.run(check('DISABLED', False)) is False
+
+
+def test_macie_disabled_error_message_must_be_explicit():
+    from botocore.exceptions import ClientError
+
+    def error(code, message):
+        return ClientError({'Error': {'Code': code, 'Message': message}},
+                           'GetMacieSession')
+
+    assert is_macie_session_not_enabled(error('AccessDeniedException',
+                                              'Macie is not enabled.'))
+    assert is_macie_session_not_enabled(error('AccessDeniedException',
+                                              ' Amazon Macie is not enabled. '))
+    assert is_macie_session_not_enabled(error('ResourceNotFoundException',
+                                              'The requested session was not found'))
+    for message in (
+        'User is not authorized to call Macie2:GetMacieSession',
+        'Access denied: insufficient permissions',
+        'Not authorized to use Macie is not enabled.',
+        'Macie is not enabled because IAM access was denied.',
+        '',
+    ):
+        assert not is_macie_session_not_enabled(error('AccessDeniedException', message))
+    assert not is_macie_session_not_enabled(error('ValidationException',
+                                                  'Macie is not enabled.'))
