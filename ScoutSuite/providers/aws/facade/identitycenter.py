@@ -184,9 +184,21 @@ class IdentityCenterFacade(AWSBaseFacade):
             'CustomerManagedPolicyReferences', 'ListCustomerManagedPolicyReferences')
         record['managed_policies'] = [x for x in managed if isinstance(x, dict)]
         record['customer_managed_policies'] = [x for x in customer if isinstance(x, dict)]
-        if len(record['managed_policies']) != len(managed) or len(record['customer_managed_policies']) != len(customer):
-            self.issue('partial', 'MalformedPolicyReference')
-            managed_ok = customer_ok = False
+        managed_arns = [x.get('Arn') for x in record['managed_policies']]
+        customer_refs = [(x.get('Name'), x.get('Path')) for x in record['customer_managed_policies']]
+        invalid_managed = (len(record['managed_policies']) != len(managed)
+                           or any(not isinstance(arn, str) or not arn.startswith('arn:')
+                                  for arn in managed_arns)
+                           or len(managed_arns) != len(set(managed_arns)))
+        invalid_customer = (len(record['customer_managed_policies']) != len(customer)
+                            or any(not isinstance(name, str) or not name
+                                   or not isinstance(path, str) or not path.startswith('/')
+                                   for name, path in customer_refs)
+                            or len(customer_refs) != len(set(customer_refs)))
+        if invalid_managed or invalid_customer:
+            self.issue('partial', 'MalformedOrDuplicatePolicyReference')
+            managed_ok = managed_ok and not invalid_managed
+            customer_ok = customer_ok and not invalid_customer
         inline, inline_ok = await self._call(
             sso.get_inline_policy_for_permission_set, args, 'GetInlinePolicyForPermissionSet')
         if inline_ok and isinstance(inline, dict) and isinstance(inline.get('InlinePolicy', ''), str):
