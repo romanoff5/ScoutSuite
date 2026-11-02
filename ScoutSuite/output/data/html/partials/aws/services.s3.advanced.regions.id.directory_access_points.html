@@ -13,6 +13,8 @@
     <li>Policy is public (review, not proof of access): {{policy_public}}</li>
     <li>Detail collection complete: {{detail_complete}}</li>
     <li>Scope verified: {{scope_verified}}</li><li>Scope permissions: {{#each scope.Permissions}}{{this}} {{/each}}</li>
+    <!-- M10-Q v2: all evidence remains escaped -->
+    <li>Directory bucket resolution: {{m10q_bucket_target.status}}</li><li>Directory target: <samp>{{m10q_bucket_target.target_bucket}}</samp></li><li>Directory census complete: {{m10q_bucket_target.directory_bucket_inventory_complete}}</li>
   </ul>
 </div>
 </script>
