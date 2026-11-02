@@ -238,3 +238,16 @@ Security Hub keeps status reasons, providers and controls-updatable state.
 Fixed low M10 pagination caps are raised, with explicit partial state on
 exhaustion. New synthetic scale and SQLite-preservation regression tests.
 Windows/Ubuntu offline CI required before integration. No live credentials.
+
+
+## M10-D Inspector2 dual-branch consolidation — 2026-11-02
+
+- Confirmed that `modernization/m10d-inspector2-vertical-slice-20261102` was already part of `master`. The separate `modernization/m10d-inspector2-account-state-20261102` had additional account **scan-type** status logic but duplicated the account-level facade, resource and finding rule.
+- Resolved by preserving the already deployed **single** `Inspector2Facade`, `InspectorAccounts`, `InspectorCoverage`, all old resource paths, `resource_states`, account and coverage finding IDs. Added nested `scan_types` with five potential AWS categories (EC2, ECR, Lambda, Lambda Code, Code Repository) and the single new `inspector2-scan-type-inactive` rule. Reused the account-state classifier; no second collector or duplicated account rule.
+- The API model requires EC2/ECR resource states; missing/malformed required statuses record partial collection. Absent optional scan types remain `UNKNOWN`, not disabled/secure. A nonempty `failedAccounts` rejects account status as incomplete, even when a success object was also returned. Report fields render with HTML-escaped Handlebars; original IDs and actionability are retained. Existing read-only bounded `BatchGetAccountStatus` and `ListCoverage` stay opt-in.
+- Added AWS Stubber and negative tests for all five scan states, optional absence, malformed/failed response, no duplication, evidence counters, existing coverage rule, report serialization and escaped HTML.
+- Two-parent merge `1fd577be90d34a21507668fa71370128a6921381` has the distinct account-state branch as an ancestor; branch history was merged with a manually reconciled final tree, not copied wholesale.
+- Reconciled concurrent AWS M10 changes on the then-current master `6a8ca071a0e217e79fcb3c419b1421177891d2f2` in merge `19313c771553587accc72d24035bd96e337c23b0`. No unrelated AWS service changes were dropped. Fast-forward updated origin/master, remote ref verified.
+- [Offline Windows/Ubuntu CI #41372856680](https://github.com/romanoff5/ScoutSuite/actions/runs/41372856680): each OS **406 passed, 34 subtests passed, 206 warnings**, enforced lint, packaging and browser/XSS checks passed.
+- No live AWS/customer scan was performed; no CIS certification is implied. Remaining limitations: small explicit `ListCoverage` result cap (500/Region, surfaced as incomplete on overflow), absent region/resource completeness comparison, no organization/delegated administrator coverage inference.
+- Rollback using history-preserving commit reverts; remove `inspector2` from opt-in service selection to avoid the new Inspector2 calls. Do not force-reset shared history or rewrite existing reports.
