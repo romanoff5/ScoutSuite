@@ -161,8 +161,7 @@ def test_guardduty_preserves_features_service_role_and_more_than_100_detectors()
             parser = Detectors.__new__(Detectors)
             parser.region = REGION
             _, normalized = parser._parse_detector(values[0])
-            assert normalized['features'][0]['name'] == 'S3_DATA_EVENTS' if False else (
-                normalized['features'][0]['Name'] == 'S3_DATA_EVENTS')
+            assert normalized['features'][0]['Name'] == 'S3_DATA_EVENTS'
             assert normalized['data_sources']['S3Logs']['Status'] == 'ENABLED'
             assert normalized['tags']['owner'] == 'Security Engineering'
             assert normalized['created_at'].startswith('2026-01')
