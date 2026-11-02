@@ -1,0 +1,20 @@
+{
+    "description": "GuardDuty detector is disabled",
+    "rationale": "A GuardDuty detector marked DISABLED is not actively monitoring the selected account and region. This check cannot prove absence of coverage when inventory is unavailable, and does not establish delegated-administrator or organization-wide coverage.",
+    "remediation": "Re-enable the GuardDuty detector and separately verify account/region coverage and organization-level administration.",
+    "references": [
+        "https://docs.aws.amazon.com/guardduty/latest/APIReference/API_GetDetector.html"
+    ],
+    "dashboard_name": "Detectors",
+    "path": "guardduty.regions.id.detectors.id",
+    "conditions": [
+        "and",
+        [
+            "disabled",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Disabled",
+    "evidence_policy": "guardduty-detector-state-v1"
+}
