@@ -20,6 +20,18 @@
       <p>Filter type: {{filterType}} | Pattern: <samp>{{filter}}</samp></p>
     {{/each}}
   </div>
+
+        <!-- M10-Q: all cross-service evidence is Handlebars-escaped and offline-safe. -->
+        <div class="list-group-item">
+            <h4>Cross-service coverage (M10-Q)</h4>
+            <p>Inspector enrollment: {{m10q_inspector.state}}</p>
+            <p>Registry scan configuration: {{m10q_image_scanning.mode}} / {{m10q_image_scanning.status}}</p>
+            <p>Inspector evidence: {{m10q_image_scanning.inspector_enrollment}}</p>
+            <p>Image scan execution verified: {{m10q_image_scanning.image_level_scan_execution_verified}}</p>
+            <p>Image scan reason: {{m10q_image_scanning.reason}}</p>
+            {{#each m10q_inspector.coverage_record_ids}}<p>Coverage record: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_inspector.reasons}}<p>Reason: {{this}}</p>{{/each}}
+        </div>
 </script>
 <script>
   Handlebars.registerPartial("services.ecr.regions.id.repositories",
