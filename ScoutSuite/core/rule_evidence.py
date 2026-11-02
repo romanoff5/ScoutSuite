@@ -567,7 +567,73 @@ def classify_identitycenter_cross_account(assignment):
     return 'unknown'
 
 
+
+def classify_ssm_critical(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    count = node.get('critical_noncompliant_count')
+    if isinstance(count, int) and count > 0:
+        return 'insecure'
+    if (count == 0 and node.get('patch_health') == 'observed_current'
+            and node.get('patch_inventory_complete') is True):
+        return 'secure'
+    return 'unknown'
+
+
+def classify_ssm_security(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    count = node.get('missing_security_patch_count')
+    if isinstance(count, int) and count > 0:
+        return 'insecure'
+    if (count == 0 and node.get('patch_health') == 'observed_current'
+            and node.get('patch_inventory_complete') is True):
+        return 'secure'
+    return 'unknown'
+
+
+def classify_ssm_scan(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    if (node.get('patch_state_collection') != 'complete'
+            or node.get('scan_evidence_collection') != 'complete'):
+        return 'unknown'
+    if node.get('successful_scan_fresh') is True and node.get('patch_snapshot_fresh') is True:
+        return 'secure'
+    if node.get('patch_health') == 'stale_or_unverified_scan':
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_ssm_agent(node):
+    if not isinstance(node, dict):
+        return 'unknown'
+    if node.get('agent_status') == 'ConnectionLost':
+        return 'insecure'
+    if node.get('agent_status') == 'Online' and node.get('agent_online_recent') is True:
+        return 'secure'
+    return 'unknown'
+
+
+def classify_ssm_ec2(instance):
+    if not isinstance(instance, dict):
+        return 'unknown'
+    status = instance.get('ssm_coverage_status')
+    if status == 'unmanaged_unverified_agent':
+        return 'insecure'
+    if status == 'managed':
+        return 'secure'
+    if status == 'not_applicable':
+        return 'not_applicable'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'ssm-critical-noncompliant-v1': classify_ssm_critical,
+    'ssm-security-noncompliant-v1': classify_ssm_security,
+    'ssm-scan-recency-v1': classify_ssm_scan,
+    'ssm-agent-connectivity-v1': classify_ssm_agent,
+    'ssm-ec2-management-coverage-v1': classify_ssm_ec2,
     'identitycenter-admin-assignment-v1': classify_identitycenter_admin,
     'identitycenter-broad-assignment-v1': classify_identitycenter_broad,
     'identitycenter-cross-account-admin-v1': classify_identitycenter_cross_account,
