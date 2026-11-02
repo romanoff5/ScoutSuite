@@ -101,7 +101,7 @@ class IdentityCenterFacade(AWSBaseFacade):
             following = response.get('NextToken')
             if following is None or following == '':
                 return rows, 'complete'
-            if (not isinstance(following, str) or len(following) > 2048
+            if (not isinstance(following, str) or len(following) > 65535
                     or following in seen):
                 self._issue('partial', operation + 'InvalidToken')
                 return rows, 'partial'
