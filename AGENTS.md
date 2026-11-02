@@ -2,7 +2,7 @@
 
 ## Scope and current stage
 
-This repository is a solo-maintainer fork of a multi-cloud security assessment tool. The original documentation-only baseline remains historical: see [baseline](docs/modernization/BASELINE.md), [roadmap](docs/modernization/ROADMAP.md), and [offline validation](docs/modernization/OFFLINE_VALIDATION.md). Resume completed work and follow dependencies in the local `ScoutSuite_AWS_Codex_Tasks_Fork.md`. Current owner scope: finish Task 00 and integrate existing M01/M02 work, then hand off to OpenCode; do not start Task 03/M03 or later work in this session. Assigned future batches need no per-task sign-offs. Azure/GCP SDK, collector and security-rule modernization is deferred; preserve existing interfaces/assets. Record work in [MODERNIZATION_PROGRESS.md](MODERNIZATION_PROGRESS.md).
+This repository is a solo-maintainer fork of a multi-cloud security assessment tool. The original documentation-only baseline remains historical: see [baseline](docs/modernization/BASELINE.md), [roadmap](docs/modernization/ROADMAP.md), and [offline validation](docs/modernization/OFFLINE_VALIDATION.md). Resume completed work and follow dependencies in the local `ScoutSuite_AWS_Codex_Tasks_Fork.md`. The active scope is set by the owner's latest explicit task (currently M10 AWS vertical slices and report evidence completeness). Historical Task 00 and M03 handoff limitations no longer apply. Assigned future batches need no per-task sign-offs. Azure/GCP SDK, collector and security-rule modernization is deferred; preserve existing interfaces/assets. Record work in [MODERNIZATION_PROGRESS.md](MODERNIZATION_PROGRESS.md).
 
 ## Fork development workflow
 
@@ -23,7 +23,7 @@ This repository is a solo-maintainer fork of a multi-cloud security assessment t
 - Any later live integration test requires explicit authorization for a named disposable non-production account/project/subscription, allowed operations, regions, cost limits, and cleanup. It must be opt-in, separate from normal tests, and use short-lived least-privilege credentials. No production credentials or customer data are permitted.
 - Preserve assessment behavior as read-oriented. Do not add remediation, resource creation, policy changes, secret-value retrieval, or broader permissions implicitly. Review metadata operations such as IAM credential-report generation individually; their names alone do not establish safety.
 - Treat resource names, tags, policies, user data, local reports, exceptions, and SDK error messages as untrusted and potentially sensitive. Do not publish generated reports or upload them to telemetry, coverage, issue trackers, or external services. Logs and snapshots must not contain tokens, private keys, secrets, or real identifiers.
-- Keep report serving on loopback by default. Do not widen CORS, bind interfaces, disable TLS validation, or suppress authentication checks to make tests pass. Treat SQLite reports as trusted serialized input until their loading behavior has been reviewed.
+- Keep report serving on loopback by default. Do not widen CORS, bind interfaces, disable TLS validation, or suppress authentication checks to make tests pass. SQLite reports may be untrusted; use the restricted data-only decoder and preserve the report viewer's loopback/origin protections.
 
 ## Security assessment evidence and report completeness (mandatory)
 
