@@ -10,6 +10,19 @@
       <li>Region: {{region}}</li>
       <li>Status: {{status}}</li>
       <li>Finding publishing frequency: {{finding_publishing_frequency}}</li>
+      <li>Created: {{created_at}}</li>
+      <li>Updated: {{updated_at}}</li>
+      <li>Service role: <samp>{{service_role}}</samp></li>
+      <li>Feature configuration:
+        <ul>{{#each features}}
+          <li>{{name}}: {{status}}
+            <ul>{{#each additionalConfiguration}}<li>{{name}}: {{status}}</li>{{/each}}</ul>
+          </li>
+        {{/each}}</ul>
+      </li>
+      <li>S3 protection: {{data_sources.S3Logs.Status}}</li>
+      <li>Kubernetes audit log protection: {{data_sources.Kubernetes.AuditLogs.Status}}</li>
+      <li>Tags: <ul>{{#each tags}}<li>{{@key}}: {{this}}</li>{{/each}}</ul></li>
     </ul>
   </div>
 </script>
