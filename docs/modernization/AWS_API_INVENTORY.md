@@ -143,3 +143,31 @@ still uses the existing paginated helper and preserves the same
 Listing non-issued statuses can intentionally increase the number of
 resources compared with older saved reports. No findings or severities
 are modified in this M05 change.
+
+## M10-C Organizations global inventory contract (2026-11-02)
+
+Opt-in `organizations` uses three read-only SDK operations:
+`DescribeOrganization`, `ListRoots`, and `ListAccounts`.
+IAM actions: `organizations:DescribeOrganization`,
+`organizations:ListRoots`, and `organizations:ListAccounts`.
+The general inventory in this document is the original M00 static snapshot;
+these three operations are an **additive M10-C appendix**, not a claim
+that the older static extraction count is updated.
+
+Endpoints: commercial `us-east-1`, GovCloud `us-gov-west-1`,
+China `cn-northwest-1` (single global call sequence for the selected
+partition). The first API is accessible to organization members;
+the other two need management or delegated-administrator access.
+No `ListPolicies`, `DescribePolicy`, effective SCP resolution, cross-account
+credentials or AWS write action is permitted in this slice.
+
+The pagination request uses `MaxResults=20`; up to 250 pages/5000
+account summaries and 10 pages/100 roots. An empty page with `NextToken`
+does not signal completion. The resulting report deliberately
+excludes `Email` and retired account `Status` fields, preserving
+current account `State`. Unknown/malformed/denied/limited results
+are marked incomplete and cannot become verified compliance.
+
+AWS references: https://docs.aws.amazon.com/organizations/latest/APIReference/API_ListAccounts.html ;
+https://docs.aws.amazon.com/organizations/latest/APIReference/API_ListRoots.html ;
+https://docs.aws.amazon.com/organizations/latest/userguide/region-support.html .
