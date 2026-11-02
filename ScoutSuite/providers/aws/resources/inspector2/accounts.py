@@ -36,7 +36,7 @@ class InspectorAccounts(AWSResources):
         scan_types = {}
         for name in SCAN_TYPES:
             value = states.get(name)
-            if value is not None and value not in VALID_SCAN_STATES:
+            if value is not None and (not isinstance(value, str) or value not in VALID_SCAN_STATES):
                 ctx = get_current_run_context()
                 if ctx is not None:
                     ctx.record_collection_issue('partial', 'inspector2', 'InvalidScanTypeStatus')
