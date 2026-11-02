@@ -58,10 +58,12 @@ def test_stable_venv_and_external_client_toolkit_are_never_mutated_by_install():
     assert ".venv-scout-fork-rc4" in install
     assert "scout_exe_sha256" in install + wrapper
     assert "Get-FileHash" in wrapper
-    assert "ForkRc1" in select and "ForkRc2" in select
+    assert "ForkRc1" in select and "ForkRc2" in select and "ForkRc3" in select
     assert ".venv-scout-fork-rc4" in select + wrapper
+    assert ".venv-scout-fork-rc3" in select + wrapper
     assert ".venv-scout-fork-rc2" in select + wrapper
     assert "5.14.0+romanoff5.m10rc4" in wrapper
+    assert "5.14.0+romanoff5.m10rc3" in wrapper
     assert "5.14.0+romanoff5.m10rc2" in wrapper
 
 
@@ -93,7 +95,7 @@ def test_rc4_release_pins_installable_dependency_closure_and_runtime_hotfix():
 def test_ridgepay_has_explicit_non_mutating_preflight_and_rollback_instructions():
     note = (ROOT / "docs/releases/TASK14_INSTALL.md").read_text(encoding="utf-8")
     assert "aws sts get-caller-identity" in note
-    assert "ForkRc1" in note and "Stable" in note
+    assert "ForkRc1" in note and "ForkRc3" in note and "Stable" in note
     assert "PowerShell 7" in note
     assert "no-browser" in note
     assert "authorized" in note
