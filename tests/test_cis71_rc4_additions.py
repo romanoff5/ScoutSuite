@@ -129,6 +129,10 @@ def test_s3_effective_bpa_and_securityhub_state_fail_closed():
         assert classify_s3_block_public_access(bucket) == 'secure'
 
     s3['public_access_block_configuration'] = {k: False for k in flags}
+    # Restore the distinct bucket settings; finalize() intentionally keeps
+    # effective results, so a second synthetic pass must supply fresh evidence.
+    s3['buckets']['bad']['public_access_block_configuration'] = {k: False for k in flags}
+    s3['buckets']['unknown']['public_access_block_configuration'] = None
     asyncio.run(s3.finalize())
     assert s3['buckets']['bad']['effective_bpa_review'] == 'missing'
     assert classify_s3_block_public_access(s3['buckets']['bad']) == 'insecure'
