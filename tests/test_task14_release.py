@@ -6,8 +6,8 @@ from ScoutSuite import __version__
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = "fork-v5.14.0-m10-rc1"
-VERSION = "5.14.0+romanoff5.m10rc1"
+TAG = "fork-v5.14.0-m10-rc2"
+VERSION = "5.14.0+romanoff5.m10rc2"
 
 
 def test_unique_fork_version_and_manifest_generator_syntax():
