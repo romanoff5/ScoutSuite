@@ -214,7 +214,19 @@ class MacieFacade(AWSBaseFacade):
                 if isinstance(detail.get('s3JobDefinition') or {}, dict) else None,
                 'number_of_runs': (detail.get('statistics') or {}).get('numberOfRuns')
                 if isinstance(detail.get('statistics') or {}, dict) else None,
+                'approximate_objects_remaining': (detail.get('statistics') or {}).get(
+                    'approximateNumberOfObjectsToProcess')
+                if isinstance(detail.get('statistics') or {}, dict) else None,
                 'last_run_age_days': age_days(detail.get('lastRunTime')),
+                # No classification contents or findings retrieved. This proves
+                # at most a completed run with no reported job access errors.
+                'execution_success_evidence': (
+                    detail.get('jobStatus') in ('COMPLETE', 'IDLE')
+                    and detail.get('lastRunTime') is not None
+                    and (detail.get('lastRunErrorStatus') or {}).get('code') == 'NONE'
+                    and isinstance((detail.get('statistics') or {}).get('numberOfRuns'), (int, float))
+                    and (detail.get('statistics') or {}).get('numberOfRuns') > 0),
+                'classification_results_verified': False,
             })
 
         inventory = await self._pages(client.describe_buckets, 'buckets', 'DescribeBuckets')
