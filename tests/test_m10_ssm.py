@@ -38,7 +38,9 @@ def state(**overrides):
 
 def node(**overrides):
     data = {'ssm_managed': True, 'ping_status': 'Online',
-            'patch_state': state(), 'patch_state_observed': True}
+            'patch_state': state(), 'patch_state_observed': True,
+            'last_successful_scan_at': NOW.isoformat(),
+            'successful_scan_confirmed': True}
     data.update(overrides)
     return data
 
@@ -87,6 +89,52 @@ def test_critical_security_and_pending_reboot_never_clear():
     assert not reboot['patch_compliant_evidence']
     missing = assessment(node(patch_state=state(MissingCount=5)), NOW)
     assert missing['missing_or_failed_patches'] is True
+
+
+
+def test_successful_scan_requires_matching_operation_node_and_command_success():
+    async def scenario():
+        facade = SSMPublicFacade(object())
+        client = Mock()
+        cid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+        client.list_commands.return_value = {'Commands': [
+            {'CommandId': cid, 'DocumentName': 'AWS-RunPatchBaseline',
+             'Parameters': {'Operation': ['Scan']}, 'Status': 'Success'},
+            {'CommandId': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+             'DocumentName': 'AWS-RunPatchBaseline',
+             'Parameters': {'Operation': ['Install']}, 'Status': 'Success'}]}
+        client.list_command_invocations.return_value = {'CommandInvocations': [
+            {'CommandId': cid, 'InstanceId': INSTANCE,
+             'DocumentName': 'AWS-RunPatchBaseline',
+             'Status': 'Success', 'StatusDetails': 'Success',
+             'CommandPlugins': [{
+                 'Status': 'Success', 'ResponseFinishDateTime': NOW}]},
+            {'CommandId': cid, 'InstanceId': SECOND,
+             'DocumentName': 'AWS-RunPatchBaseline',
+             'Status': 'Failed', 'StatusDetails': 'Failed',
+             'CommandPlugins': [{
+                 'Status': 'Failed', 'ResponseFinishDateTime': NOW}]}]}
+        scans, complete = await facade.successful_scan_commands(client, [INSTANCE, SECOND])
+        assert complete
+        assert scans[INSTANCE].startswith('2026-11-02')
+        assert SECOND not in scans
+        assert client.list_command_invocations.call_count == 1
+        assert assessment(node(), NOW)['patch_compliant_evidence']
+        assert not assessment(node(
+            successful_scan_confirmed=False,
+            last_successful_scan_at=None), NOW)['patch_compliant_evidence']
+
+        client.list_commands.return_value = {'Commands': [
+            {'CommandId': cid, 'DocumentName': 'AWS-RunPatchBaseline',
+             'Parameters': {'Operation': ['Scan']}}]}
+        client.list_command_invocations.return_value = {'CommandInvocations': [
+            {'CommandId': cid, 'InstanceId': INSTANCE,
+             'DocumentName': 'AWS-RunPatchBaseline',
+             'Status': 'Success', 'StatusDetails': 'Success',
+             'CommandPlugins': []}]}
+        scans, complete = await facade.successful_scan_commands(client, [INSTANCE])
+        assert complete and scans == {}
+    asyncio.run(scenario())
 
 
 def test_running_ec2_without_ssm_not_presented_as_patched():
