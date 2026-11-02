@@ -204,7 +204,7 @@ class OrganizationsFacade(AWSBaseFacade):
                     except Exception as error:
                         status, reason = self._error_status(error)
                         record['collection_status'] = status
-                        self._issue(status, 'AccountListRegions' + reason + ':' + account_id)
+                        self._issue(status, 'AccountListRegions' + reason + '.' + account_id)
                         break
                     batch = response.get('Regions') if isinstance(response, dict) else None
                     if not isinstance(batch, list):
