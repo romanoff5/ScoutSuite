@@ -852,6 +852,34 @@
         "buckets": {
           "cols": 2,
           "path": "services.s3.buckets"
+        },
+        "access_points": {
+          "cols": 2,
+          "path": "services.s3.advanced.regions.id.access_points"
+        },
+        "directory_access_points": {
+          "cols": 2,
+          "path": "services.s3.advanced.regions.id.directory_access_points"
+        },
+        "directory_buckets": {
+          "cols": 2,
+          "path": "services.s3.advanced.regions.id.directory_buckets"
+        },
+        "access_grants_instances": {
+          "cols": 2,
+          "path": "services.s3.advanced.regions.id.access_grants_instances"
+        },
+        "access_grants_locations": {
+          "cols": 2,
+          "path": "services.s3.advanced.regions.id.access_grants_locations"
+        },
+        "access_grants": {
+          "cols": 2,
+          "path": "services.s3.advanced.regions.id.access_grants"
+        },
+        "multi_region_access_points": {
+          "cols": 2,
+          "path": "services.s3.advanced.multi_region_access_points"
         }
       }
     }

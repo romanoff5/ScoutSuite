@@ -1,0 +1,25 @@
+<!-- M10-Q: escaped, read-only S3 advanced resource detail. -->
+<script id="services.s3.advanced.regions.id.access_grants.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item">
+  <h4> S3 Access Grant </h4>
+  <ul>
+    <li>Region: {{region}}</li>
+    <li>ARN: <samp>{{AccessPointArn}}{{AccessGrantArn}}{{AccessGrantsInstanceArn}}{{BucketArn}}</samp></li>
+    <li>Bucket: <samp>{{Bucket}}</samp></li>
+    <li>Account: {{BucketAccountId}}</li>
+    <li>Network origin: {{NetworkOrigin}}</li>
+    <li>Policy status: {{policy_status}}</li>
+    <li>Policy is public (review, not proof of access): {{policy_public}}</li>
+    <li>Detail collection complete: {{detail_complete}}</li>
+    <li>Grantee: {{Grantee.GranteeType}} / {{Grantee.GranteeIdentifier}}</li><li>Permission: {{Permission}}</li><li>Grant scope: <samp>{{GrantScope}}</samp></li><li>Broad write review: {{broad_write_review}}</li>
+  </ul>
+</div>
+</script>
+<script>Handlebars.registerPartial("services.s3.advanced.regions.id.access_grants",
+ $("#services\\.s3\\.advanced\\.regions\\.id\\.access_grants\\.partial").html());</script>
+<script id="single_s3_advanced_regions_id_access_grants-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.s3.advanced.regions.id.access_grants' }}
+</script>
+<script>var single_s3_advanced_regions_id_access_grants_template =
+ Handlebars.compile($("#single_s3_advanced_regions_id_access_grants-template").html());</script>

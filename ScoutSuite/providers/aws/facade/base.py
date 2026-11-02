@@ -37,6 +37,7 @@ from ScoutSuite.providers.aws.facade.rds import RDSFacade
 from ScoutSuite.providers.aws.facade.redshift import RedshiftFacade
 from ScoutSuite.providers.aws.facade.route53 import Route53Facade
 from ScoutSuite.providers.aws.facade.s3 import S3Facade
+from ScoutSuite.providers.aws.facade.s3_advanced import S3AdvancedFacade
 from ScoutSuite.providers.aws.facade.ses import SESFacade
 from ScoutSuite.providers.aws.facade.sns import SNSFacade
 from ScoutSuite.providers.aws.facade.sqs import SQSFacade
@@ -181,6 +182,7 @@ class AWSFacade(AWSBaseFacade):
         self.rds = RDSFacade(self.session)
         self.redshift = RedshiftFacade(self.session)
         self.s3 = S3Facade(self.session)
+        self.s3_advanced = S3AdvancedFacade(self.session, self.owner_id)
         self.ses = SESFacade(self.session)
         self.sns = SNSFacade(self.session)
         self.sqs = SQSFacade(self.session)

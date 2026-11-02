@@ -1651,6 +1651,30 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "s3-access-point-policy-public-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-directory-access-point-policy-public-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-mrap-policy-public-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-access-grants-broad-write-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

@@ -1,0 +1,19 @@
+{
+    "description": "S3 Access Grant provides WRITE permissions at root S3 scope",
+    "rationale": "Evidence-only review candidate. Effective access is not established by this one control-plane signal; UNKNOWN or denied API responses do not match.",
+    "remediation": "Restrict permissions and grant scope to required buckets and prefixes; review grantee identity and business need.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points.html"
+    ],
+    "dashboard_name": "S3 advanced",
+    "path": "s3.advanced.regions.id.access_grants.id",
+    "conditions": [
+        "and",
+        [
+            "broad_write_review",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "broad_write_review"
+}

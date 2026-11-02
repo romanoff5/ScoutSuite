@@ -1,0 +1,19 @@
+{
+    "description": "S3 Multi-Region Access Point policy is classified public",
+    "rationale": "Evidence-only review candidate. Effective access is not established by this one control-plane signal; UNKNOWN or denied API responses do not match.",
+    "remediation": "Review MRAP and underlying bucket policies and Block Public Access before concluding effective exposure.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points.html"
+    ],
+    "dashboard_name": "S3 advanced",
+    "path": "s3.advanced.multi_region_access_points.id",
+    "conditions": [
+        "and",
+        [
+            "public_policy_review",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "public_policy_review"
+}
