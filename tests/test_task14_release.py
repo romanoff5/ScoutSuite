@@ -58,9 +58,10 @@ def test_stable_venv_and_external_client_toolkit_are_never_mutated_by_install():
     assert ".venv-scout-fork-rc2" in install
     assert "scout_exe_sha256" in install + wrapper
     assert "Get-FileHash" in wrapper
-    assert "ForkRc1" in select
+    assert "ForkRc1" in select and "ForkRc2" in select
     assert ".venv-scout-fork-rc2" in select + wrapper
     assert "5.14.0+romanoff5.m10rc3" in wrapper
+    assert "5.14.0+romanoff5.m10rc2" in wrapper
 
 
 def test_release_notes_explicitly_disclaim_unverified_controls_and_containers():
