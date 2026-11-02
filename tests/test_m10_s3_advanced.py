@@ -97,16 +97,18 @@ def test_pagination_repeated_token_preserves_rows_and_marks_incomplete():
         try:
             with Stubber(client) as stub:
                 stub.add_response('list_access_points', {
-                    'AccessPointList': [{'Name': 'a'}], 'NextToken': 'loop'},
+                    'AccessPointList': [{'Name': 'point-a', 'NetworkOrigin': 'Internet',
+                                         'Bucket': 'example'}], 'NextToken': 'loop'},
                     {'AccountId': ACCOUNT, 'MaxResults': 100})
                 stub.add_response('list_access_points', {
-                    'AccessPointList': [{'Name': 'b'}], 'NextToken': 'loop'},
+                    'AccessPointList': [{'Name': 'point-b', 'NetworkOrigin': 'VPC',
+                                         'Bucket': 'example'}], 'NextToken': 'loop'},
                     {'AccountId': ACCOUNT, 'MaxResults': 100, 'NextToken': 'loop'})
                 items, complete = await facade._pages(
                     client, 'ListAccessPoints', 'AccessPointList', REGION, AccountId=ACCOUNT)
                 stub.assert_no_pending_responses()
             assert not complete
-            assert [x['Name'] for x in items] == ['a', 'b']
+            assert [x['Name'] for x in items] == ['point-a', 'point-b']
             assert any('InvalidPaginationToken' in x['reason_code'] for x in ctx.collection_issues)
         finally:
             await ctx.aclose()

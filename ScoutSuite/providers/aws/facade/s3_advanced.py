@@ -42,9 +42,16 @@ class S3AdvancedFacade:
 
     @staticmethod
     def _issue(status, operation, region):
+        # RunContext accepts a strict 64-char identifier; preserve distinct
+        # failures with a stable digest, without altering raw resource evidence.
+        import hashlib
+        import re
+        reason = re.sub(r'[^A-Za-z0-9_.-]', '-', operation + '-' + region)
+        if len(reason) > 64:
+            reason = reason[:55] + '-' + hashlib.sha256(reason.encode()).hexdigest()[:8]
         context = get_current_run_context()
         if context is not None:
-            context.record_collection_issue(status, 's3', operation + ':' + region)
+            context.record_collection_issue(status, 's3', reason)
 
     async def _call(self, client, operation, region, *, policy_absence=False, **params):
         if client is None:
