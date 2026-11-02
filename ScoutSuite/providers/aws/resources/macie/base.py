@@ -63,6 +63,12 @@ class MaciePublic(Regions):
                         item.get('last_run_error') == 'ERROR'
                         or item.get('status') in ('CANCELLED', 'PAUSED', 'USER_PAUSED')),
                     'last_run_age_days': age,
+                    'execution_evidence_status': (
+                        'completed_without_reported_access_errors'
+                        if item.get('execution_success_evidence') is True
+                        else 'reported_run_error' if item.get('last_run_error') == 'ERROR'
+                        else 'not_verified'),
+                    'classification_results_verified': False,
                     'stale': (
                         item.get('type') == 'SCHEDULED'
                         and (age > STALE_DAYS if age is not None
@@ -81,7 +87,29 @@ class MaciePublic(Regions):
                 if key in data['buckets']:
                     data['buckets_complete'] = False
                     continue
-                data['buckets'][key] = {'id': key, 'name': name, **bucket}
+                last_job_id = bucket.get('last_job_id')
+                linked_job = next((job for job in data['jobs'].values()
+                                   if job.get('job_id') == last_job_id), None)
+                bucket_evidence = (
+                    'linked_job_completed_no_reported_access_errors'
+                    if linked_job and linked_job.get('execution_success_evidence') is True
+                    and bucket.get('last_job_run_at')
+                    else 'linked_job_failed'
+                    if linked_job and linked_job.get('last_run_error') == 'ERROR'
+                    else 'not_verified')
+                data['buckets'][key] = {
+                    'id': key, 'name': name, **bucket,
+                    'job_execution_evidence_status': bucket_evidence,
+                    'classification_results_verified': False,
+                    'classification_evidence_note': (
+                        'A linked job run without reported access errors does not '
+                        'prove which objects were classified or that the bucket '
+                        'was fully analyzed.'),
+                }
+            data['verified_job_executions_count'] = sum(
+                j.get('execution_success_evidence') is True
+                for j in data['jobs'].values())
+            data['verified_bucket_classifications_count'] = 0
             data['jobs_count'] = len(data['jobs'])
             data['buckets_count'] = len(data['buckets'])
             data['no_classification_configured'] = (
