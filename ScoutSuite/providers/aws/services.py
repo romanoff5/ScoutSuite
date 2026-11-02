@@ -1,5 +1,6 @@
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.accessanalyzer.base import AccessAnalyzer
+from ScoutSuite.providers.aws.resources.guardduty.base import GuardDutyPublic
 from ScoutSuite.providers.aws.resources.acm.base import Certificates
 from ScoutSuite.providers.aws.resources.awslambda.base import Lambdas
 from ScoutSuite.providers.aws.resources.cloudformation.base import CloudFormation
@@ -118,6 +119,7 @@ class AWSServicesConfig(BaseServicesConfig):
         self.sqs = SQS(facade)
         self.vpc = VPC(facade)
         self.secretsmanager = SecretsManager(facade)
+        self.guardduty = GuardDutyPublic(facade)
 
         # Instantiate proprietary services
         try:
