@@ -33,9 +33,9 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$(git ls-remote origin refs/heads/master | cut -f1)" = "$EXPECTED_SHA"
-          test -f docs/releases/fork-v5.14.0-m10-rc6.md
-          grep -Fq "5.14.0+romanoff5.m10rc6" ScoutSuite/__init__.py
-          if gh release view fork-v5.14.0-m10-rc6 --repo romanoff5/ScoutSuite >/dev/null 2>&1; then
+          test -f docs/releases/fork-v5.14.0-m10-rc7.md
+          grep -Fq "5.14.0+romanoff5.m10rc7" ScoutSuite/__init__.py
+          if gh release view fork-v5.14.0-m10-rc7 --repo romanoff5/ScoutSuite >/dev/null 2>&1; then
             echo "Release already exists: cannot overwrite published assets."
             exit 1
           fi
@@ -51,6 +51,12 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse 70cf29d5579864543b6363e7a271a84216bb6837^{commit})" = "70cf29d5579864543b6363e7a271a84216bb6837"
           git merge-base --is-ancestor 70cf29d5579864543b6363e7a271a84216bb6837 HEAD
+      - name: Ensure release SHA includes the RC7 S3 backup evidence gap fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse 409b07570b690cce67612e729718a6178a6d020a^{commit})" = "409b07570b690cce67612e729718a6178a6d020a"
+          git merge-base --is-ancestor 409b07570b690cce67612e729718a6178a6d020a HEAD
       - name: Build pinned fork wheel and source distribution
         shell: bash
         run: |
@@ -88,13 +94,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG='fork-v5.14.0-m10-rc6'
+          TAG='fork-v5.14.0-m10-rc7'
           if gh api "repos/romanoff5/ScoutSuite/git/ref/tags/$TAG" >/tmp/existing-tag.json 2>/dev/null; then
             test "$(gh api "repos/romanoff5/ScoutSuite/git/ref/tags/$TAG" --jq '.object.sha')" = "$RELEASE_SHA"
           else
             gh api repos/romanoff5/ScoutSuite/git/refs -X POST -f "ref=refs/tags/$TAG" -f "sha=$RELEASE_SHA" >/dev/null
           fi
           gh release create "$TAG" dist/* --repo romanoff5/ScoutSuite --verify-tag --prerelease \
-            --title "ScoutSuite fork 5.14.0+romanoff5.m10rc6" \
-            --notes-file docs/releases/fork-v5.14.0-m10-rc6.md
+            --title "ScoutSuite fork 5.14.0+romanoff5.m10rc7" \
+            --notes-file docs/releases/fork-v5.14.0-m10-rc7.md
           gh release view "$TAG" --repo romanoff5/ScoutSuite --json tagName,isPrerelease,url

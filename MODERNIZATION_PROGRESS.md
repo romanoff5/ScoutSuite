@@ -1,3 +1,18 @@
+## RC7 release preparation (2026-11-02)
+
+- RC7 derives from master after the post-RC6 S3 backup evidence gap fix
+  `409b07570b690cce67612e729718a6178a6d020a`; the release workflow refuses
+  any SHA that does not contain it. No customer evidence or credentials are
+  included.
+- The new version installs in `.venv-scout-fork-rc7`; `ForkRc6` is added as an
+  explicit rollback/comparison mode and RC5 through RC1 and Stable remain
+  selectable without overwriting previous environments.
+- Release gates: offline CI across Python 3.11/3.14 on Windows/Ubuntu;
+  installed distribution, PowerShell integrity and report tests; immutable
+  exact-master release and SHA256SUMS. Fresh authorized field acceptance is
+  separate: compared with RC6, S3 buckets in Regions without AWS Backup should
+  regain `m10q-s3-backup-evidence-gap`.
+
 ## Post-RC6 review: S3 backup evidence gap with deferred AWS Backup history (2026-11-02)
 
 - Review of the last three days of `master` found one changed-feature false
