@@ -139,29 +139,63 @@ class BackupPublic(Regions):
 
     async def _enrich_region(self, region, data):
         backup = self.facade.backup
+        # First perform the SecurityAudit-accessible protected-resource census.
+        # Only suppress deeper restricted job/restore APIs when *all three*
+        # discovery collections were verified complete and empty. An empty
+        # array returned after AccessDenied must never be treated as absence.
+        try:
+            protected_raw = (await backup.get_protected_resources(region)
+                             if hasattr(backup, 'get_protected_resources')
+                             else MissingCollection())
+        except Exception:
+            _issue('protected_resourcesCollectionFailed')
+            protected_raw = MissingCollection()
+        protected_complete = getattr(protected_raw, 'complete', True)
+        data['protected_resources'], malformed = _store(
+            protected_raw, 'ResourceArn', 'protected_resources')
+        data['protected_resources_count'] = len(data['protected_resources'])
+        protected_complete = bool(protected_complete and not malformed)
+
+        discovery = getattr(backup, 'discovery_complete', {}).get(region, {})
+        verified_empty = (
+            discovery.get('plans') is True
+            and discovery.get('vaults') is True
+            and protected_complete
+            and not data['plans'] and not data['vaults']
+            and not data['protected_resources'])
         methods = (
-            ('protected_resources', 'get_protected_resources', 'ResourceArn'),
             ('backup_jobs', 'get_backup_jobs', 'BackupJobId'),
             ('restore_jobs', 'get_restore_jobs', 'RestoreJobId'),
             ('restore_testing_plans', 'get_restore_testing_plans',
              'RestoreTestingPlanArn'),
         )
-        results = await asyncio.gather(*(
-            (getattr(backup, method)(region) if hasattr(backup, method)
-             else asyncio.sleep(0, result=MissingCollection()))
-            for _, method, _ in methods),
-            return_exceptions=True)
-        status = {}
-        for (key, _, identity), result in zip(methods, results):
-            if isinstance(result, BaseException):
-                _issue(key + 'CollectionFailed')
-                result = []
-                complete = False
-            else:
+        status = {
+            'protected_resources': 'complete' if protected_complete else 'partial'}
+        if verified_empty:
+            # Historical jobs or standalone restore-testing plans can still
+            # exist. They are deliberately *unassessed*, not verified absent.
+            # Native RDS snapshots/PITR and EBS backups are independently
+            # evaluated by their respective service collectors.
+            for key, _, _ in methods:
+                data[key] = {}
+                data[key + '_count'] = 0
+                status[key] = 'deferred_no_current_backup_inventory'
+            data['backup_service_activity'] = 'no_current_resources_observed'
+        else:
+            results = await asyncio.gather(*(
+                getattr(backup, method)(region) if hasattr(backup, method)
+                else asyncio.sleep(0, result=MissingCollection())
+                for _, method, _ in methods),
+                return_exceptions=True)
+            for (key, _, identity), result in zip(methods, results):
+                if isinstance(result, BaseException):
+                    _issue(key + 'CollectionFailed')
+                    result = MissingCollection()
                 complete = getattr(result, 'complete', True)
-            data[key], malformed = _store(result, identity, key)
-            data[key + '_count'] = len(data[key])
-            status[key] = 'complete' if complete and not malformed else 'partial'
+                data[key], malformed = _store(result, identity, key)
+                data[key + '_count'] = len(data[key])
+                status[key] = 'complete' if complete and not malformed else 'partial'
+            data['backup_service_activity'] = 'not_determined'
         data['backup_inventory_status'] = status
 
         protected = {
