@@ -46,7 +46,7 @@ def wheelhouse_inputs():
                         platform.system(), platform.machine())).encode('utf-8'))
     for path in sorted(set(paths)):
         digest.update(path.relative_to(SOURCE).as_posix().encode('utf-8'))
-        digest.update(b'\\0')
+        digest.update(b'\0')
         digest.update(hashlib.sha256(path.read_bytes()).digest())
     return digest.hexdigest()
 
@@ -175,7 +175,7 @@ class Pipeline:
                     'wheels': {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                for p in wheels}}
         (self.root / 'wheelhouse-manifest.json').write_text(
-            json.dumps(manifest, sort_keys=True) + '\\n', encoding='utf-8')
+            json.dumps(manifest, sort_keys=True) + '\n', encoding='utf-8')
 
     def create(self, name):
         assert not (self.root / name).exists(), 'Use a fresh CI root: ' + name
