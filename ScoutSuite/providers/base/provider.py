@@ -148,7 +148,31 @@ class BaseProvider:
             for key in self.services[service]:
                 if key != 'regions_count' and key.endswith('_count'):
                     last_run['summary'][service]['resources_count'] += self.services[service][key]
+
+        issues = (getattr(self, 'collection_status', None) or {}).get('issues') or []
+        for service, summary in last_run['summary'].items():
+            summary['collection_issues'] = sum(
+                1 for issue in issues if isinstance(issue, dict) and issue.get('scope') == service)
+            summary['status'] = BaseProvider._service_status(summary)
         self.last_run = last_run
+
+    @staticmethod
+    def _service_status(summary):
+        """Dashboard status; an empty inventory is "not in use" only when it was fully collected.
+
+        Detective controls (GuardDuty, Access Analyzer, Config, CloudTrail, Security
+        Hub, Macie) have region-level rules, so their absence is checked and flagged
+        rather than shown as "not in use".
+        """
+        if summary['flagged_items'] > 0:
+            return 'issues'
+        if summary['incomplete_rules'] > 0 or summary['collection_issues'] > 0:
+            return 'incomplete'
+        if summary['checked_items'] > 0:
+            return 'passed'
+        if summary['rules_count'] > 0 and summary['resources_count'] == 0:
+            return 'not_in_use'
+        return 'not_assessed'
 
     def _update_metadata(self):
         service_map = {}

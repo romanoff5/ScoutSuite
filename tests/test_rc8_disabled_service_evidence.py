@@ -250,6 +250,45 @@ def test_service_summary_counts_incomplete_rules_for_the_dashboard():
     assert summary['iam']['incomplete_rules'] == 0
     assert summary['legacy']['incomplete_rules'] == 0
     assert summary['iam']['resources_count'] == 2
+    assert summary['securityhub']['status'] == 'incomplete'
+    assert summary['iam']['status'] == 'passed'
+    assert summary['legacy']['status'] == 'not_assessed'
+
+
+def test_service_status_model_distinguishes_unused_incomplete_and_unassessed():
+    from ScoutSuite.providers.base.provider import BaseProvider
+
+    def status(**overrides):
+        summary = {'checked_items': 0, 'flagged_items': 0, 'rules_count': 2, 'incomplete_rules': 0,
+                   'resources_count': 0, 'collection_issues': 0}
+        summary.update(overrides)
+        return BaseProvider._service_status(summary)
+
+    assert status(flagged_items=1, checked_items=3, incomplete_rules=1) == 'issues'
+    assert status(checked_items=3, incomplete_rules=1) == 'incomplete'
+    assert status(collection_issues=1) == 'incomplete'  # Empty after a denial is not "not in use".
+    assert status(checked_items=3, resources_count=3) == 'passed'
+    assert status() == 'not_in_use'
+    assert status(resources_count=11) == 'not_assessed'  # Resources without any rule check.
+    assert status(rules_count=0) == 'not_assessed'
+
+
+def test_service_summary_uses_collection_issue_scope():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    from ScoutSuite.providers.base.provider import BaseProvider
+
+    provider = SimpleNamespace(
+        services={'eks': {'findings': {'audit': {'checked_items': 0, 'flagged_items': 0, 'level': 'warning',
+                                                  'items': []}}, 'clusters_count': 0},
+                  'ecs': {'findings': {'insights': {'checked_items': 0, 'flagged_items': 0, 'level': 'warning',
+                                                     'items': []}}, 'clusters_count': 0}},
+        collection_status={'issues': [{'status': 'denied', 'scope': 'ecs', 'reason_code': 'ListClustersDenied'}]})
+    BaseProvider._update_last_run(provider, datetime(2026, 11, 2, tzinfo=timezone.utc),
+                                  SimpleNamespace(name='synthetic', about='synthetic'), {})
+    summary = provider.last_run['summary']
+    assert summary['eks']['status'] == 'not_in_use'
+    assert summary['ecs']['collection_issues'] == 1 and summary['ecs']['status'] == 'incomplete'
 
 
 def test_templates_pass_assessment_state_to_status_colour():
@@ -260,7 +299,8 @@ def test_templates_pass_assessment_state_to_status_colour():
     assert dashboard.count('dashboard_color level checked_items flagged_items assessment_status') == 2
     assert 'Assessment status: {{assessment_status}}' in dashboard
     assert 'with unknown evidence: {{evaluation_summary.counts.unknown}}' in dashboard
-    assert 'dashboard_color max_level checked_items flagged_items incomplete_rules' in report
+    assert 'finding-badge-{{service_badge this}}' in report
+    assert '{{service_status_label this}}' in report
     assert '{{{' not in dashboard
 
 

@@ -87,6 +87,24 @@ body {
     color: rgb(225, 225, 225);
 }
 
+/* RC8 status model: incomplete evidence and "not in use" are distinct from a pass. */
+.finding-badge-incomplete:before {
+    content: '\f059';
+    color: #7d8590;
+}
+
+.finding-badge-notused:before {
+    content: '\f056';
+    color: #23af44;
+    opacity: 0.75;
+}
+
+.service-status { font-size: 13px; }
+.service-status-danger { color: #ee293d; font-weight: bold; }
+.service-status-warning { color: #c48f00; font-weight: bold; }
+.service-status-good, .service-status-notused { color: #1f9b3c; }
+.service-status-incomplete, .service-status-unknown { color: #6c757d; }
+
 .finding-good { color: #23af44; }
 .finding-warning { color: #fdbe00; }
 .finding-danger { color:#ee293d; 

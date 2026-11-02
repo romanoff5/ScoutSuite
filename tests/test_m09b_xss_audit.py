@@ -166,13 +166,28 @@ def check_dashboard_color_never_renders_incomplete_evidence_as_good():
     const color = helpers.dashboard_color;
     const options = {hash: {}, data: {}};  // Handlebars always appends this argument.
     assert.strictEqual(color('warning', 3, 0, options), 'good disabled-link');
-    assert.strictEqual(color('warning', 3, 0, 'incomplete', options), 'unknown disabled-link');
+    assert.strictEqual(color('warning', 3, 0, 'incomplete', options), 'incomplete disabled-link');
     assert.strictEqual(color('warning', 3, 0, 'not_applicable', options), 'good disabled-link');
     assert.strictEqual(color('danger', 3, 2, 'incomplete', options), 'danger');
     assert.strictEqual(color('warning', 0, 0, 'incomplete', options), 'unknown disabled-link');
-    assert.strictEqual(color('warning', 5, 0, 2, options), 'unknown disabled-link');
+    assert.strictEqual(color('warning', 5, 0, 2, options), 'incomplete disabled-link');
     assert.strictEqual(color('warning', 5, 0, 0, options), 'good disabled-link');
     assert.strictEqual(color('danger', 5, 1, 2, options), 'danger');
+    const badge = (summary) => helpers.service_badge(summary, options);
+    const label = (summary) => helpers.service_status_label(summary, options);
+    assert.strictEqual(badge({status: 'issues', max_level: 'danger'}), 'danger');
+    assert.strictEqual(badge({status: 'issues', max_level: 'warning'}), 'warning');
+    assert.strictEqual(badge({status: 'passed'}), 'good');
+    assert.strictEqual(badge({status: 'not_in_use'}), 'notused');
+    assert.strictEqual(badge({status: 'incomplete'}), 'incomplete');
+    assert.strictEqual(badge({status: 'not_assessed'}), 'unknown');
+    assert.strictEqual(label({status: 'issues', incomplete_rules: 2}), 'Issues found (incomplete)');
+    assert.strictEqual(label({status: 'not_in_use'}), 'Not in use');
+    // Reports produced before RC8 have no status: previous colours, no label.
+    assert.strictEqual(badge({max_level: 'warning', checked_items: 4, flagged_items: 0}), 'good');
+    assert.strictEqual(badge({max_level: 'warning', checked_items: 4, flagged_items: 0, incomplete_rules: 1}),
+                       'incomplete');
+    assert.strictEqual(label({max_level: 'warning', checked_items: 4, flagged_items: 0}), '');
     """
     proc = subprocess.run([node, '-e', script, str(ASSETS / 'inc-scoutsuite' / 'helpers.js')],
                           capture_output=True, text=True, timeout=15, check=False)

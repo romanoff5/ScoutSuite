@@ -232,7 +232,7 @@ Handlebars.registerHelper('fixBucketName', function (bucketName) {
     }
 })
 
-Handlebars.registerHelper('dashboard_color', function (level, checked, flagged, assessment) {
+function dashboardColor (level, checked, flagged, assessment) {
     // Optional 4th argument: a finding's assessment_status or a service's
     // incomplete_rules count. Zero flagged items on incomplete evidence is
     // not a verified pass, so it must not be rendered as "good".
@@ -240,10 +240,40 @@ Handlebars.registerHelper('dashboard_color', function (level, checked, flagged, 
     if (checked === 0) {
         return 'unknown disabled-link'
     } else if (flagged === 0) {
-        return incomplete ? 'unknown disabled-link' : 'good disabled-link'
+        return incomplete ? 'incomplete disabled-link' : 'good disabled-link'
     } else {
         return level
     }
+}
+
+Handlebars.registerHelper('dashboard_color', dashboardColor)
+
+// Service status computed by the provider summary (RC8). Older reports have no
+// status and fall back to the colour derived from the counters.
+const SERVICE_STATUS = {
+    issues: {label: 'Issues found'},
+    passed: {badge: 'good', label: 'Passed'},
+    not_in_use: {badge: 'notused', label: 'Not in use'},
+    incomplete: {badge: 'incomplete', label: 'Incomplete'},
+    not_assessed: {badge: 'unknown', label: 'Not assessed'}
+}
+
+Handlebars.registerHelper('service_badge', function (summary) {
+    const known = summary && SERVICE_STATUS[summary.status]
+    if (!known) {
+        return dashboardColor(summary.max_level, summary.checked_items, summary.flagged_items,
+            summary.incomplete_rules).split(' ')[0]
+    }
+    return known.badge || (summary.max_level === 'danger' ? 'danger' : 'warning')
+})
+
+Handlebars.registerHelper('service_status_label', function (summary) {
+    const known = summary && SERVICE_STATUS[summary.status]
+    if (!known) return ''
+    if (summary.status === 'issues' && (summary.incomplete_rules > 0 || summary.collection_issues > 0)) {
+        return 'Issues found (incomplete)'
+    }
+    return known.label
 })
 
 Handlebars.registerHelper('ifEqual', function (v1, v2, options) {

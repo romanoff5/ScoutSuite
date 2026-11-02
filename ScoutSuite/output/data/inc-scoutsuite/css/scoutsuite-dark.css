@@ -238,3 +238,10 @@ code {
 ::-webkit-scrollbar-thumb {
     background-color: #4a505b;
 }
+
+.finding-badge-incomplete:before { color: #8b949e; }
+.finding-badge-notused:before { color: #3fb950; opacity: 0.75; }
+.service-status-danger { color: #ff5c5c; }
+.service-status-warning { color: #f2b705; }
+.service-status-good, .service-status-notused { color: #3fb950; }
+.service-status-incomplete, .service-status-unknown { color: #9aa1ab; }

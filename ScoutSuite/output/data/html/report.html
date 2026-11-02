@@ -112,6 +112,7 @@
                         <div class="accordion" id="last_run">
                             <a class="card">
                                 <div class="card-header card-header-dark">Service
+                                    <div class="col-sm-2 float-right" style="text-align: center">Status</div>
                                     <div class="col-sm-2 float-right" style="text-align: center">Checks</div>
                                     <div class="col-sm-2 float-right" style="text-align: center">Findings</div>
                                     <div class="col-sm-2 float-right" style="text-align: center">Rules</div>
@@ -122,8 +123,9 @@
                             <div class="card finding-title finding-title-{{dashboard_color level rules_count rules_count}} plain-link">
                                 <a href="#services.{{@key}}.findings">
                                     <div class="finding-title card-header">
-                                        <i class="fa finding-badge finding-badge-{{dashboard_color max_level checked_items flagged_items incomplete_rules}}"></i>
+                                        <i class="fa finding-badge finding-badge-{{service_badge this}}"></i>
                                         {{makeTitle @key}}
+                                        <div class="col-sm-2 float-right service-status service-status-{{service_badge this}}" style="text-align: center">{{service_status_label this}}</div>
                                         <div class="col-sm-2 float-right" style="text-align: center">{{checked_items}}</div>
                                         <div class="col-sm-2 float-right" style="text-align: center">{{flagged_items}}</div>
                                         <div class="col-sm-2 float-right" style="text-align: center">{{rules_count}}</div>
