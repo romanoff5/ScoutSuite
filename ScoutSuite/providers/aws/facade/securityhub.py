@@ -41,7 +41,8 @@ class SecurityHubPublicFacade(AWSBaseFacade):
             code = error.response.get('Error', {}).get('Code', '')
             if code == 'ResourceNotFoundException':
                 self.hub_states[region] = 'not_subscribed'
-                issue('not_applicable', 'HubNotSubscribed')
+                # A confirmed absent subscription is valid negative security evidence,
+                # not a failed/partial AWS collection. The regional rule reports it.
             elif code in DENIED_CODES:
                 issue('denied', 'DescribeHubDenied')
             elif code in UNSUPPORTED_CODES:

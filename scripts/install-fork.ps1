@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory, ParameterSetName = 'Local')][string]$WheelPath,
     [Parameter(Mandatory, ParameterSetName = 'Local')][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$CommitSha,
     [Parameter(Mandatory, ParameterSetName = 'Release')][switch]$FromRelease,
-    [string]$ReleaseTag = 'fork-v5.14.0-m10-rc4',
+    [string]$ReleaseTag = 'fork-v5.14.0-m10-rc5',
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'),
     [string]$ExpectedSha256,
     [string]$ConstraintsPath,
@@ -14,25 +14,25 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repo = 'romanoff5/ScoutSuite'
-$version = '5.14.0+romanoff5.m10rc4'
-$venv = Join-Path $ToolkitRoot '.venv-scout-fork-rc4'
+$version = '5.14.0+romanoff5.m10rc5'
+$venv = Join-Path $ToolkitRoot '.venv-scout-fork-rc5'
 $scout = Join-Path $venv 'Scripts\scout.exe'
 $venvPython = Join-Path $venv 'Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $ToolkitRoot -PathType Container)) {
     throw "Toolkit root not found: $ToolkitRoot"
 }
-# Side-by-side RC4 installation cannot change the RC1/hotfix or stable scanner.
+# Side-by-side RC5 installation cannot change the RC1/hotfix or stable scanner.
 if (Test-Path -LiteralPath $venv) {
-    throw "RC4 environment already exists: $venv. Refusing overwrite; inspect or select the existing install."
+    throw "RC5 environment already exists: $venv. Refusing overwrite; inspect or select the existing install."
 }
-$temp = Join-Path ([IO.Path]::GetTempPath()) ("scout-fork-rc4-" + [guid]::NewGuid().ToString('N'))
+$temp = Join-Path ([IO.Path]::GetTempPath()) ("scout-fork-rc5-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp | Out-Null
 $createdVenv = $false
 $verifiedInstall = $false
 try {
     $origin = 'local-wheel'
     if ($FromRelease) {
-        if ($ReleaseTag -cne 'fork-v5.14.0-m10-rc4') { throw 'Only the pinned RC4 release is permitted.' }
+        if ($ReleaseTag -cne 'fork-v5.14.0-m10-rc5') { throw 'Only the pinned RC5 release is permitted.' }
         $base = "https://github.com/$repo/releases/download/$ReleaseTag"
         $sums = Join-Path $temp 'SHA256SUMS'
         Invoke-WebRequest -Uri "$base/SHA256SUMS" -OutFile $sums
@@ -42,7 +42,7 @@ try {
             if ($entries.ContainsKey($Matches[2])) { throw 'Duplicate checksum entry' }
             $entries[$Matches[2]] = $Matches[1].ToLowerInvariant()
         }
-        $wheelName = 'scoutsuite-5.14.0+romanoff5.m10rc4-py3-none-any.whl'
+        $wheelName = 'scoutsuite-5.14.0+romanoff5.m10rc5-py3-none-any.whl'
         $constraintsName = 'runtime-py311.constraints.txt'
         foreach ($name in @($wheelName, 'manifest.json', $constraintsName)) {
             if (-not $entries.ContainsKey($name)) { throw "Missing release asset: $name" }
@@ -76,7 +76,7 @@ try {
     $ConstraintsPath = (Resolve-Path -LiteralPath $ConstraintsPath -ErrorAction Stop).Path
     $actualHash = (Get-FileHash -LiteralPath $WheelPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actualHash -cne $ExpectedSha256.ToLowerInvariant()) { throw 'Wheel SHA256 mismatch' }
-    if ((Split-Path -Leaf $WheelPath) -cne 'scoutsuite-5.14.0+romanoff5.m10rc4-py3-none-any.whl') {
+    if ((Split-Path -Leaf $WheelPath) -cne 'scoutsuite-5.14.0+romanoff5.m10rc5-py3-none-any.whl') {
         throw 'Unexpected wheel filename'
     }
     $constraintsHash = (Get-FileHash -LiteralPath $ConstraintsPath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -87,7 +87,7 @@ try {
     }
     $createdVenv = Test-Path -LiteralPath $venv -PathType Container
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
-        throw 'Failed to create isolated RC4 environment'
+        throw 'Failed to create isolated RC5 environment'
     }
     if ($WheelhousePath) {
         $WheelhousePath = (Resolve-Path -LiteralPath $WheelhousePath -ErrorAction Stop).Path
@@ -95,9 +95,9 @@ try {
     } else {
         & $venvPython -m pip install --disable-pip-version-check -c $ConstraintsPath $WheelPath
     }
-    if ($LASTEXITCODE -ne 0) { throw 'Pinned RC4 wheel installation failed' }
+    if ($LASTEXITCODE -ne 0) { throw 'Pinned RC5 wheel installation failed' }
     & $venvPython -m pip check
-    if ($LASTEXITCODE -ne 0) { throw 'RC4 dependency consistency check failed' }
+    if ($LASTEXITCODE -ne 0) { throw 'RC5 dependency consistency check failed' }
     $actualVersion = (& $venvPython -I -c 'import importlib.metadata as m; print(m.version("ScoutSuite"))').Trim()
     if ($LASTEXITCODE -ne 0 -or $actualVersion -cne $version) { throw "Unexpected version: $actualVersion" }
     & $scout --help | Out-Null
@@ -113,7 +113,7 @@ try {
     }
     $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $venv 'fork-install.json') -Encoding utf8
     $verifiedInstall = $true
-    Write-Host "Verified RC4 installed at: $scout"
+    Write-Host "Verified RC5 installed at: $scout"
     Write-Host 'Scanner selection unchanged; no AWS calls performed.'
 } finally {
     if ($createdVenv -and -not $verifiedInstall) {

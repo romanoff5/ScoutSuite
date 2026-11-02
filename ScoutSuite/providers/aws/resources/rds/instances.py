@@ -28,9 +28,9 @@ class RDSInstances(AWSResources):
         cluster_id = raw_instance.get('DBClusterIdentifier')
         # Aurora / Multi-AZ DB cluster deletion protection lives on DBCluster.
         # A malformed membership field must never imply a standalone instance.
-        instance['DBClusterIdentifier'] = cluster_id if isinstance(cluster_id, str) and cluster_id else None
-        instance['is_cluster_member'] = (True if isinstance(cluster_id, str) and cluster_id
-                                         else False if cluster_id is None else None)
+        instance['DBClusterIdentifier'] = cluster_id if isinstance(cluster_id, str) and cluster_id.strip() else None
+        instance['is_cluster_member'] = (False if cluster_id is None else
+                                         True if isinstance(cluster_id, str) and cluster_id.strip() else None)
         instance['is_read_replica'] = self._is_read_replica(raw_instance)
         instance['arn'] = raw_instance.get('DBInstanceArn')
         return get_non_provider_id(instance['name']), instance

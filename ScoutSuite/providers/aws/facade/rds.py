@@ -1,5 +1,7 @@
 from asyncio import Lock
 
+from ScoutSuite.core.run_context import get_current_run_context
+
 from botocore.exceptions import ClientError
 from ScoutSuite.core.console import print_exception, print_warning
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
@@ -20,11 +22,18 @@ class RDSFacade(AWSBaseFacade):
         self._regional_subnet_groups_cache_locks = {}
         self._subnet_groups_cache = {}
 
+    @staticmethod
+    def _record_incomplete(reason):
+        ctx = get_current_run_context()
+        if ctx is not None:
+            ctx.record_collection_issue('partial', 'rds', reason)
+
     async def get_instances(self, region: str, vpc: str):
         try:
             await self._cache_instances(region)
             return [instance for instance in self._instances_cache[region] if instance['VpcId'] == vpc]
         except Exception as e:
+            self._record_incomplete('DescribeDBInstancesIncomplete')
             print_exception(f'Failed to get RDS instances: {e}')
             return []
 
@@ -33,17 +42,20 @@ class RDSFacade(AWSBaseFacade):
             if region in self._instances_cache:
                 return
 
-            self._instances_cache[region] = await AWSFacadeUtils.get_all_pages(
+            instances = await AWSFacadeUtils.get_all_pages(
                 'rds', region, self.session, 'describe_db_instances', 'DBInstances')
 
-            for instance in self._instances_cache[region]:
+            for instance in instances:
                 instance['VpcId'] = instance['DBSubnetGroup']['VpcId'] \
                     if 'DBSubnetGroup' in instance and 'VpcId' in instance['DBSubnetGroup'] \
                     and instance['DBSubnetGroup']['VpcId'] \
                     else ec2_classic
 
             await get_and_set_concurrently(
-                [self._get_and_set_instance_clusters, self._get_and_set_instance_tags], self._instances_cache[region], region=region)
+                [self._get_and_set_instance_clusters, self._get_and_set_instance_tags], instances, region=region)
+            # Publish only fully enriched cache entries; a failed first attempt
+            # must not make later VPC queries return a stale partial census.
+            self._instances_cache[region] = instances
 
 
     async def _get_and_set_instance_tags(self, instance: {}, region: str):
@@ -54,12 +66,14 @@ class RDSFacade(AWSBaseFacade):
             instance['Tags'] = {x['Key']: x['Value'] for x in instance_tagset['TagList']}
         except ClientError as e:
             if e.response['Error']['Code'] != 'NoSuchTagSet':
+                self._record_incomplete('ListDBInstanceTagsIncomplete')
                 print_exception('Failed to get db instance tags for {}: {}'.format(instance['DBInstanceIdentifier'], e))
         except Exception as e:
             if 'DBInstanceNotFound' in str(e):
                 print_warning('Failed to get db instance tags for {}: {}'.format(instance['DBInstanceIdentifier'], e))
             else:
                 print_exception('Failed to get db instance tags for {}: {}'.format(instance['DBInstanceIdentifier'], e))
+            self._record_incomplete('ListDBInstanceTagsIncomplete')
             instance['Tags'] = {}
 
     async def _get_and_set_instance_clusters(self, instance: {}, region: str):
@@ -73,6 +87,7 @@ class RDSFacade(AWSBaseFacade):
                 if cluster_list and 'MultiAZ' in cluster_list[0]:
                     instance['MultiAZ'] = cluster_list[0]['MultiAZ']
             except Exception as e:
+                self._record_incomplete('DescribeClusterMemberIncomplete')
                 print_exception(f'Failed to describe RDS clusters: {e}')
 
     async def get_snapshots(self, region: str, vpc: str):
@@ -80,6 +95,7 @@ class RDSFacade(AWSBaseFacade):
             await self._cache_snapshots(region)
             return [snapshot for snapshot in self._snapshots_cache[region] if snapshot['VpcId'] == vpc]
         except Exception as e:
+            self._record_incomplete('DescribeDBSnapshotsIncomplete')
             print_exception(f'Failed to get RDS snapshots: {e}')
             return []
 
@@ -89,10 +105,10 @@ class RDSFacade(AWSBaseFacade):
                 return
 
             # First, fetch regular snapshots
-            self._snapshots_cache[region] = await AWSFacadeUtils.get_all_pages(
+            snapshots = await AWSFacadeUtils.get_all_pages(
                 'rds', region, self.session, 'describe_db_snapshots', 'DBSnapshots')
 
-            for snapshot in self._snapshots_cache[region]:
+            for snapshot in snapshots:
                 snapshot['VpcId'] = snapshot['VpcId'] if 'VpcId' in snapshot else ec2_classic
 
             await get_and_set_concurrently(
@@ -108,7 +124,9 @@ class RDSFacade(AWSBaseFacade):
             await get_and_set_concurrently(
                 [self._get_and_set_cluster_snapshot_attributes], cluster_snapshots_for_region, region=region)
 
-            self._snapshots_cache[region].extend(cluster_snapshots_for_region)
+            snapshots.extend(cluster_snapshots_for_region)
+            # A cluster-snapshot enrichment error must not poison the cache.
+            self._snapshots_cache[region] = snapshots
 
     async def _get_and_set_snapshot_attributes(self, snapshot: {}, region: str):
         client = AWSFacadeUtils.get_client('rds', self.session, region)
@@ -123,6 +141,7 @@ class RDSFacade(AWSBaseFacade):
                 print_warning(f'Failed to describe RDS snapshot attributes: {e}')
             else:
                 print_exception(f'Failed to describe RDS snapshot attributes: {e}')
+            self._record_incomplete('DescribeSnapshotAttributesIncomplete')
             snapshot['Attributes'] = {}
 
     async def _get_and_set_cluster_snapshot_attributes(self, snapshot: {}, region: str):
@@ -134,6 +153,7 @@ class RDSFacade(AWSBaseFacade):
             snapshot['Attributes'] =\
                 attributes['DBClusterSnapshotAttributes'] if 'DBClusterSnapshotAttributes' in attributes else {}
         except Exception as e:
+            self._record_incomplete('DescribeClusterSnapshotAttributesIncomplete')
             print_exception(f'Failed to describe RDS cluster snapshot attributes: {e}')
             snapshot['Attributes'] = {}
 
@@ -142,6 +162,7 @@ class RDSFacade(AWSBaseFacade):
             await self._cache_subnet_groups(region)
             return [subnet_group for subnet_group in self._subnet_groups_cache[region] if subnet_group['VpcId'] == vpc]
         except Exception as e:
+            self._record_incomplete('DescribeDBSubnetGroupsIncomplete')
             print_exception(f'Failed to get RDS subnet groups: {e}')
             return []
 
@@ -160,6 +181,7 @@ class RDSFacade(AWSBaseFacade):
             await get_and_set_concurrently(
                 [self._get_and_set_db_parameters], parameter_groups, region=region)
         except Exception as e:
+            self._record_incomplete('DescribeDBParameterGroupsIncomplete')
             print_exception(f'Failed to get RDS parameter groups: {e}')
             parameter_groups = []
         return parameter_groups
@@ -177,6 +199,7 @@ class RDSFacade(AWSBaseFacade):
                 parameter_name = parameter.pop('ParameterName')
                 parameter_group['Parameters'][parameter_name] = parameter
         except Exception as e:
+            self._record_incomplete('DescribeDBParametersIncomplete')
             print_exception(f'Failed fetching DB parameters for {name}: {e}')
 
     async def get_security_groups(self, region: str) :
@@ -184,5 +207,6 @@ class RDSFacade(AWSBaseFacade):
             return await AWSFacadeUtils.get_all_pages(
                 'rds', region, self.session, 'describe_db_security_groups', 'DBSecurityGroups')
         except Exception as e:
+            self._record_incomplete('DescribeDBSecurityGroupsIncomplete')
             print_exception(f'Failed to get RDS security groups: {e}')
             return []

@@ -1,6 +1,6 @@
 # CIS AWS Foundations v7.1.0 — RC4 staging crosswalk and gap review
 
-**State:** separate branch only; not merged into `master`, not part of RC3.
+**State:** merged into `master` in RC4; this is a historical RC4 staging review, not an RC5 validation claim.
 Reference: owner-provided CIS AWS Foundations v7.1.0 PDF, dated 2026-10-02.
 Do not commit, redistribute, or reproduce the licensed source document.
 

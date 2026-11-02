@@ -1,5 +1,6 @@
 """M10-Q operational evidence. Read-only; no image contents, vulnerabilities or WAF request data."""
 import os
+from math import isfinite
 from datetime import datetime, timedelta, timezone
 
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
@@ -199,7 +200,7 @@ async def collect_waf_traffic(facade, region, acl):
         values = row.get('Values')
         if (row.get('StatusCode') != 'Complete' or not isinstance(values, list)
                 or any(not isinstance(x, (int, float)) or isinstance(x, bool)
-                       or x < 0 or x != x for x in values)):
+                       or x < 0 or not isfinite(x) for x in values)):
             complete = False
             continue
         result['metrics'][name] = sum(values)

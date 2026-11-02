@@ -1,10 +1,12 @@
-# ScoutSuite RC4 — Ridgepay install, non-mutating preflight and rollback
+# ScoutSuite RC5 — Ridgepay install, non-mutating preflight and rollback
 
-RC1/RC2/RC3 published GitHub releases are immutable. RC4 adds candidate
-CIS AWS Foundations v7.1.0 rules, reviewed against RC3 private field
+RC1–RC4 published GitHub releases are immutable. RC5 retains the candidate
+CIS AWS Foundations v7.1.0 rules and fixes Security Hub absent-subscription,
+RDS incomplete-inventory/cache poisoning, malformed cluster membership and
+non-finite WAF metrics, reviewed against RC3 private field
 evidence. Requirements: Windows 11, PowerShell 7, Python 3.11.
 
-## Install RC4 side by side
+## Install RC5 side by side
 
 From an updated trusted local clone of `romanoff5/ScoutSuite`:
 
@@ -13,7 +15,7 @@ git checkout master
 git pull --ff-only origin master
 $toolkit = Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-fork.ps1 `
-  -FromRelease -ReleaseTag fork-v5.14.0-m10-rc4 -ToolkitRoot $toolkit
+  -FromRelease -ReleaseTag fork-v5.14.0-m10-rc5 -ToolkitRoot $toolkit
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 `
   -Mode Fork -ToolkitRoot $toolkit
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\invoke-selected-scout.ps1 `
@@ -23,11 +25,12 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\invoke-selected-scout.ps
 The installer verifies release SHA256SUMS, pinned wheel, manifest and
 runtime-py311 constraints, version, `pip check` and CLI help, and writes
 `fork-install.json` with package/executable provenance. Release assets use
-a distinct RC4 tag; the existing `.venv-scout-fork-rc3` remains untouched.
+a distinct RC5 tag; the existing `.venv-scout-fork-rc4` and previous environments remain untouched.
 Checksums co-hosted on GitHub do not establish third-party signatures.
 
 The explicit rollback targets are:
-- `Fork`: new RC4, `.venv-scout-fork-rc4`
+- `Fork`: new RC5, `.venv-scout-fork-rc5`
+- `ForkRc4`: prior RC4, `.venv-scout-fork-rc4`
 - `ForkRc3`: prior RC3, `.venv-scout-fork-rc3`
 - `ForkRc2`: prior RC2, `.venv-scout-fork-rc2`
 - `ForkRc1`: prior RC1/hotfix, `.venv-scout-fork`
@@ -37,11 +40,11 @@ Example rollback without uninstalling or modifying existing reports:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 `
-  -Mode ForkRc3 -ToolkitRoot $toolkit
+  -Mode ForkRc4 -ToolkitRoot $toolkit
 ```
 
 The launcher validates matching provenance, scanner version and
-executable SHA256 for RC4/RC3/RC2. The separate external Ridgepay
+executable SHA256 for RC5/RC4/RC3/RC2. The separate external Ridgepay
 launcher must be explicitly configured to invoke
 `scripts/invoke-selected-scout.ps1`; the selector does not magically
 replace a hardcoded path to scout.exe.
@@ -60,7 +63,7 @@ client account; these steps do not grant cloud access to CI or the installer.
 3. Compare collected service/Region coverage, API exceptions, all
    `collection_status.issues`, evidence statuses and resolved findings.
 4. Verify RDS instance vs DB cluster deletion protection separately.
-   RC3 evidence showed Aurora member instances; RC4 assesses the DB
+   RC3 evidence showed Aurora member instances; RC5 assesses the DB
    cluster once via `rds:DescribeDBClusters`. Missing access is
    partial/UNKNOWN, never a clean pass.
 5. Run the offline consistency audit against local RESULTS:
@@ -79,7 +82,7 @@ client account; these steps do not grant cloud access to CI or the installer.
 The remaining 40 collection issues in the RC3 Ridgepay scan were
 predominantly Organizations/Identity Center/Macie/Backup/SSM/Bedrock,
 Security Hub/Inspector and S3 permissions/incomplete evidence. They
-are not remedied by installing RC4. A verified ECR BASIC registry
+are not remedied by installing RC5. A verified ECR BASIC registry
 configuration with zero repositories is an informational observation,
 not proof of unscanned images.
 

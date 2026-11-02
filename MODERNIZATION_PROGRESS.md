@@ -1,3 +1,10 @@
+## RC5 corrective release — 2026-11-02
+
+- Security Hub `DescribeHub ResourceNotFoundException` is confirmed negative subscription evidence, not an invalid `not_applicable` collection issue; regression runs under an active `RunContext`.
+- RDS unexpected inventory errors now register partial collection issues. Instance and snapshot cache entries are published only after enrichment succeeds, preventing a failed first attempt from poisoning subsequent VPC queries. Malformed empty cluster membership remains UNKNOWN.
+- WAF CloudWatch evidence rejects non-finite metric values instead of treating positive infinity as observed traffic.
+- RC5 uses its own wheel/venv/immutable tag. RC4/RC3/RC2/RC1 and Stable remain explicit rollback choices. These fixes have synthetic/offline gates; customer AWS scans and organization-wide coverage remain separately unverified.
+
 # Solo-maintainer modernization progress
 
 ## CIS Foundations v7.1.0 — RC4 candidate after RC3 evidence review (2026-11-02)

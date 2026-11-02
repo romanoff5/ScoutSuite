@@ -6,8 +6,8 @@ from ScoutSuite import __version__
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = "fork-v5.14.0-m10-rc4"
-VERSION = "5.14.0+romanoff5.m10rc4"
+TAG = "fork-v5.14.0-m10-rc5"
+VERSION = "5.14.0+romanoff5.m10rc5"
 
 
 def test_unique_fork_version_and_manifest_generator_syntax():
@@ -55,13 +55,15 @@ def test_stable_venv_and_external_client_toolkit_are_never_mutated_by_install():
     assert "if ($createdVenv -and -not $verifiedInstall)" in install
     assert "Remove-Item -LiteralPath $venv -Recurse -Force" in install
     assert "runtime-py311.constraints.txt" in install
-    assert ".venv-scout-fork-rc4" in install
+    assert ".venv-scout-fork-rc5" in install
     assert "scout_exe_sha256" in install + wrapper
     assert "Get-FileHash" in wrapper
-    assert "ForkRc1" in select and "ForkRc2" in select and "ForkRc3" in select
+    assert "ForkRc1" in select and "ForkRc2" in select and "ForkRc3" in select and "ForkRc4" in select
+    assert ".venv-scout-fork-rc5" in select + wrapper
     assert ".venv-scout-fork-rc4" in select + wrapper
     assert ".venv-scout-fork-rc3" in select + wrapper
     assert ".venv-scout-fork-rc2" in select + wrapper
+    assert "5.14.0+romanoff5.m10rc5" in wrapper
     assert "5.14.0+romanoff5.m10rc4" in wrapper
     assert "5.14.0+romanoff5.m10rc3" in wrapper
     assert "5.14.0+romanoff5.m10rc2" in wrapper
@@ -80,14 +82,14 @@ def test_release_notes_explicitly_disclaim_unverified_controls_and_containers():
         assert entry in manifest
 
 
-def test_rc4_release_pins_installable_dependency_closure_and_runtime_hotfix():
+def test_rc5_release_pins_installable_dependency_closure_and_runtime_hotfix():
     flow = (ROOT / ".github/workflows/fork-rc-release.yml").read_text(encoding="utf-8")
     generator = (ROOT / "tools/fork_release.py").read_text(encoding="utf-8")
     assert "runtime-py311.constraints.txt" in flow
     assert "runtime_constraints_sha256" in generator
     assert "70cf29d5579864543b6363e7a271a84216bb6837" in flow
     assert "merge-base --is-ancestor" in flow
-    assert "fork-v5.14.0-m10-rc4" in flow
+    assert "fork-v5.14.0-m10-rc5" in flow
     assert "fork-v5.14.0-m10-rc1" not in flow
     assert "No real client AWS scanning" in (ROOT / "docs/releases" / (TAG + ".md")).read_text(encoding="utf-8")
 
@@ -95,7 +97,7 @@ def test_rc4_release_pins_installable_dependency_closure_and_runtime_hotfix():
 def test_ridgepay_has_explicit_non_mutating_preflight_and_rollback_instructions():
     note = (ROOT / "docs/releases/TASK14_INSTALL.md").read_text(encoding="utf-8")
     assert "aws sts get-caller-identity" in note
-    assert "ForkRc1" in note and "ForkRc3" in note and "Stable" in note
+    assert "ForkRc1" in note and "ForkRc4" in note and "Stable" in note
     assert "PowerShell 7" in note
     assert "no-browser" in note
     assert "authorized" in note
