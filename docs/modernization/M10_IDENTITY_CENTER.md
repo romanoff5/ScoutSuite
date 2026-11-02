@@ -27,7 +27,7 @@ that no organization-wide IAM Identity Center deployment exists.
 
 ## Diagnostic/report data
 
-Full instance, permission set, account and identity store IDs; instance name,
+Full instance, permission set, account and identity store IDs; user/group and direct\nmembership ARNs, identity revisions, membership IDs; instance name,
 status/reason, creation date, permission-set name/description/session length,
 AWS-managed policy ARNs, customer-managed policy references, inline-policy
 presence, permissions boundary, provisioned account IDs, assignment identities,
@@ -64,3 +64,10 @@ offline, Windows/Ubuntu, JSON/SQLite and browser/security gates.
 No live AWS account or customer identity data is assessed in CI. Rollback
 by reverting the additive M10-L change or excluding
 `--skip-services identitycenter`.
+
+## Integrated verification
+
+The merged build passed offline CI on both Ubuntu and Windows:
+https://github.com/romanoff5/ScoutSuite/actions/runs/41422635182.
+The integration commit is f11f1d8777ec55e71f782a0c022489875d9852aa.
+No live AWS access was used.
