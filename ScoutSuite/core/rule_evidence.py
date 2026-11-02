@@ -308,7 +308,20 @@ def classify_access_analyzer(analyzer):
     return 'unknown'
 
 
+def classify_guardduty_detector(detector):
+    """Disabled is a confirmed finding; unknown and missing status never pass."""
+    if not isinstance(detector, dict):
+        return 'unknown'
+    state = detector.get('status')
+    if state == 'ENABLED':
+        return 'secure'
+    if state == 'DISABLED':
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'guardduty-detector-state-v1': classify_guardduty_detector,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
     'lambda-managed-runtime-v1': classify_lambda_runtime,
