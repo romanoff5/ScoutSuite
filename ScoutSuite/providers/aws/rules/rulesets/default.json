@@ -1,8 +1,18 @@
 {
     "about": "This ruleset consists of numerous rules that are considered standard by NCC Group. The rules enabled range from violations of well-known security best practices to gaps resulting from less-known security implications of provider-specific mechanisms. Additional rules exist, some of them requiring extra-parameters to be configured, and some of them being applicable to a limited number of users.",
     "rules": {
-        "securityhub-standard-status-unhealthy.json": [{"enabled": true, "level": "warning"}],
-        "guardduty-detector-disabled.json": [{"enabled": true, "level": "warning"}],
+        "securityhub-standard-status-unhealthy.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "guardduty-detector-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "accessanalyzer-analyzer-inactive.json": [
             {
                 "enabled": true,
@@ -1415,6 +1425,18 @@
             }
         ],
         "awslambda-function-deprecated-runtime.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "inspector2-account-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "inspector2-coverage-inactive.json": [
             {
                 "enabled": true,
                 "level": "warning"

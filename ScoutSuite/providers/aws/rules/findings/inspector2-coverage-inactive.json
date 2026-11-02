@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Inspector reports inactive scanning of a covered resource",
+    "rationale": "An Inspector2 resource scan with confirmed INACTIVE status is not active. The bounded account-scoped coverage listing cannot establish the absence of unmonitored resources. Missing scan statuses remain incomplete.",
+    "remediation": "Inspect the scan reason, permissions and resource eligibility; restore coverage where applicable.",
+    "references": [
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListCoverage.html"
+    ],
+    "dashboard_name": "Inspector coverage",
+    "path": "inspector2.regions.id.coverage.id",
+    "conditions": [
+        "and",
+        [
+            "inactive",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Inactive",
+    "evidence_policy": "inspector2-coverage-state-v1"
+}

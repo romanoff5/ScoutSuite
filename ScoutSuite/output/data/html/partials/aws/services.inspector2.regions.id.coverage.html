@@ -1,0 +1,24 @@
+<!-- M10-D: Inspector2 scan identifiers and statuses are escaped. -->
+<script id="services.inspector2.regions.id.coverage.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <p>Resource ID: <samp>{{resource_id}}</samp></p>
+    <p>Type: {{resource_type}}</p>
+    <p>Account: {{account_id}}</p>
+    <p>Region: {{region}}</p>
+    <p>Scan type: {{scan_type}}</p>
+    <p>Scan status: {{scan_status}}</p>
+    <p>Reason: {{scan_reason}}</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.inspector2.regions.id.coverage",
+    $("#services\\.inspector2\\.regions\\.id\\.coverage\\.partial").html());
+</script>
+<script id="single_inspector2_coverage-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.inspector2.regions.id.coverage' }}
+</script>
+<script>
+  var single_inspector2_coverage_template =
+    Handlebars.compile($("#single_inspector2_coverage-template").html());
+</script>

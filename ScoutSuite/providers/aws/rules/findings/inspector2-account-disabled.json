@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Inspector is disabled or suspended in the selected account and Region",
+    "rationale": "A confirmed DISABLED or SUSPENDED Inspector2 account is not scanning. Transitional or unavailable states remain incomplete, not verified healthy. This rule does not prove organization-wide coverage.",
+    "remediation": "Investigate account and regional enrollment; restore Inspector scanning through an approved change, then verify the applicable EC2/ECR/Lambda scan types.",
+    "references": [
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html"
+    ],
+    "dashboard_name": "Inspector accounts",
+    "path": "inspector2.regions.id.accounts.id",
+    "conditions": [
+        "and",
+        [
+            "disabled",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Disabled",
+    "evidence_policy": "inspector2-account-state-v1"
+}
