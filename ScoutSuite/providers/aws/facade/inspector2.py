@@ -5,6 +5,13 @@ from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
+# EC2/ECR are required by the Inspector2 ResourceState response model.
+# Remaining resource categories are optional and absent means UNKNOWN, not DISABLED.
+SCAN_TYPES = ('ec2', 'ecr', 'lambda', 'lambdaCode', 'codeRepository')
+REQUIRED_SCAN_TYPES = frozenset(('ec2', 'ecr'))
+VALID_SCAN_STATES = frozenset((
+    'ENABLING', 'ENABLED', 'DISABLING', 'DISABLED', 'SUSPENDING', 'SUSPENDED',
+))
 MAX_PAGES = 5
 PAGE_SIZE = 100
 MAX_COVERED_RESOURCES = 500
@@ -66,7 +73,10 @@ class Inspector2Facade(AWSBaseFacade):
             self._issue('failed', 'MalformedAccountStatus')
             return []
         if failures:
+            # Even when a partial account object is also returned, the status
+            # response is not authoritative. Never promote that object to PASS.
             self._issue('partial' if accounts else 'failed', 'FailedAccountStatus')
+            return []
         if len(accounts) != 1 or not isinstance(accounts[0], dict) or accounts[0].get('accountId') != self.owner_id:
             self._issue('partial' if accounts else 'failed', 'MissingOrUnexpectedAccount')
             return []
@@ -75,16 +85,32 @@ class Inspector2Facade(AWSBaseFacade):
         if not isinstance(state, dict) or not isinstance(state.get('status'), str):
             self._issue('partial', 'MalformedAccountState')
             return []
-        resources = raw.get('resourceState', {})
+        resources = raw.get('resourceState')
         if not isinstance(resources, dict):
             self._issue('partial', 'MalformedResourceState')
             resources = {}
+        resource_states = {}
+        for name in SCAN_TYPES:
+            state = resources.get(name)
+            if state is None:
+                resource_states[name] = None
+                if name in REQUIRED_SCAN_TYPES:
+                    self._issue('partial', 'MissingRequiredScanType')
+                continue
+            if not isinstance(state, dict):
+                resource_states[name] = None
+                self._issue('partial', 'MalformedScanType')
+                continue
+            status = state.get('status')
+            if status not in VALID_SCAN_STATES:
+                resource_states[name] = None
+                self._issue('partial', 'InvalidScanTypeStatus')
+                continue
+            resource_states[name] = status
+        # Preserve original resource_states field for existing JSON/SQLite
+        # consumers. Add scan_types at the normalized resource layer.
         return [{'account_id': self.owner_id, 'status': state['status'],
-                 'resource_states': {
-                     name: value.get('status')
-                     for name in ('ec2', 'ecr', 'lambda', 'lambdaCode', 'codeRepository')
-                     for value in (resources.get(name),)
-                     if isinstance(value, dict) and isinstance(value.get('status'), str)}}]
+                 'resource_states': resource_states}]
 
     async def get_coverage(self, region):
         if not self._account_valid():
