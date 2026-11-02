@@ -2,6 +2,7 @@
 from botocore.exceptions import ClientError
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
+from ScoutSuite.providers.aws.facade.inspector2_organization import Inspector2OrganizationMixin
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
@@ -34,7 +35,7 @@ class CoverageRows(list):
         self.status = status
 
 
-class Inspector2Facade(AWSBaseFacade):
+class Inspector2Facade(Inspector2OrganizationMixin, AWSBaseFacade):
     def __init__(self, session, owner_id):
         super().__init__(session)
         self.owner_id = owner_id
@@ -265,7 +266,7 @@ class Inspector2Facade(AWSBaseFacade):
                 result['by_status'][row['groupKey']] = row['count']
             following = page.get('nextToken')
             if following is None or following == '':
-                if result['by_status'] and sum(result['by_status'].values()) != total:
+                if (sum(result['by_status'].values()) != total):
                     self._issue('partial', 'StatisticsCountMismatch')
                     result['status'] = 'partial'
                 else:
