@@ -44,7 +44,7 @@ escaped offline HTML, wheel/sdist and legacy AWS/Azure/GCP gates must pass
 before merge. No live AWS account was assessed. Use
 `--skip-services wafv2` to exclude it.
 
-## M10-K — actual association inventory
+## M10-J2 — actual association inventory
 
 A new bounded read-only association collection now runs for **every** Web ACL
 during the standard AWS scan:
