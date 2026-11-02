@@ -129,8 +129,12 @@ def generate(root, dist, sha):
         ],
     }
     write(dist / "sbom.cdx.json", sbom)
+    runtime_constraints = dist / "runtime-py311.constraints.txt"
+    assert runtime_constraints.is_file(), "Release must ship pinned Python 3.11 closure"
     manifest = {
         "repository": REPO, "version": VERSION, "tag": TAG, "git_sha": sha,
+        "runtime_constraints": runtime_constraints.name,
+        "runtime_constraints_sha256": digest(runtime_constraints),
         "wheel": wheel.name, "sdist": sdist.name,
         "wheel_sha256": digest(wheel), "sdist_sha256": digest(sdist),
         "direct_dependency_requirements": declared,
