@@ -11,7 +11,7 @@
     "conditions": [
         "and",
         [
-            "critical_noncompliant_count",
+            "critical_patches_present",
             "true",
             ""
         ]
