@@ -1519,6 +1519,24 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "identitycenter-admin-assignment.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "identitycenter-broad-permissions.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "identitycenter-cross-account-admin.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
         ]
     }
 }
