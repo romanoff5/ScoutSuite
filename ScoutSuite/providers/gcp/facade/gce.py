@@ -39,8 +39,7 @@ class GCEFacade(GCPBaseFacade):
             print_exception(f'Failed to retrieve compute instances: {e}')
         else:
             await self._add_metadata(project_id, instances)
-        finally:
-            return instances
+        return instances
 
     async def _add_metadata(self, project_id, instances):
         project = await self.get_project(project_id)
