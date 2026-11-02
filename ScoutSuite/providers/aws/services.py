@@ -10,6 +10,7 @@ from ScoutSuite.providers.aws.resources.wafv2.base import WAFv2Public
 from ScoutSuite.providers.aws.resources.networkfirewall.base import NetworkFirewallPublic
 from ScoutSuite.providers.aws.resources.backup.base import BackupPublic
 from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter
+from ScoutSuite.providers.aws.resources.ssm_patch.base import SSMPatchPublic
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
 from ScoutSuite.providers.aws.resources.acm.base import Certificates
 from ScoutSuite.providers.aws.resources.awslambda.base import Lambdas
@@ -170,6 +171,9 @@ class AWSServicesConfig(BaseServicesConfig):
             self.ssm = SSM(facade)
         except NameError as _:
             pass
+
+        # M10-O standard read-only patch inventory always wins over optional legacy SSM.
+        self.ssm = SSMPatchPublic(facade)
 
     def _is_provider(self, provider_name):
         return provider_name == 'aws'
