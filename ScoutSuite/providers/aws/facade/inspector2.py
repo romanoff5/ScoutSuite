@@ -50,7 +50,7 @@ class Inspector2PublicFacade(AWSBaseFacade):
             issue('failed', 'MalformedAccountStatus')
             return None
         accounts = response.get('accounts')
-        failed = response.get('failedAccounts')
+        failed = response.get('failedAccounts', [])
         if not isinstance(accounts, list) or not isinstance(failed, list):
             issue('failed', 'MalformedAccountStatus')
             return None

@@ -207,3 +207,23 @@ def test_optin_catalog_and_safe_renderer():
     assert '{{account_id}}' in template and '{{status}}' in template
     assert '{{{' not in template and 'onclick=' not in template
     assert 'javascript:' not in template
+
+
+def test_sdk_may_omit_empty_failed_accounts():
+    """An absent optional failedAccounts field must not falsely fail success."""
+    async def scenario():
+        sdk = client()
+        output = response()
+        output.pop('failedAccounts')
+        try:
+            with Stubber(sdk) as stub:
+                stub.add_response('batch_get_account_status', output,
+                                  {'accountIds': [ACCOUNT]})
+                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
+                    result = await Inspector2PublicFacade(object(), ACCOUNT).get_account_status(REGION)
+                stub.assert_no_pending_responses()
+            assert result['account_id'] == ACCOUNT
+            assert result['status'] == 'ENABLED'
+        finally:
+            sdk.close()
+    asyncio.run(scenario())
