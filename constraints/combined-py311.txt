@@ -62,7 +62,7 @@ google-cloud-iam==2.21.0
 google-cloud-kms==3.17.0
 google-cloud-logging==3.14.0
 google-cloud-monitoring==2.31.0
-google-cloud-resource-manager==1.14.0
+google-cloud-resource-manager==1.19.0
 google-cloud-storage==2.14.0
 google-crc32c==1.9.0
 google-resumable-media==2.11.0
@@ -105,7 +105,7 @@ portalocker==2.10.1
 portend==3.2.1
 propcache==0.5.4
 proto-plus==1.27.1
-# M11: protobuf must satisfy google-cloud-monitoring>=2.31 (>=4.25.8,<8).
+protobuf==6.33.5
 pyasn1==0.6.5
 pyasn1-modules==0.4.2
 pycodestyle==2.15.0
