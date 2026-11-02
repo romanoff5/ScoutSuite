@@ -103,3 +103,18 @@ class Organizations(AWSResources):
                             for account in collected.get('accounts', [])}
         self['accounts_count'] = len(self['accounts'])
         self['collection'] = dict(collected['collection'])
+        self['account_regions'] = {}
+        self['account_region_inventory_status'] = 'not_collected'
+        region_method = getattr(self.facade.organizations, 'get_account_region_inventory', None)
+        if callable(region_method) and self['accounts']:
+            management = (organization or {}).get('management_account_id')
+            self['account_regions'] = await region_method(self['accounts'], management)
+            self['account_region_inventory_status'] = (
+                'complete' if collected['collection'].get('accounts') == 'complete'
+                and all(record.get('collection_status') == 'complete'
+                        for record in self['account_regions'].values()
+                        if isinstance(record, dict))
+                and len(self['account_regions']) >= sum(
+                    account.get('state') not in ('SUSPENDED', 'CLOSED', 'PENDING_CLOSURE')
+                    for account in self['accounts'].values()) else 'partial')
+
