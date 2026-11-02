@@ -81,7 +81,7 @@ def test_full_stubber_inventory_unknown_vs_referenced_routing():
                     'UpdateToken': 'token',
                     'FirewallPolicyResponse': {'FirewallPolicyArn': POLICY,
                                                'FirewallPolicyName': 'policy',
-                                               'FirewallPolicyId': 'policy-id'},
+                                               'FirewallPolicyId': '11111111-1111-4111-8111-111111111111'},
                     'FirewallPolicy': {
                         'StatelessDefaultActions': ['aws:pass'],
                         'StatelessFragmentDefaultActions': ['aws:forward_to_sfe'],
@@ -90,14 +90,14 @@ def test_full_stubber_inventory_unknown_vs_referenced_routing():
                 n.add_response('describe_rule_group', {
                     'UpdateToken': 'token',
                     'RuleGroupResponse': {'RuleGroupArn': GROUP, 'RuleGroupName': 'rules',
-                                          'RuleGroupId': 'rule-group-id', 'Type': 'STATEFUL'},
+                                          'RuleGroupId': '11111111-1111-4111-8111-111111111111', 'Type': 'STATEFUL'},
                     'RuleGroup': {'RulesSource': {'StatefulRules': [{
                         'Action': 'PASS',
                         'Header': {'Protocol': 'IP', 'Source': 'ANY', 'Destination': 'ANY',
                                    'SourcePort': 'ANY', 'DestinationPort': 'ANY',
                                    'Direction': 'ANY'}, 'RuleOptions': []}]}}}, {'RuleGroupArn': GROUP})
                 n.add_response('describe_firewall', {
-                    'Firewall': {'FirewallId': 'firewall-id', 'FirewallName': 'fw', 'FirewallArn': FW,
+                    'Firewall': {'FirewallId': '11111111-1111-4111-8111-111111111111', 'FirewallName': 'fw', 'FirewallArn': FW,
                                  'FirewallPolicyArn': POLICY, 'VpcId': 'vpc-123',
                                  'SubnetMappings': [{'SubnetId': 'subnet-123'}]},
                     'FirewallStatus': {
