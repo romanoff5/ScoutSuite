@@ -74,6 +74,18 @@ def test_backup_tag_matching_uses_and_or_and_unknown_without_guessing_absence():
     assert _selection_decision(ARN, selection, {'backup': 'daily', 'env': 'prod'}) == 'matched'
     assert _selection_decision(ARN, selection, {'backup': 'daily', 'env': 'testing'}) == 'not_matched'
     assert _selection_decision(ARN, selection) == 'unknown'
+    # Resources and ListOfTags form an OR, constrained by Conditions AND.
+    mixed = {'BackupSelection': {
+        'Resources': ['arn:aws:rds:*:*:db:*'],
+        'ListOfTags': [{'ConditionType': 'STRINGEQUALS',
+                        'ConditionKey': 'backup', 'ConditionValue': 'daily'}]}}
+    assert _selection_decision(ARN, mixed, {'backup': 'daily'}) == 'matched'
+    assert _selection_decision(ARN, mixed, {'backup': 'weekly'}) == 'not_matched'
+    direct_or_tag = {'BackupSelection': {
+        'Resources': [ARN],
+        'ListOfTags': [{'ConditionType': 'STRINGEQUALS',
+                        'ConditionKey': 'backup', 'ConditionValue': 'weekly'}]}}
+    assert _selection_decision(ARN, direct_or_tag) == 'matched'
     assert _selection_decision(ARN, {'BackupSelection': {
         'ListOfTags': [
             {'ConditionType': 'STRINGEQUALS', 'ConditionKey': 'backup',
