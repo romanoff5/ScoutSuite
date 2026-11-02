@@ -310,6 +310,7 @@
       "section": "3",
       "status": "candidate",
       "candidate_rules": [
+        "rds-cluster-deletion-protection-disabled.json",
         "rds-instance-deletion-protection-disabled.json"
       ],
       "evidence_verified": false,
