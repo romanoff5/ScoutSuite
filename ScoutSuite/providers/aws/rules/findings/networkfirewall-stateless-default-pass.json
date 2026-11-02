@@ -1,0 +1,20 @@
+{
+    "references": [
+        "https://docs.aws.amazon.com/network-firewall/latest/developerguide/route-tables.html"
+    ],
+    "evidence_policy": "networkfirewall-m10-m-v1",
+    "description": "Stateless default action permits unmatched traffic without stateful inspection",
+    "rationale": "aws:pass bypasses the stateful engine for unmatched packets; stateless rules may still block some traffic.",
+    "remediation": "Review stateless defaults and consider aws:forward_to_sfe; test the change.",
+    "dashboard_name": "Network Firewall policies",
+    "path": "networkfirewall.regions.id.policies.id",
+    "conditions": [
+        "and",
+        [
+            "stateless_default_pass",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "StatelessDefaultPass"
+}

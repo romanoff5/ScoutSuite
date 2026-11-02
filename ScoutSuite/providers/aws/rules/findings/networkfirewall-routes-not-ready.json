@@ -1,0 +1,20 @@
+{
+    "references": [
+        "https://docs.aws.amazon.com/network-firewall/latest/developerguide/route-tables.html"
+    ],
+    "evidence_policy": "networkfirewall-m10-m-v1",
+    "description": "Firewall endpoint routes are inactive or target unready attachments",
+    "rationale": "Routes point to firewall endpoints but none was confirmed as an active route to a READY endpoint.",
+    "remediation": "Review attachment SyncStates, EC2 route status and both path directions.",
+    "dashboard_name": "Network Firewalls",
+    "path": "networkfirewall.regions.id.firewalls.id",
+    "conditions": [
+        "and",
+        [
+            "routing_not_ready",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "RoutesNotReady"
+}

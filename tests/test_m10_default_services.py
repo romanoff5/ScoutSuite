@@ -9,7 +9,7 @@ from ScoutSuite.providers.aws.provider import AWSProvider
 
 M10_SERVICES = frozenset({
     'accessanalyzer', 'guardduty', 'securityhub', 'organizations',
-    'inspector2', 'ecr', 'ecs', 'eks', 'wafv2', 'backup',
+    'inspector2', 'ecr', 'ecs', 'eks', 'wafv2', 'backup', 'networkfirewall',
 })
 
 

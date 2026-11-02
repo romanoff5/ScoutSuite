@@ -1,0 +1,20 @@
+{
+    "references": [
+        "https://docs.aws.amazon.com/network-firewall/latest/developerguide/route-tables.html"
+    ],
+    "evidence_policy": "networkfirewall-m10-m-v1",
+    "description": "Stateless fragment default action bypasses stateful inspection",
+    "rationale": "aws:pass is explicitly selected for fragmented packets unmatched by stateless rules.",
+    "remediation": "Review fragmentation policy and test forwarding through stateful inspection.",
+    "dashboard_name": "Network Firewall policies",
+    "path": "networkfirewall.regions.id.policies.id",
+    "conditions": [
+        "and",
+        [
+            "stateless_fragment_default_pass",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "FragmentDefaultPass"
+}

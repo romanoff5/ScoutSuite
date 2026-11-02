@@ -1519,6 +1519,42 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "networkfirewall-logging-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "networkfirewall-stateless-default-pass.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "networkfirewall-fragment-default-pass.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "networkfirewall-broad-pass-rule.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "networkfirewall-no-route-references.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "networkfirewall-routes-not-ready.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
