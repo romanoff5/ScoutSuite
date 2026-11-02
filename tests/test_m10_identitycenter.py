@@ -73,7 +73,7 @@ def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
                     'CustomerManagedPolicyReferences': []},
                     {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION,
                      'MaxResults': PAGE_SIZE})
-                a.add_response('get_inline_policy_for_permission_set', {'InlinePolicy': ''},
+                a.add_response('get_inline_policy_for_permission_set', {},
                                {'InstanceArn': INSTANCE, 'PermissionSetArn': PERMISSION})
                 a.add_response('get_permissions_boundary_for_permission_set', {
                     'PermissionsBoundary': {'ManagedPolicyArn':
@@ -170,7 +170,7 @@ def test_policy_missing_or_directory_denial_is_not_verified_safe():
         sso.list_managed_policies_in_permission_set.side_effect = RuntimeError('blocked')
         sso.list_customer_managed_policy_references_in_permission_set.return_value = {
             'CustomerManagedPolicyReferences': []}
-        sso.get_inline_policy_for_permission_set.return_value = {'InlinePolicy': ''}
+        sso.get_inline_policy_for_permission_set.return_value = {}
         sso.get_permissions_boundary_for_permission_set.return_value = {}
         sso.list_accounts_for_provisioned_permission_set.return_value = {'AccountIds': [ACCOUNT]}
         sso.list_account_assignments.return_value = {'AccountAssignments': [{
@@ -271,7 +271,7 @@ def test_missing_identitystore_client_preserves_assignment_and_marks_unknown():
             'AttachedManagedPolicies': [{'Name': 'AdministratorAccess', 'Arn': ADMIN}]}
         sso.list_customer_managed_policy_references_in_permission_set.return_value = {
             'CustomerManagedPolicyReferences': []}
-        sso.get_inline_policy_for_permission_set.return_value = {'InlinePolicy': ''}
+        sso.get_inline_policy_for_permission_set.return_value = {}
         sso.get_permissions_boundary_for_permission_set.return_value = {}
         sso.list_accounts_for_provisioned_permission_set.return_value = {'AccountIds': [ACCOUNT]}
         sso.list_account_assignments.return_value = {'AccountAssignments': [{
