@@ -1,5 +1,27 @@
 # Solo-maintainer modernization progress
 
+## M12 — Ridgepay RC2 stabilization (2026-11-02; release gate pending)
+
+- Branch `stabilization/ridgepay-rc2-20261102`, based on the corrected
+  `bd21ca1` master; fork PR #22.
+- Fork RC2 `5.14.0+romanoff5.m10rc2` includes immutable RC1 runtime corrections.
+  Installer uses side-by-side `.venv-scout-fork-rc2`, pinned 3.11 release
+  constraints and full wheel/manifest/constraints SHA validation; preserved
+  stable and old fork environments, explicit rollback through selection.
+- Windows CI exercises PowerShell parsing, fail-closed selected-runner integrity,
+  actual pinned wheel installation from offline cached artifacts, CLI smoke.
+- Operational AWS evidence now records partial collection issues for invalid ECR
+  scan identity/client, incomplete WAF metric data and malformed or truncated
+  AWS Backup recovery-point collection; synthetic API negative cases added.
+- RC2 prerelease publication is **conditional** on all four offline CI jobs and
+  independent distribution verification for the integrated master SHA.
+- **Not yet demonstrated:** live Ridgepay role permission preflight, authorized
+  single-region read-only scan, client inventory completeness, final JSON/SQLite/
+  HTML delivery. Do not report operational readiness until those gates pass.
+- No upstream or PyPI publication, no credentials, live cloud calls, resource
+  changes or stable installer updates are part of this branch.
+
+
 ## RC1 runtime correction — Task 14 / M10 (2026-11-02)
 
 - Implemented the 13 published Network Firewall/Macie/Bedrock evidence policies
