@@ -31,10 +31,11 @@ def test_rds_clusters_readonly_inventory_deduplicates_members_and_preserves_evid
         assert len(resources) == 2
         api.assert_awaited_once_with('rds', 'eu-west-1', facade.session,
                                      'describe_db_clusters', 'DBClusters')
-    a = resources['synthetic-aurora-a']
+    a = next(row for row in resources.values() if row['name'] == 'synthetic-aurora-a')
     assert a['DeletionProtection'] is False
     assert a['DBClusterMembers'] == ['member-a', 'member-b']
-    assert resources['synthetic-aurora-b']['DeletionProtection'] is True
+    b = next(row for row in resources.values() if row['name'] == 'synthetic-aurora-b')
+    assert b['DeletionProtection'] is True
 
 
 def test_rds_cluster_api_denial_creates_partial_issue_not_false_clean():
