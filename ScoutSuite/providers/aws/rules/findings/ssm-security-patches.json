@@ -11,7 +11,7 @@
     "conditions": [
         "and",
         [
-            "missing_security_patch_count",
+            "security_patches_present",
             "true",
             ""
         ]
