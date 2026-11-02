@@ -1,6 +1,5 @@
 """RC5 regression checks for confirmed evidence-integrity defects; no external AWS calls."""
 import asyncio
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 from botocore.exceptions import ClientError
