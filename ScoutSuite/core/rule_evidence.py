@@ -103,6 +103,30 @@ def _rds_ca_catalog():
     return frozenset(current), frozenset(deprecated)
 
 
+def classify_rds_deletion_protection(instance):
+    """AWS DB instance DeletionProtection, not backup or snapshot coverage."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    value = instance.get('DeletionProtection')
+    if value is True:
+        return 'secure'
+    if value is False:
+        return 'insecure'
+    return 'unknown'
+
+
+def classify_efs_encryption(filesystem):
+    """AWS EFS DescribeFileSystems Encrypted state; missing is not clean."""
+    if not isinstance(filesystem, dict):
+        return 'unknown'
+    value = filesystem.get('Encrypted')
+    if value is True:
+        return 'secure'
+    if value is False:
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_rds_ca_lifecycle(instance):
     """Current, deprecated or unknown CA; never invent validity for new names."""
     if not isinstance(instance, dict):
@@ -817,6 +841,8 @@ def _classify_scoped_review(resource, field):
 
 
 CLASSIFIERS = {
+    'cis71-rds-deletion-protection-v1': classify_rds_deletion_protection,
+    'cis71-efs-encryption-v1': classify_efs_encryption,
     'macie-session-v1': classify_macie_session,
     'macie-no-classification-v1': classify_macie_configuration,
     'macie-bucket-coverage-v1': classify_macie_bucket,
