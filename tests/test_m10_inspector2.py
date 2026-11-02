@@ -36,9 +36,14 @@ def client():
 
 
 def account(status):
-    return {'accountId': ACCOUNT, 'state': {'status': status},
-            'resourceState': {'ec2': {'status': 'ENABLED'},
-                              'ecr': {'status': 'DISABLED'}}}
+    return {'accountId': ACCOUNT,
+            'state': {'status': status, 'errorCode': 'ALREADY_ENABLED',
+                      'errorMessage': 'synthetic'},
+            'resourceState': {
+                'ec2': {'status': 'ENABLED', 'errorCode': 'ALREADY_ENABLED',
+                        'errorMessage': 'synthetic'},
+                'ecr': {'status': 'DISABLED', 'errorCode': 'ALREADY_ENABLED',
+                        'errorMessage': 'synthetic'}}}
 
 
 def coverage(resource_id, code):
@@ -67,10 +72,10 @@ def test_boto_stubber_account_and_two_coverage_pages_without_findings():
                                   {'accounts': [account('ENABLED')], 'failedAccounts': []},
                                   {'accountIds': [ACCOUNT]})
                 stub.add_response('list_coverage',
-                                  {'coveredResources': [coverage('i-a', 'ACTIVE')], 'nextToken': 'next'},
+                                  {'coveredResources': [coverage('i-0123456789abcdef0', 'ACTIVE')], 'nextToken': 'next'},
                                   {'maxResults': PAGE_SIZE, 'filterCriteria': FILTER})
                 stub.add_response('list_coverage',
-                                  {'coveredResources': [coverage('i-b', 'INACTIVE')]},
+                                  {'coveredResources': [coverage('i-0123456789abcdef1', 'INACTIVE')]},
                                   {'maxResults': PAGE_SIZE, 'filterCriteria': FILTER,
                                    'nextToken': 'next'})
                 with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk) as get_client:
@@ -137,7 +142,7 @@ def test_partial_coverage_on_denied_second_page():
         try:
             with Stubber(sdk) as stub:
                 stub.add_response('list_coverage',
-                                  {'coveredResources': [coverage('i-a', 'ACTIVE')], 'nextToken': 'next'},
+                                  {'coveredResources': [coverage('i-0123456789abcdef0', 'ACTIVE')], 'nextToken': 'next'},
                                   {'maxResults': PAGE_SIZE, 'filterCriteria': FILTER})
                 stub.add_client_error('list_coverage',
                                       service_error_code='AccessDeniedException',
@@ -159,13 +164,13 @@ def test_partial_coverage_on_denied_second_page():
     ([{}], 'MalformedCoveragePage'),
     ([{'coveredResources': [], 'nextToken': 'loop'},
       {'coveredResources': [], 'nextToken': 'loop'}], 'InvalidPaginationToken'),
-    ([{'coveredResources': [coverage('i-a', 'ACTIVE'), coverage('i-a', 'ACTIVE')]}],
+    ([{'coveredResources': [coverage('i-0123456789abcdef0', 'ACTIVE'), coverage('i-0123456789abcdef0', 'ACTIVE')]}],
      'DuplicateCoveredResource'),
-    ([{'coveredResources': [coverage('i-a', 'ACTIVE')], 'nextToken': str(i)}
+    ([{'coveredResources': [coverage('i-0123456789abcdef0', 'ACTIVE')], 'nextToken': str(i)}
       for i in range(MAX_PAGES)], 'CoveragePageLimit'),
     ([{'coveredResources': [coverage(str(i), 'ACTIVE') for i in range(PAGE_SIZE + 1)]}],
      'CoverageLimit'),
-    ([{'coveredResources': [dict(coverage('i-a', 'ACTIVE'), accountId='111111111111')]}],
+    ([{'coveredResources': [dict(coverage('i-0123456789abcdef0', 'ACTIVE'), accountId='111111111111')]}],
      'UnexpectedAccount'),
 ])
 def test_malformed_bounded_and_cross_account_collections(pages, reason):
