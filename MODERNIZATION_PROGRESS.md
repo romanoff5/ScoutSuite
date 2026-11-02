@@ -189,3 +189,13 @@ and strict synthetic integration tests. This **does not complete M10**.
 Scope, API permissions, exclusions, test contract and rollback:
 [docs/modernization/M10_ACCESS_ANALYZER.md](docs/modernization/M10_ACCESS_ANALYZER.md).
 Acceptance remains conditional on Windows/Ubuntu CI and installed package tests.
+
+## Task 13 / M10-B — GuardDuty public detector inventory (2026-11-02)
+
+Opt-in regional GuardDuty read-only vertical slice on `modernization/m10b-guardduty-vertical-slice`.
+Public collector provides bounded ListDetectors/GetDetector, incomplete
+status, normalized detector IDs, a DISABLED-only finding, and an escaped
+report partial. AWS/region and organization-wide coverage are not implied.
+See [M10-B scope](docs/modernization/M10_GUARDDUTY.md).
+M10 overall remains incomplete; no other service is advertised without an
+independent complete vertical slice.
