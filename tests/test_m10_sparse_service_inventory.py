@@ -114,3 +114,56 @@ def test_backup_incomplete_or_nonempty_census_still_queries_deep_history():
         assert service['regions'][REGION]['backup_service_activity'] == 'not_determined'
     asyncio.run(scenario(False, False))
     asyncio.run(scenario(True, True))
+
+
+def test_s3_directory_access_points_resume_when_directory_bucket_exists():
+    from ScoutSuite.providers.aws.facade.s3_advanced import S3AdvancedFacade
+
+    async def scenario():
+        facade = S3AdvancedFacade(object(), '000000000000')
+        calls = []
+        async def pages(client, operation, field, region, **kwargs):
+            calls.append(operation)
+            if operation == 'ListDirectoryBuckets':
+                return [{'Name': 'test--euc1-az1--x-s3'}], True
+            return [], True
+
+        with patch.object(AWSFacadeUtils, 'get_client', return_value=Mock()), (
+                patch.object(facade, '_pages', side_effect=pages)), (
+                patch.object(facade, '_directory_bucket', new_callable=AsyncMock)):
+            result = await facade._scan_region(REGION)
+        assert 'ListAccessPointsForDirectoryBuckets' in calls
+        assert result['collection']['directory_access_points'] == 'complete'
+
+    asyncio.run(scenario())
+
+
+def test_bedrock_enforced_guardrails_resume_when_customer_workload_observed():
+    from ScoutSuite.providers.aws.facade.bedrock import BedrockFacade
+
+    async def scenario():
+        control, agent = Mock(), Mock()
+        control.get_model_invocation_logging_configuration.return_value = {}
+        control.list_guardrails.return_value = {'guardrails': []}
+        control.list_inference_profiles.return_value = {'inferenceProfileSummaries': []}
+        control.list_provisioned_model_throughputs.return_value = {
+            'provisionedModelSummaries': [{
+                'provisionedModelArn': 'arn:aws:bedrock:eu-central-1:000000000000:provisioned-model/test',
+                'provisionedModelName': 'synthetic-model'}]}
+        control.list_model_customization_jobs.return_value = {
+            'modelCustomizationJobSummaries': []}
+        control.list_enforced_guardrails_configuration.return_value = {
+            'guardrailsConfig': []}
+        agent.list_agents.return_value = {'agentSummaries': []}
+        agent.list_knowledge_bases.return_value = {'knowledgeBaseSummaries': []}
+        agent.list_flows.return_value = {'flowSummaries': []}
+        agent.list_prompts.return_value = {'promptSummaries': []}
+        with patch.object(AWSFacadeUtils, 'get_client',
+                          side_effect=lambda name, *_: (
+                              control if name == 'bedrock' else agent)):
+            result = await BedrockFacade(object()).inventory(REGION)
+        control.list_enforced_guardrails_configuration.assert_called_once_with()
+        assert result['collection']['enforced_guardrails'] is True
+        assert result['enforced_guardrails_evidence_status'] == 'verified'
+
+    asyncio.run(scenario())
