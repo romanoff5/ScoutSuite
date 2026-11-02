@@ -1,0 +1,29 @@
+<!-- M10-B GuardDuty: all detector fields are escaped by Handlebars. -->
+<script id="services.guardduty.regions.id.detectors.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active">
+    <h4 class="list-group-item-heading">{{name}}</h4>
+  </div>
+  <div class="list-group-item">
+    <h4>GuardDuty detector</h4>
+    <ul>
+      <li>Detector ID: <samp>{{detector_id}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Status: {{status}}</li>
+      <li>Finding publishing frequency: {{finding_publishing_frequency}}</li>
+    </ul>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial(
+    "services.guardduty.regions.id.detectors",
+    $("#services\\.guardduty\\.regions\\.id\\.detectors\\.partial").html()
+  );
+</script>
+<script id="single_guardduty_detector-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.guardduty.regions.id.detectors' }}
+</script>
+<script>
+  var single_guardduty_detector_template = Handlebars.compile(
+    $("#single_guardduty_detector-template").html()
+  );
+</script>
