@@ -312,6 +312,15 @@ class SSMPublicFacade(AWSBaseFacade):
                            size=EC2_PAGE_SIZE) if ec2 is not None
                 else asyncio.sleep(0, result=([], False))))
 
+        # AWS default patch baselines exist even if Patch Manager has never
+        # managed a node. The summaries are retained, but avoid GetPatchBaseline
+        # on every AWS-managed baseline when complete inventories establish
+        # zero managed nodes AND zero patch group associations. This does not
+        # assert that EC2 instances are patched; the EC2/SSM comparison below
+        # still emits unmanaged-instance findings.
+        defer_baseline_details = bool(
+            managed_ok and not managed and groups_ok and not groups
+            and baseline_ok)
         baseline_records = []
         seen_baselines = set()
         for summary in baselines:
@@ -321,13 +330,20 @@ class SSMPublicFacade(AWSBaseFacade):
                 self.issue('partial', 'InvalidPatchBaselineId')
                 continue
             seen_baselines.add(bid)
+            if defer_baseline_details:
+                baseline_records.append({
+                    **summary, 'detail': None, 'detail_complete': False,
+                    'detail_status': 'not_required_no_managed_nodes'})
+                continue
             detail = await self.call(ssm, 'get_patch_baseline', BaselineId=bid)
             if not isinstance(detail, dict) or detail.get('BaselineId') != bid:
                 baseline_ok = False
                 self.issue('partial', 'MissingPatchBaselineDetail:' + bid)
             baseline_records.append({
                 **summary, 'detail': json_safe(detail) if isinstance(detail, dict) else None,
-                'detail_complete': isinstance(detail, dict) and detail.get('BaselineId') == bid})
+                'detail_complete': isinstance(detail, dict) and detail.get('BaselineId') == bid,
+                'detail_status': 'verified' if isinstance(detail, dict)
+                and detail.get('BaselineId') == bid else 'incomplete'})
 
         nodes, managed_ids = {}, []
         for entry in managed:
@@ -440,6 +456,9 @@ class SSMPublicFacade(AWSBaseFacade):
             'collection': {
                 'managed_nodes': managed_ok, 'ec2': ec2_ok,
                 'patch_states': states_ok, 'patch_baselines': baseline_ok,
+                'patch_baseline_details': ('not_required_no_managed_nodes'
+                                           if defer_baseline_details else
+                                           'complete' if baseline_ok else 'partial'),
                 'patch_groups': groups_ok, 'scan_command_history': commands_ok,
                 'patch_details': details_ok},
             'ec2_comparison_complete': comparison,

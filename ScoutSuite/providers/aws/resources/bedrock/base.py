@@ -78,7 +78,9 @@ class BedrockPublic(Regions):
             data = {'id': region, 'name': region, 'region': region,
                     'collection': dict(raw.get('collection') or {}),
                     'logging_verified': raw.get('logging_verified') is True,
-                    'logging_config': raw.get('logging_config') or {}}
+                    'logging_config': raw.get('logging_config') or {},
+                     'enforced_guardrails_evidence_status': raw.get(
+                         'enforced_guardrails_evidence_status', 'unknown')}
             for kind, mapping in FIELDS.items():
                 bucket = {}
                 complete = data['collection'].get(kind) is True

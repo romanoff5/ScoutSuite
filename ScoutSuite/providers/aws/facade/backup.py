@@ -41,6 +41,9 @@ class BackupPublicFacade(AWSBaseFacade):
     def __init__(self, session, account_id):
         super().__init__(session)
         self.account_id = account_id
+        # Region-level proof of discovery completeness, not inferred from [] alone.
+        self.discovery_complete = {}
+
 
     @staticmethod
     def issue(status, reason):
@@ -116,14 +119,17 @@ class BackupPublicFacade(AWSBaseFacade):
             return []
         summary = await self._paginate(client.list_backup_vaults, 'BackupVaultList', 'ListBackupVaults')
         result, seen = [], set()
+        discovery_complete = summary.complete
         for vault in summary:
             name, arn = vault.get('BackupVaultName'), vault.get('BackupVaultArn')
             if (not isinstance(name, str) or not name
                     or not self._valid_arn(arn, region, 'backup-vault')):
                 self.issue('partial', 'InvalidBackupVaultIdentity')
+                discovery_complete = False
                 continue
             if arn in seen:
                 self.issue('partial', 'DuplicateBackupVault')
+                discovery_complete = False
                 continue
             seen.add(arn)
             try:
@@ -131,10 +137,12 @@ class BackupPublicFacade(AWSBaseFacade):
                     lambda name=name: client.describe_backup_vault(BackupVaultName=name))
             except Exception as error:
                 self.failure('DescribeBackupVault', error, partial=True)
+                discovery_complete = False
                 continue
             if (not isinstance(response, dict) or response.get('BackupVaultName') != name
                     or response.get('BackupVaultArn') != arn):
                 self.issue('partial', 'MismatchedBackupVaultDetail')
+                discovery_complete = False
                 continue
             policy, policy_status = None, 'unknown'
             try:
@@ -171,6 +179,7 @@ class BackupPublicFacade(AWSBaseFacade):
                 'creator_request_id': response.get('CreatorRequestId'),
                 'source_backup_vault_arn': response.get('SourceBackupVaultArn'),
             })
+        self.discovery_complete.setdefault(region, {})['vaults'] = discovery_complete
         return result
 
     async def get_plans(self, region):
@@ -180,14 +189,17 @@ class BackupPublicFacade(AWSBaseFacade):
             return []
         summary = await self._paginate(client.list_backup_plans, 'BackupPlansList', 'ListBackupPlans')
         result, seen = [], set()
+        discovery_complete = summary.complete
         for plan in summary:
             identifier, arn = plan.get('BackupPlanId'), plan.get('BackupPlanArn')
             if (not isinstance(identifier, str) or not identifier
                     or not self._valid_arn(arn, region, 'backup-plan')):
                 self.issue('partial', 'InvalidBackupPlanIdentity')
+                discovery_complete = False
                 continue
             if arn in seen:
                 self.issue('partial', 'DuplicateBackupPlan')
+                discovery_complete = False
                 continue
             seen.add(arn)
             try:
@@ -195,6 +207,7 @@ class BackupPublicFacade(AWSBaseFacade):
                     lambda identifier=identifier: client.get_backup_plan(BackupPlanId=identifier))
             except Exception as error:
                 self.failure('GetBackupPlan', error, partial=True)
+                discovery_complete = False
                 continue
             config = response.get('BackupPlan') if isinstance(response, dict) else None
             if (not isinstance(config, dict) or response.get('BackupPlanId') != identifier
@@ -202,6 +215,7 @@ class BackupPublicFacade(AWSBaseFacade):
                     or not isinstance(config.get('BackupPlanName'), str)
                     or not isinstance(config.get('Rules'), list)):
                 self.issue('partial', 'MismatchedBackupPlanDetail')
+                discovery_complete = False
                 continue
             selections = await self._paginate(
                 client.list_backup_selections, 'BackupSelectionsList',
@@ -214,6 +228,7 @@ class BackupPublicFacade(AWSBaseFacade):
                         or selection.get('BackupPlanId') not in (None, identifier)):
                     self.issue('partial', 'InvalidBackupSelectionIdentity')
                     selection_complete = False
+                    discovery_complete = False
                     continue
                 selection_ids.add(selection_id)
                 try:
@@ -223,12 +238,14 @@ class BackupPublicFacade(AWSBaseFacade):
                 except Exception as error:
                     self.failure('GetBackupSelection', error, partial=True)
                     selection_complete = False
+                    discovery_complete = False
                     continue
                 if (not isinstance(item, dict) or item.get('BackupPlanId') != identifier
                         or item.get('SelectionId') != selection_id
                         or not isinstance(item.get('BackupSelection'), dict)):
                     self.issue('partial', 'MismatchedBackupSelectionDetail')
                     selection_complete = False
+                    discovery_complete = False
                     continue
                 details.append(json_safe(item))
             result.append({
@@ -241,6 +258,7 @@ class BackupPublicFacade(AWSBaseFacade):
                 'rules': config['Rules'],
                 'advanced_backup_settings': config.get('AdvancedBackupSettings', []),
             })
+        self.discovery_complete.setdefault(region, {})['plans'] = discovery_complete
         return result
 
     async def _list_evidence(self, region, method, response_key, operation):

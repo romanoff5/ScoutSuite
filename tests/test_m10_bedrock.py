@@ -49,7 +49,6 @@ def test_bedrock_stubber_minimal_contract_and_complete_empty_inventory():
                 s.add_response('get_model_invocation_logging_configuration', {}, {})
                 for operation, key in (
                     ('list_guardrails', 'guardrails'),
-                    ('list_enforced_guardrails_configuration', 'guardrailsConfig'),
                     ('list_inference_profiles', 'inferenceProfileSummaries'),
                     ('list_provisioned_model_throughputs', 'provisionedModelSummaries'),
                     ('list_model_customization_jobs', 'modelCustomizationJobSummaries')):
@@ -73,7 +72,10 @@ def test_bedrock_stubber_minimal_contract_and_complete_empty_inventory():
             control.close()
             agent.close()
         assert result['logging_verified']
-        assert all(result['collection'].values())
+        assert result['enforced_guardrails_evidence_status'] == 'deferred_no_customer_workload_evidence'
+        assert result['collection']['enforced_guardrails'] is False
+        assert all(ok for key, ok in result['collection'].items()
+                   if key != 'enforced_guardrails')
         assert not result['agents'] and not result['guardrails']
     asyncio.run(scenario())
 
