@@ -239,13 +239,24 @@ def _s3(services, selected, backup_regions):
     for bucket in s3['buckets'].values():
         if not isinstance(bucket, dict):
             continue
-        arn, region = bucket.get('arn'), bucket.get('region')
+        original_arn, region = bucket.get('arn'), bucket.get('region')
+        name = bucket.get('name')
+        # S3 bucket ARNs have no region/account/resource-type component.
+        # Legacy bucket["arn"] may be formatted as arn:...:s3:::*/name;
+        # do not mutate it: canonicalize only this correlation identity.
+        partition = (original_arn.split(':', 2)[1]
+                     if isinstance(original_arn, str)
+                     and original_arn.startswith('arn:') else None)
+        arn = (f'arn:{partition}:s3:::{name}'
+               if isinstance(partition, str) and partition
+               and isinstance(name, str) and name else None)
         evidence = {'state': 'unknown', 'source': 'backup.ListProtectedResources',
-                    'region': region, 'recovery_point_arns': [],
+                    'region': region, 'canonical_bucket_arn': arn,
+                    'recovery_point_arns': [],
                     'completed_job_ids': [], 'last_completed_job_at': None,
                     'ongoing_schedule_verified': False, 'reasons': []}
         if not isinstance(arn, str) or not arn.startswith('arn:'):
-            evidence['reasons'].append('s3_bucket_arn_unknown')
+            evidence['reasons'].append('s3_bucket_identity_unknown')
         elif not isinstance(region, str) or not region:
             evidence['reasons'].append('bucket_region_unknown')
         elif backup_regions is None or not isinstance(backup_regions.get(region), dict):
