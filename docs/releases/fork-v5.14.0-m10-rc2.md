@@ -15,6 +15,10 @@ Version: 5.14.0+romanoff5.m10rc2
   manifest and checksums. The installer verifies wheel, manifest and dependency
   closure hashes before creating the environment, then verifies metadata,
   `pip check` and both CLI help commands.
+- Operational evidence now records explicit partial collection issues for
+  malformed/truncated Backup recovery-point inventories, WAF metric queries
+  and ECR scan-identity/client problems. Missing evidence cannot silently
+  pass a strict completeness scan.
 - Scanner selection supports `Stable`, `Fork` (RC2) and
   `ForkRc1` (retained for explicit rollback). The wrapper rejects invalid
   provenance, missing binaries, mismatched package versions and modified RC2
