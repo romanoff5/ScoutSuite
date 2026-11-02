@@ -13,7 +13,7 @@ _TRANSITION = frozenset(('ENABLING', 'DISABLING'))
 def _issue(reason):
     context = get_current_run_context()
     if context is not None:
-        context.record_collection_issue('partial', 'cloudtrail', 'M10R:' + reason)
+        context.record_collection_issue('partial', 'cloudtrail', 'M10R.' + reason)
 
 
 def _management_events_complete(trail):
@@ -126,7 +126,7 @@ def _coverage_for_region(region, states, trails, inventory_complete, account_reg
             evidence['trail_arns'].append(trail.get('arn') or trail.get('TrailARN'))
         elif applies is None:
             unknown = True
-    if evidence['trail_arns'] and account_region_complete:
+    if evidence['trail_arns'] and account_region_complete and inventory_complete:
         evidence['configuration_state'] = 'configured'
         evidence['reason'] = 'organization_trail_configuration_only'
     elif not account_region_complete or not inventory_complete or unknown:
