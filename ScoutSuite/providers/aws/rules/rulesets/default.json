@@ -1573,6 +1573,36 @@
                 "enabled": true,
                 "level": "danger"
             }
+        ],
+        "ssm-critical-patches.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "ssm-security-patches.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-stale-or-unverified-scan.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-agent-offline.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-running-ec2-unmanaged.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
