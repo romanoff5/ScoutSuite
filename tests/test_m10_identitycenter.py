@@ -1,6 +1,7 @@
 """M10-L strict offline IAM Identity Center API, normalization, and incomplete evidence tests."""
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -139,9 +140,11 @@ def test_full_inventory_with_group_emails_and_cross_account_admin():
         store = Mock()
         sso.list_instances.return_value = {
             'Instances': [{'InstanceArn': INSTANCE, 'IdentityStoreId': STORE,
-                           'OwnerAccountId': ACCOUNTS[0], 'Name': '<SSO>'}]}
+                           'OwnerAccountId': ACCOUNTS[0], 'Name': '<SSO>',
+                           'CreatedDate': datetime(2026, 1, 2, tzinfo=timezone.utc)}]}
         sso.list_permission_sets.return_value = {'PermissionSets': [PS]}
-        sso.describe_permission_set.return_value = {'PermissionSet': {'Name': '<Admin>'}}
+        sso.describe_permission_set.return_value = {'PermissionSet': {
+            'Name': '<Admin>', 'CreatedDate': datetime(2026, 1, 3, tzinfo=timezone.utc)}}
         sso.list_managed_policies_in_permission_set.return_value = {
             'AttachedManagedPolicies': [{'Name': 'AdministratorAccess',
                                           'Arn': 'arn:aws:iam::aws:policy/AdministratorAccess'}]}
@@ -169,6 +172,8 @@ def test_full_inventory_with_group_emails_and_cross_account_admin():
                           side_effect=lambda service, *_: sso if service == 'sso-admin' else store):
             data = await facade.get_region('eu-west-1')
         instance = data['instances'][INSTANCE]
+        assert instance['created_date'] == '2026-01-02T00:00:00+00:00'
+        assert instance['permission_sets'][PS]['created_date'] == '2026-01-03T00:00:00+00:00'
         assert instance['users'][USER]['primary_email'] == 'private@example.invalid'
         assert instance['groups'][GROUP]['member_emails'] == ['private@example.invalid']
         assert len(instance['permission_sets'][PS]['assignments']) == 2
