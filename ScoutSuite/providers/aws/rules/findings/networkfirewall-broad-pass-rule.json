@@ -1,0 +1,20 @@
+{
+    "references": [
+        "https://docs.aws.amazon.com/network-firewall/latest/developerguide/route-tables.html"
+    ],
+    "evidence_policy": "networkfirewall-m10-m-v1",
+    "description": "Rule group contains an unconditional broad PASS rule",
+    "rationale": "A conservative signature indicates an unrestricted PASS rule. Policy attachment and rule priority still determine whether it can match.",
+    "remediation": "Restrict broad PASS conditions and review referenced policies and rule order.",
+    "dashboard_name": "Network Firewall rule groups",
+    "path": "networkfirewall.regions.id.rule_groups.id",
+    "conditions": [
+        "and",
+        [
+            "broad_pass",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "BroadPassRule"
+}

@@ -1,0 +1,20 @@
+{
+    "references": [
+        "https://docs.aws.amazon.com/network-firewall/latest/developerguide/route-tables.html"
+    ],
+    "evidence_policy": "networkfirewall-m10-m-v1",
+    "description": "Firewall endpoints are not referenced by inspected VPC routes",
+    "rationale": "Complete in-account VPC route-table inventory has no references to the firewall endpoints. TGW, proxy and cross-account traffic are not covered.",
+    "remediation": "Review workload, edge and return-path route tables with AZ mappings; do not assume protection based on a firewall resource alone.",
+    "dashboard_name": "Network Firewalls",
+    "path": "networkfirewall.regions.id.firewalls.id",
+    "conditions": [
+        "and",
+        [
+            "no_endpoint_routes",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "NoVpcRoutes"
+}

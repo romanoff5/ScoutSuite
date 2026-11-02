@@ -1,0 +1,20 @@
+{
+    "references": [
+        "https://docs.aws.amazon.com/network-firewall/latest/developerguide/route-tables.html"
+    ],
+    "evidence_policy": "networkfirewall-m10-m-v1",
+    "description": "AWS Network Firewall logging is disabled",
+    "rationale": "An empty LogDestinationConfigs list was returned successfully. This is a confirmed service logging gap, not a statement about all external monitoring.",
+    "remediation": "Configure and test ALERT/FLOW log destinations; verify alert routing and retention.",
+    "dashboard_name": "Network Firewalls",
+    "path": "networkfirewall.regions.id.firewalls.id",
+    "conditions": [
+        "and",
+        [
+            "logging_disabled",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "LoggingDisabled"
+}
