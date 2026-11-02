@@ -13,6 +13,8 @@
     <li>Policy is public (review, not proof of access): {{policy_public}}</li>
     <li>Detail collection complete: {{detail_complete}}</li>
     <li>MRAP status: {{Status}}</li><li>Regions: {{#each Regions}}{{Bucket}} ({{Region}}) {{/each}}</li><li>Public policy review: {{public_policy_review}}</li>
+    <!-- M10-Q v2: all evidence remains escaped -->
+    <li>M10-Q bucket target status: {{m10q_bucket_target_status}}</li>{{#each m10q_bucket_targets}}<li>Bucket: <samp>{{bucket}}</samp>; Region: {{region}}; census match: {{status}}</li>{{/each}}
   </ul>
 </div>
 </script>
