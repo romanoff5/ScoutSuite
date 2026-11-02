@@ -1,4 +1,6 @@
 """Bounded, read-only regional Security Hub hub/standards inventory."""
+import re
+
 from botocore.exceptions import ClientError
 
 from ScoutSuite.core.run_context import get_current_run_context
@@ -13,6 +15,27 @@ PAGE_SIZE = 50
 DENIED_CODES = frozenset(('AccessDeniedException', 'AccessDenied', 'UnauthorizedOperation',
                           'InvalidAccessException'))
 UNSUPPORTED_CODES = frozenset(('UnsupportedOperationException', 'UnknownOperationException'))
+NOT_SUBSCRIBED_MESSAGE = re.compile(r'account \d{12} is not subscribed to aws security hub( cspm)?', re.ASCII)
+
+
+def is_hub_not_subscribed(error):
+    """Classify only AWS's explicit subscription-state response, not IAM denials.
+
+    DescribeHub answers an unsubscribed account with InvalidAccessException
+    "Account <id> is not subscribed to AWS Security Hub [CSPM]". The same code
+    without that exact service-state message stays a denial/UNKNOWN.
+    """
+    if not isinstance(error, ClientError):
+        return False
+    details = error.response.get('Error', {})
+    code = details.get('Code')
+    if code == 'ResourceNotFoundException':
+        return True
+    message = details.get('Message', '')
+    if code != 'InvalidAccessException' or not isinstance(message, str):
+        return False
+    normalized = ' '.join(message.split()).strip().rstrip('.').casefold()
+    return NOT_SUBSCRIBED_MESSAGE.fullmatch(normalized) is not None
 
 
 class SecurityHubPublicFacade(AWSBaseFacade):
@@ -39,7 +62,7 @@ class SecurityHubPublicFacade(AWSBaseFacade):
             hub = await run_concurrently(client.describe_hub)
         except ClientError as error:
             code = error.response.get('Error', {}).get('Code', '')
-            if code == 'ResourceNotFoundException':
+            if is_hub_not_subscribed(error):
                 self.hub_states[region] = 'not_subscribed'
                 # A confirmed absent subscription is valid negative security evidence,
                 # not a failed/partial AWS collection. The regional rule reports it.

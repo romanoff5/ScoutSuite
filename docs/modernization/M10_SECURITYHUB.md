@@ -19,9 +19,13 @@ are preserved for remediation.
 
 Denied, unsupported, missing hub, malformed payloads, duplicate subscription
 ARNs, cycles in pagination and exceeded limits are **not** reported as clean
-coverage. A missing subscribed hub is an explicit not-applicable collection
-issue, not a false Security Hub enablement finding; a failed standards request
-produces a partial hub with `standards_inventory_complete=false`.
+coverage. A confirmed unsubscribed Region (DescribeHub
+`ResourceNotFoundException`, or `InvalidAccessException` with the exact
+service message "Account <id> is not subscribed to AWS Security Hub [CSPM]",
+which is what AWS returns in practice) is negative evidence reported by
+`securityhub-region-not-subscribed`, not a collection issue (RC5, RC8). Any
+other `InvalidAccessException` or denial stays UNKNOWN. A failed standards
+request produces a partial hub with `standards_inventory_complete=false`.
 
 The only warning flags a confirmed `FAILED` or `INCOMPLETE` standard
 subscription state; `READY` is healthy **for this status check only**,

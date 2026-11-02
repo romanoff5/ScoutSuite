@@ -31,7 +31,7 @@ detailed scans include the four new checks independently of the opt-in profile.
 | 3.1.4 | `s3-bucket-public-access-block-incomplete` | Four effective account/bucket BPA flags; unknown API responses remain UNKNOWN; not proof of object/AP safety or org-wide policy |
 | 3.2.5 | `rds-instance-deletion-protection-disabled` and `rds-cluster-deletion-protection-disabled` | Standalone instance vs Aurora/Multi-AZ cluster DeletionProtection, assessed separately; cluster members excluded, uncollected evidence remains UNKNOWN |
 | 3.3.1 | `efs-filesystem-not-encrypted` | DescribeFileSystems Encrypted boolean; does not assess TLS or KMS key policy |
-| 5.16 | `securityhub-region-not-subscribed` | Only explicit DescribeHub ResourceNotFound means NOT_SUBSCRIBED; AccessDenied and invalid responses are UNKNOWN |
+| 5.16 | `securityhub-region-not-subscribed` | Only explicit DescribeHub ResourceNotFound, or InvalidAccessException with the exact "not subscribed to AWS Security Hub" message, means NOT_SUBSCRIBED; AccessDenied, other InvalidAccess and invalid responses are UNKNOWN |
 
 Each rule uses an evidence classifier with explicit secure/insecure/unknown
 states and synthetic regression tests. Existing resource identifiers and

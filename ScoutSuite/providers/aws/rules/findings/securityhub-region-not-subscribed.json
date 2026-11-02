@@ -1,6 +1,6 @@
 {
     "description": "Security Hub is not subscribed in the observed AWS Region",
-    "rationale": "An AWS Security Hub DescribeHub call explicitly returned ResourceNotFoundException. A missing subscription in the observed Region is a configuration observation; API denials and malformed responses must remain UNKNOWN. This does not prove organizational aggregation or control effectiveness.",
+    "rationale": "An AWS Security Hub DescribeHub call explicitly returned ResourceNotFoundException or InvalidAccessException with the exact service-state message that the account is not subscribed to AWS Security Hub. A missing subscription in the observed Region is a configuration observation; API denials and malformed responses must remain UNKNOWN. This does not prove organizational aggregation or control effectiveness.",
     "remediation": "Determine whether AWS Security Hub CSPM is required in the Region, enable it and review applicable standards where appropriate. Verify delegated administration, findings ingestion and aggregation separately.",
     "references": [
         "https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-accounts.html"

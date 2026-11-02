@@ -225,7 +225,7 @@ def classify_s3_block_public_access(bucket):
 
 
 def classify_securityhub_subscription(region):
-    """Known subscription or explicit AWS ResourceNotFound, not a permissions guess."""
+    """Known subscription or explicit AWS not-subscribed response, not a permissions guess."""
     if not isinstance(region, dict):
         return 'unknown'
     status = region.get('hub_subscription_status')
