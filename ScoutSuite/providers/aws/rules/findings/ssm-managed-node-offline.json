@@ -16,5 +16,5 @@
         ]
     ],
     "id_suffix": "AgentNotOnline",
-    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+    "evidence_policy": "ssm-offline-agent-v1"
 }
