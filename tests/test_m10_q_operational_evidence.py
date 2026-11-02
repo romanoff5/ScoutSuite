@@ -160,3 +160,71 @@ def test_stopped_backup_and_denied_recovery_history():
         failed = asyncio.run(collect_backup_rpo(facade, 'eu-west-1', [arn], []))
     assert failed['resources'][arn]['state'] == 'unknown'
     assert not failed['resources'][arn]['census_complete']
+
+
+def test_ridgepay_incomplete_operational_api_results_raise_collection_issues():
+    """An incomplete per-service result must be visible to strict completeness."""
+    facade = Facade()
+    with patch('ScoutSuite.providers.aws.facade.operational_evidence.AWSFacadeUtils.get_client',
+               return_value=None):
+        ecr = asyncio.run(collect_ecr_images(facade, 'eu-west-1', 'app'))
+        waf = asyncio.run(collect_waf_traffic(facade, 'eu-west-1', {
+            'scope': 'REGIONAL', 'visibility_config': {
+                'CloudWatchMetricsEnabled': True, 'MetricName': 'web-acl'}}))
+    assert ecr['status'] == waf['status'] == 'unknown'
+    assert ('partial', 'ECRImageScanClientUnavailable') in facade.issues
+    assert ('partial', 'WAFMetricClientUnavailable') in facade.issues
+
+    class TruncatedMetrics:
+        def get_metric_data(self, **kwargs):
+            return {'MetricDataResults': [], 'NextToken': 'more'}
+    facade = Facade()
+    with patch('ScoutSuite.providers.aws.facade.operational_evidence.AWSFacadeUtils.get_client',
+               return_value=TruncatedMetrics()), patch(
+               'ScoutSuite.providers.aws.facade.operational_evidence.run_concurrently', immediate):
+        waf = asyncio.run(collect_waf_traffic(facade, 'eu-west-1', {
+            'scope': 'REGIONAL', 'visibility_config': {
+                'CloudWatchMetricsEnabled': True, 'MetricName': 'web-acl'}}))
+    assert waf['status'] == 'unknown'
+    assert ('partial', 'WAFMetricResponseIncomplete') in facade.issues
+
+    class MalformedBackup:
+        def list_recovery_points_by_resource(self, **kwargs):
+            return {'RecoveryPoints': 'malformed'}
+    arn = 'arn:aws:s3:::synthetic-bucket'
+    facade = Facade()
+    with patch('ScoutSuite.providers.aws.facade.operational_evidence.AWSFacadeUtils.get_client',
+               return_value=MalformedBackup()), patch(
+               'ScoutSuite.providers.aws.facade.operational_evidence.run_concurrently', immediate):
+        backup = asyncio.run(collect_backup_rpo(facade, 'eu-west-1', [arn], []))
+    assert backup['status'] == 'partial'
+    assert backup['resources'][arn]['census_complete'] is False
+    assert ('partial', 'MalformedRecoveryPointPage') in facade.issues
+
+
+def test_ridgepay_partial_waf_series_and_backup_pagination_are_not_silent():
+    class PartialMetrics:
+        def get_metric_data(self, **kwargs):
+            return {'MetricDataResults': [{'Id': 'm0', 'StatusCode': 'PartialData', 'Values': [100]}]}
+    facade = Facade()
+    with patch('ScoutSuite.providers.aws.facade.operational_evidence.AWSFacadeUtils.get_client',
+               return_value=PartialMetrics()), patch(
+               'ScoutSuite.providers.aws.facade.operational_evidence.run_concurrently', immediate):
+        result = asyncio.run(collect_waf_traffic(facade, 'eu-central-1', {
+            'scope': 'REGIONAL', 'visibility_config': {
+                'CloudWatchMetricsEnabled': True, 'MetricName': 'web-acl'}}))
+    assert result['completeness'] == 'partial'
+    assert result['requests_observed'] is False
+    assert ('partial', 'WAFMetricSeriesIncomplete') in facade.issues
+
+    class CyclicBackup:
+        def list_recovery_points_by_resource(self, **kwargs):
+            return {'RecoveryPoints': [], 'NextToken': 'cycle'}
+    facade = Facade()
+    arn = 'arn:aws:s3:::synthetic-bucket'
+    with patch('ScoutSuite.providers.aws.facade.operational_evidence.AWSFacadeUtils.get_client',
+               return_value=CyclicBackup()), patch(
+               'ScoutSuite.providers.aws.facade.operational_evidence.run_concurrently', immediate):
+        result = asyncio.run(collect_backup_rpo(facade, 'eu-west-1', [arn], []))
+    assert result['status'] == 'partial'
+    assert ('partial', 'InvalidRecoveryPointPagination') in facade.issues

@@ -94,6 +94,74 @@ jobs:
       - name: Guarded installed package and minimal dependency smoke
         if: "!cancelled() && steps.build.outcome == 'success'"
         run: python -B tools/ci.py packaging
+      - name: Validate Ridgepay RC2 PowerShell scripts and fail-closed selection
+        if: "!cancelled() && steps.build.outcome == 'success' && runner.os == 'Windows'"
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($name in @('install-fork.ps1', 'select-scanner.ps1', 'invoke-selected-scout.ps1')) {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $PWD "scripts/$name"), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { throw "PowerShell parse error: $name : $($errors | Out-String)" }
+          }
+          $root = Join-Path $env:RUNNER_TEMP ('scout-rc2-selection-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $root | Out-Null
+          try {
+            foreach ($name in @('.venv-scout', '.venv-scout-fork-rc2')) {
+              $scripts = Join-Path $root (Join-Path $name 'Scripts')
+              New-Item -ItemType Directory -Path $scripts -Force | Out-Null
+              [IO.File]::WriteAllBytes((Join-Path $scripts 'scout.exe'), [byte[]]@(0, 1, 2))
+            }
+            $record = [ordered]@{
+              repository = 'romanoff5/ScoutSuite'
+              version = '5.14.0+romanoff5.m10rc2'
+              git_sha = ('a' * 40)
+              wheel_sha256 = ('b' * 64)
+              constraints_sha256 = ('c' * 64)
+              scout_exe_sha256 = ('0' * 64)
+            }
+            $record | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root '.venv-scout-fork-rc2/fork-install.json')
+            & ./scripts/select-scanner.ps1 -Mode Fork -ToolkitRoot $root
+            $config = Get-Content -LiteralPath (Join-Path $root '.scout-scanner-selection.json') -Raw | ConvertFrom-Json
+            if ($config.mode -ne 'fork') { throw 'RC2 selector did not persist choice' }
+            $rejected = $false
+            try { & ./scripts/invoke-selected-scout.ps1 -ToolkitRoot $root --help }
+            catch { $rejected = $_.Exception.Message -match 'executable changed after verification' }
+            if (-not $rejected) { throw 'Modified RC2 executable was not rejected before invocation' }
+            & ./scripts/select-scanner.ps1 -Mode Stable -ToolkitRoot $root
+            $config = Get-Content -LiteralPath (Join-Path $root '.scout-scanner-selection.json') -Raw | ConvertFrom-Json
+            if ($config.mode -ne 'stable') { throw 'Stable rollback selection failed' }
+          } finally {
+            Remove-Item -LiteralPath $root -Force -Recurse -ErrorAction SilentlyContinue
+          }
+      - name: Install actual RC2 wheel on Windows from offline pinned wheelhouse
+        if: "!cancelled() && steps.build.outcome == 'success' && runner.os == 'Windows' && matrix.python == '3.11.9'"
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP ('scout-rc2-real-install-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $root | Out-Null
+          try {
+            $wheel = @(Get-ChildItem -LiteralPath (Join-Path $env:SCOUT_CI_ROOT 'dist') -Filter '*m10rc2*.whl')
+            if ($wheel.Count -ne 1) { throw 'RC2 wheel missing from independently built CI dist' }
+            $sha = (Get-FileHash -LiteralPath $wheel[0].FullName -Algorithm SHA256).Hash
+            $commit = (git rev-parse HEAD).Trim()
+            & ./scripts/install-fork.ps1 -WheelPath $wheel[0].FullName -CommitSha $commit `
+              -ExpectedSha256 $sha -ToolkitRoot $root `
+              -WheelhousePath (Join-Path $env:SCOUT_CI_ROOT 'wheelhouse') `
+              -PythonCommand (Get-Command python).Source
+            if (-not (Test-Path -LiteralPath (Join-Path $root '.venv-scout-fork-rc2/fork-install.json'))) {
+              throw 'Verified RC2 installation provenance missing'
+            }
+            & ./scripts/select-scanner.ps1 -Mode Fork -ToolkitRoot $root
+            & pwsh -NoProfile -File ./scripts/invoke-selected-scout.ps1 -ToolkitRoot $root --help | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Verified RC2 selected launcher help failed' }
+            & pwsh -NoProfile -File ./scripts/invoke-selected-scout.ps1 -ToolkitRoot $root aws --help | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Verified RC2 AWS CLI help failed' }
+          } finally {
+            Remove-Item -LiteralPath $root -Force -Recurse -ErrorAction SilentlyContinue
+          }
       - name: Summarize exact versions and gate outcomes
         if: always()
         run: python -B tools/ci.py summary

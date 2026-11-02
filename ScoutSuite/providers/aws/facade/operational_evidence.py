@@ -48,6 +48,7 @@ async def collect_ecr_images(facade, region, repo_name):
               'image_level_scan_execution_verified': False, 'reasons': []}
     client = AWSFacadeUtils.get_client('ecr', facade.session, region)
     if client is None:
+        facade.issue('partial', 'ECRImageScanClientUnavailable')
         result['reasons'].append('client_unavailable')
         return result
     account = facade.owner_id
@@ -112,6 +113,7 @@ async def collect_ecr_images(facade, region, repo_name):
                 if (not isinstance(scan, dict) or scan.get('registryId') != account
                         or scan.get('repositoryName') != repo_name
                         or scan.get('imageId', {}).get('imageDigest') != digest):
+                    facade.issue('partial', 'ImageScanIdentityMismatch')
                     record['reason'] = 'scan_identity_mismatch'
                 else:
                     status = (scan.get('imageScanStatus') or {}).get('status')
@@ -160,6 +162,7 @@ async def collect_waf_traffic(facade, region, acl):
     metric_region = 'us-east-1' if scope == 'CLOUDFRONT' else region
     client = AWSFacadeUtils.get_client('cloudwatch', facade.session, metric_region)
     if client is None:
+        facade.issue('partial', 'WAFMetricClientUnavailable')
         result['reasons'].append('cloudwatch_client_unavailable')
         return result
     end = datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes=15)
@@ -186,6 +189,7 @@ async def collect_waf_traffic(facade, region, acl):
         return result
     series = response.get('MetricDataResults') if isinstance(response, dict) else None
     if not isinstance(series, list) or response.get('NextToken'):
+        facade.issue('partial', 'WAFMetricResponseIncomplete')
         result['reasons'].append('metric_response_incomplete')
         return result
     by_id = {item.get('Id'): item for item in series if isinstance(item, dict)}
@@ -207,6 +211,7 @@ async def collect_waf_traffic(facade, region, acl):
     if not result['requests_observed']:
         result['reasons'].append('no_nonzero_waf_metrics_observed')
     if not complete:
+        facade.issue('partial', 'WAFMetricSeriesIncomplete')
         result['reasons'].append('metric_series_incomplete')
     return result
 
@@ -254,10 +259,12 @@ async def collect_backup_rpo(facade, region, arns, jobs):
                 break
             rows = page.get('RecoveryPoints') if isinstance(page, dict) else None
             if not isinstance(rows, list) or len(rows) > BACKUP_PAGE:
+                facade.issue('partial', 'MalformedRecoveryPointPage')
                 entry['reasons'].append('malformed_recovery_points')
                 break
             for row in rows:
                 if not isinstance(row, dict) or not isinstance(row.get('RecoveryPointArn'), str):
+                    facade.issue('partial', 'MalformedRecoveryPoint')
                     entry['reasons'].append('malformed_recovery_point')
                     continue
                 created = _date(row.get('CreationDate'))
@@ -270,11 +277,13 @@ async def collect_backup_rpo(facade, region, arns, jobs):
                 complete = not entry['reasons']
                 break
             if not isinstance(following, str) or following in tokens or len(following) > 4096:
+                facade.issue('partial', 'InvalidRecoveryPointPagination')
                 entry['reasons'].append('recovery_point_pagination')
                 break
             tokens.add(following)
             token = following
         else:
+            facade.issue('partial', 'RecoveryPointPageLimit')
             entry['reasons'].append('recovery_point_page_limit')
         points = sorted((d for d in (_date(p['creation_date']) for p in entry['recovery_points']
                                    if p['status'] in ('AVAILABLE', 'COMPLETED'))
