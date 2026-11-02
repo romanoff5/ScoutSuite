@@ -1,71 +1,24 @@
-<!-- M10-L: all identities, emails and policy metadata use escaped interpolation. -->
+<!-- M10-L: all Identity Center evidence is escaped by Handlebars. -->
 <script id="services.identitycenter.regions.id.instances.partial" type="text/x-handlebars-template">
   <div class="list-group-item active"><h4>{{name}}</h4></div>
   <div class="list-group-item">
     <h4>IAM Identity Center instance</h4>
-    <ul>
-      <li>Instance ARN: <samp>{{instance_arn}}</samp></li>
-      <li>Identity Store ID: {{identity_store_id}}</li>
-      <li>Owner account: {{owner_account_id}}</li>
-      <li>Region: {{region}}</li>
-      <li>Status: {{status}}; reason: {{status_reason}}</li>
-      <li>Created: {{created_date}}</li>
-      <li>Instance enumeration complete: {{instance_enumeration_complete}}</li>
-      <li>Permission sets and assignments complete: {{permission_sets_complete}}</li>
-    </ul>
-    <h4>Permission sets ({{permission_sets_count}})</h4>
-    {{#each permission_sets}}
-      <ul>
-        <li>{{name}}: <samp>{{permission_set_arn}}</samp></li>
-        <li>Description: {{description}}</li>
-        <li>Session duration: {{session_duration}}</li>
-        <li>Relay state: {{relay_state}}</li>
-        <li>Policy inventory complete: {{policy_collection_complete}}</li>
-        <li>Account assignment inventory complete: {{assignment_collection_complete}}</li>
-        <li>Inline policy present: {{inline_policy_present}}</li>
-        <li>Permission boundary: {{permission_boundary.ManagedPolicyArn}}
-          {{permission_boundary.CustomerManagedPolicyReference.Name}}</li>
-        {{#each managed_policies}}
-          <li>Managed policy {{Name}}: <samp>{{Arn}}</samp></li>
-        {{/each}}
-        {{#each customer_managed_policies}}
-          <li>Customer-managed policy {{Name}} (path {{Path}})</li>
-        {{/each}}
-        {{#each account_ids}}<li>Provisioned AWS account: {{this}}</li>{{/each}}
-      </ul>
-    {{/each}}
-    <h4>AWS account assignments ({{assignments_count}})</h4>
-    {{#each assignments}}
-      <ul>
-        <li>Account: {{account_id}}</li>
-        <li>Permission set: {{permission_set_name}} <samp>{{permission_set_arn}}</samp></li>
-        <li>Principal: {{principal_type}} {{principal_name}} ({{principal_id}})</li>
-        <li>Principal ARN: <samp>{{principal_arn}}</samp>; revision: {{principal_revision}}</li>
-        <li>Username: {{principal_username}}; primary email: {{principal_email}}</li>
-        {{#each principal_emails}}<li>Principal email: {{Value}} (primary: {{Primary}})</li>{{/each}}
-        <li>Identity resolution: {{identity_resolution_status}}</li>
-        <li>AWS-managed AdministratorAccess assigned: {{administrator_access_managed_policy}}</li>
-        <li>Policy collection complete: {{policy_collection_complete}}</li>
-        <li>Group membership complete: {{group_members_complete}}</li>
-        {{#each group_members}}
-          <li>Group member: {{name}} ({{principal_id}}) — {{username}} / {{email}}
-            ({{resolution_status}}), membership ID: {{membership_id}}</li>
-          <li>Member ARN: <samp>{{principal_arn}}</samp>; revision: {{revision}}</li>
-          <li>Membership ARN: <samp>{{membership_arn}}</samp></li>
-          {{#each emails}}<li>Group member email: {{Value}} (primary: {{Primary}})</li>{{/each}}
-        {{/each}}
-      </ul>
-    {{/each}}
+    <p>Instance ARN: <samp>{{arn}}</samp></p>
+    <p>Identity Store ID: <samp>{{identity_store_id}}</samp>; Owner account: <samp>{{owner_account_id}}</samp></p>
+    <p>Region: {{region}}; Status: {{status}}; Created: {{created_date}}</p>
+    <p>Permission sets: {{permission_sets_count}}; Users: {{users_count}}; Groups: {{groups_count}}</p>
+    <p>Organization coverage: {{organization_coverage_status}}; Inventory complete: {{collection_complete}}</p>
+    <h4>Collection status</h4>
+    {{#each collection}}<p>{{@key}}: {{this}}</p>{{/each}}
   </div>
 </script>
 <script>
-  Handlebars.registerPartial("services.identitycenter.regions.id.instances",
-    $("#services\\.identitycenter\\.regions\\.id\\.instances\\.partial").html());
+  Handlebars.registerPartial("services.identitycenter.regions.id.instances", $("#services\\.identitycenter\\.regions\\.id\\.instances\\.partial").html());
 </script>
 <script id="single_identitycenter_instance-template" type="text/x-handlebars-template">
   {{> modal-template template='services.identitycenter.regions.id.instances' }}
 </script>
 <script>
-  var single_identitycenter_instance_template = Handlebars.compile(
-    $("#single_identitycenter_instance-template").html());
+  var single_identitycenter_instance_template =
+    Handlebars.compile($("#single_identitycenter_instance-template").html());
 </script>
