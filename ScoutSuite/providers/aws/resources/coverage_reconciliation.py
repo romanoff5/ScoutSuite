@@ -301,6 +301,8 @@ def _s3(services, selected, backup_regions):
                 else:
                     evidence['state'] = 'partial_evidence'
                     evidence['reasons'].append('backup_job_or_recovery_point_not_correlated')
+        operational = backup_regions.get(region, {}).get('operational_rpo', {}) if isinstance(backup_regions, dict) and isinstance(region, str) else {}
+        evidence['operational_rpo'] = operational.get('resources', {}).get(arn) if isinstance(operational, dict) and arn else None
         bucket['m10q_backup'] = evidence
         bucket['m10q_backup_evidence_gap'] = evidence['state'] in (
             'not_reported', 'partial_evidence')
