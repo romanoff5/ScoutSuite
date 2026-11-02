@@ -1,0 +1,27 @@
+<!-- M10-R Bedrock: metadata only; escaped Handlebars -->
+<script id="services.bedrock.regions.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>region: <samp>{{region}}</samp></li>
+<li>logging_verified: <samp>{{logging_verified}}</samp></li>
+<li>coverage_status: <samp>{{coverage_status}}</samp></li>
+<li>invocation_logging_review: <samp>{{invocation_logging_review}}</samp></li>
+<li>logging_config.text_enabled: <samp>{{logging_config.text_enabled}}</samp></li>
+<li>logging_config.image_enabled: <samp>{{logging_config.image_enabled}}</samp></li>
+<li>logging_config.embedding_enabled: <samp>{{logging_config.embedding_enabled}}</samp></li>
+<li>logging_config.cloudwatch_log_group: <samp>{{logging_config.cloudwatch_log_group}}</samp></li>
+<li>logging_config.s3_bucket: <samp>{{logging_config.s3_bucket}}</samp></li>
+<li>agents_count: <samp>{{agents_count}}</samp></li>
+<li>knowledge_bases_count: <samp>{{knowledge_bases_count}}</samp></li>
+<li>guardrails_count: <samp>{{guardrails_count}}</samp></li>
+<li>enforced_guardrails_count: <samp>{{enforced_guardrails_count}}</samp></li>
+<li>inference_profiles_count: <samp>{{inference_profiles_count}}</samp></li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.bedrock.regions",
+ $("#services\\.bedrock\\.regions\\.partial").html());</script>
+<script id="single_bedrock_regions-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.bedrock.regions' }}
+</script>
+<script>var single_bedrock_regions_template =
+ Handlebars.compile($("#single_bedrock_regions-template").html());</script>

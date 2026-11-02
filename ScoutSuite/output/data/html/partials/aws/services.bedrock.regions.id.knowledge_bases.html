@@ -1,0 +1,23 @@
+<!-- M10-R Bedrock: metadata only; escaped Handlebars -->
+<script id="services.bedrock.regions.id.knowledge_bases.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>knowledge_base_id: <samp>{{knowledge_base_id}}</samp></li>
+<li>name: <samp>{{name}}</samp></li>
+<li>status: <samp>{{status}}</samp></li>
+<li>knowledge_base_arn: <samp>{{knowledge_base_arn}}</samp></li>
+<li>role_arn: <samp>{{role_arn}}</samp></li>
+<li>knowledge_base_type: <samp>{{knowledge_base_type}}</samp></li>
+<li>storage_type: <samp>{{storage_type}}</samp></li>
+<li>detail_verified: <samp>{{detail_verified}}</samp></li>
+<li>data_sources_count: <samp>{{data_sources_count}}</samp></li>
+<li>data_sources_complete: <samp>{{data_sources_complete}}</samp></li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.bedrock.regions.id.knowledge_bases",
+ $("#services\\.bedrock\\.regions\\.id\\.knowledge_bases\\.partial").html());</script>
+<script id="single_bedrock_knowledge_bases-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.bedrock.regions.id.knowledge_bases' }}
+</script>
+<script>var single_bedrock_knowledge_bases_template =
+ Handlebars.compile($("#single_bedrock_knowledge_bases-template").html());</script>

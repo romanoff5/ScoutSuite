@@ -282,6 +282,8 @@
       "acm-certificate-with-transparency-logging-disabled.json",
       "awslambda-function-deprecated-runtime.json",
       "backup-vault-lock-disabled.json",
+      "bedrock-agent-no-explicit-guardrail-review.json",
+      "bedrock-invocation-logging-review.json",
       "cloudformation-stack-with-role.json",
       "cloudfront-distribution-cleartext-origin.json",
       "cloudfront-distribution-insecure-origin.json",

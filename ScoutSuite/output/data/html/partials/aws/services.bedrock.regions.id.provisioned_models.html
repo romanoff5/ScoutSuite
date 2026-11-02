@@ -1,0 +1,17 @@
+<!-- M10-R Bedrock: metadata only; escaped Handlebars -->
+<script id="services.bedrock.regions.id.provisioned_models.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>name: <samp>{{name}}</samp></li>
+<li>arn: <samp>{{arn}}</samp></li>
+<li>model_arn: <samp>{{model_arn}}</samp></li>
+<li>status: <samp>{{status}}</samp></li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.bedrock.regions.id.provisioned_models",
+ $("#services\\.bedrock\\.regions\\.id\\.provisioned_models\\.partial").html());</script>
+<script id="single_bedrock_provisioned_models-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.bedrock.regions.id.provisioned_models' }}
+</script>
+<script>var single_bedrock_provisioned_models_template =
+ Handlebars.compile($("#single_bedrock_provisioned_models-template").html());</script>

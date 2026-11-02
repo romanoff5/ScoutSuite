@@ -633,6 +633,54 @@
           "path": "services.macie.regions.id.buckets"
         }
       }
+    },
+    "bedrock": {
+      "resources": {
+        "regions": {
+          "cols": 2,
+          "path": "services.bedrock.regions"
+        },
+        "guardrails": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.guardrails"
+        },
+        "enforced_guardrails": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.enforced_guardrails"
+        },
+        "agents": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.agents"
+        },
+        "knowledge_bases": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.knowledge_bases"
+        },
+        "data_sources": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.knowledge_bases.id.data_sources"
+        },
+        "flows": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.flows"
+        },
+        "prompts": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.prompts"
+        },
+        "inference_profiles": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.inference_profiles"
+        },
+        "provisioned_models": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.provisioned_models"
+        },
+        "model_jobs": {
+          "cols": 2,
+          "path": "services.bedrock.regions.id.model_jobs"
+        }
+      }
     }
   },
   "database": {

@@ -1,0 +1,20 @@
+{
+  "description": "Bedrock resources are configured, but model invocation logging is not enabled",
+  "rationale": "Bedrock resources exist in this Region and the logging configuration was successfully read with no modality enabled. Resource presence does not prove recent model invocation; Bedrock-Mantle requests and some operations are not covered by model invocation logging.",
+  "remediation": "Review usage and data classification. If appropriate, enable Bedrock invocation logging to encrypted S3 or CloudWatch Logs, enforce access controls and retention for potentially sensitive model input/output. Verify CloudTrail data events independently.",
+  "references": [
+    "https://docs.aws.amazon.com/bedrock/latest/userguide/model-invocation-logging.html"
+  ],
+  "dashboard_name": "Bedrock Regions",
+  "path": "bedrock.regions.id",
+  "conditions": [
+    "and",
+    [
+      "invocation_logging_review",
+      "true",
+      ""
+    ]
+  ],
+  "id_suffix": "invocationloggingreview",
+  "evidence_policy": "bedrock-m10-r-v1"
+}
