@@ -396,10 +396,14 @@ def enrich_inspector_and_waf(services, selected, account_id):
                 if service == 'ecr':
                     scan = row.get('m10q_image_scanning')
                     if isinstance(scan, dict):
-                        scan['image_level_scan_execution_verified'] = False
-                        scan['image_inventory_available'] = False
-                        scan['configuration_only'] = True
-                        scan['effective_scan_freshness'] = 'unknown'
+                        operational = row.get('operational_image_scans')
+                        if not isinstance(operational, dict):
+                            scan['image_level_scan_execution_verified'] = False
+                            scan['image_inventory_available'] = False
+                        scan['configuration_only'] = not isinstance(operational, dict)
+                        scan['effective_scan_freshness'] = (
+                            'verified_for_observed_images' if scan.get('image_level_scan_execution_verified')
+                            else 'unknown')
     waf = _regions(services, 'wafv2', selected)
     if waf is not None:
         for region in waf.values():
@@ -412,7 +416,9 @@ def enrich_inspector_and_waf(services, selected, account_id):
                 targets['independent_target_existence_only'] = True
                 targets['independent_waf_attachment_verified'] = False
                 targets['traffic_routing_through_waf_verified'] = False
-                targets['inspection_applied_to_requests_verified'] = False
+                traffic = acl.get('operational_traffic') or {}
+                targets['observed_request_processing'] = traffic.get('requests_observed') is True
+                targets['inspection_applied_to_requests_verified'] = traffic.get('requests_observed') is True
                 if targets.get('state') == 'independent_target_observed':
                     # Independently observed target *existence*, not ALB->WAF
                     # attachment nor proof that any request is inspected.
