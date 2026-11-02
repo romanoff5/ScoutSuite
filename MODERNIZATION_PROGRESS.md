@@ -1,5 +1,30 @@
 # Solo-maintainer modernization progress
 
+## RC3 field-evidence follow-up (2026-11-02; CI/release validation pending)
+
+- Real authorized read-only scan of the prior RC1 hotfix was inspected locally,
+  without uploading customer data: 42 services, 207 rules, 80 incomplete
+  assessments, 40 collection issues and 120 flagged rule/resource pairs.
+- One independently confirmed false negative: ECR registry BASIC scanning
+  produced `evaluation_summary.counts.insecure=1` but zero findings because
+  the condition read an uncollected `basic_scanning` field. The rule now
+  checks `scan_type=BASIC`. No rule ID/schema change.
+- Added an offline RESULTS consistency tool that reports only rule names
+  and counts, plus synthetic tests for the ECR rule, unknown evidence and
+  absence of customer data in diagnostic output.
+- Kept S3 MRAP control-plane routing (already uses the documented us-west-2
+  endpoint); do not infer a scanner defect from a manual regional redirect.
+- Inspector2 stats raw API response was not captured, so the malformed
+  statistics issue is unresolved rather than falsely classified as a confirmed
+  collector bug.
+- RC2 release remains immutable; successor RC3 has a separate tagged wheel,
+  pinned environment and reversible installer selection, preserving RC2.
+- No additional AWS APIs, credential use, network scans or customer report
+  assets are included. Acceptance requires four offline CI variants and
+  successful installed RC3 release smoke after integrating into master.
+
+
+
 ## M12 — Ridgepay RC2 stabilization (2026-11-02; release gate pending)
 
 - Branch `stabilization/ridgepay-rc2-20261102`, based on the corrected
