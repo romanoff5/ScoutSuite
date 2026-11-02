@@ -22,6 +22,7 @@ class IdentityCenterFacade(AWSBaseFacade):
     def __init__(self, session, account_id):
         super().__init__(session)
         self.account_id = account_id
+        self.region_statuses = {}
 
     @staticmethod
     def _issue(status, reason):
@@ -177,6 +178,7 @@ class IdentityCenterFacade(AWSBaseFacade):
         client = self._client('sso-admin', region)
         if client is None:
             result['collection']['instances'] = 'failed'
+            self.region_statuses[region] = dict(result['collection'])
             return result
         try:
             instances, status = await self._pages(client, 'list_instances', 'Instances')
@@ -285,6 +287,7 @@ class IdentityCenterFacade(AWSBaseFacade):
                 instance['users'] = identities['users']
                 instance['groups'] = identities['groups']
                 instance['collection'].update(identities['collection'])
+            self.region_statuses[region] = dict(result['collection'])
             return result
         finally:
             close = getattr(client, 'close', None)
