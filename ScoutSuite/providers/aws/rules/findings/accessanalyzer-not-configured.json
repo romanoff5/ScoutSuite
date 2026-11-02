@@ -1,0 +1,21 @@
+{
+    "description": "IAM Access Analyzer is not configured in the observed AWS Region",
+    "rationale": "The Access Analyzer inventory visible to this account was fully enumerated for the Region and contains no analyzer, so external access to resources in this account is not continuously analyzed there. A denied, unsupported or incomplete inventory remains UNKNOWN and never triggers this finding. DISABLED or FAILED analyzers are reported separately by accessanalyzer-analyzer-inactive. An organization analyzer owned by another account is not visible here; verify organization-level coverage before closing.",
+    "remediation": "Create an account (or organization, from the management or delegated administrator account) analyzer in this Region and review its active findings.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-getting-started.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ListAnalyzers.html"
+    ],
+    "dashboard_name": "Regions",
+    "path": "accessanalyzer.regions.id",
+    "conditions": [
+        "and",
+        [
+            "analyzer_not_configured",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "NotConfigured",
+    "evidence_policy": "accessanalyzer-region-configured-v1"
+}

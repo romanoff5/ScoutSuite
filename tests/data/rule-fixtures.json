@@ -278,6 +278,7 @@
   "untested": {
     "aws": [
       "accessanalyzer-analyzer-inactive.json",
+      "accessanalyzer-not-configured.json",
       "acm-certificate-with-close-expiration-date.json",
       "acm-certificate-with-transparency-logging-disabled.json",
       "awslambda-function-deprecated-runtime.json",
@@ -331,6 +332,7 @@
       "elbv2-no-deletion-protection.json",
       "elbv2-older-ssl-policy.json",
       "guardduty-detector-disabled.json",
+      "guardduty-not-enabled.json",
       "iam-assume-role-lacks-external-id-and-mfa.json",
       "iam-assume-role-no-mfa.json",
       "iam-assume-role-policy-allows-all.json",

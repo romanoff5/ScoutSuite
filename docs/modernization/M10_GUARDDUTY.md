@@ -36,6 +36,10 @@ HTML partial and offline fixtures cover API paging, failures, normalized
 data, rule evaluation, renderer and installed wheel/sdist. Azure/GCP
 preservation remains a blocking CI gate.
 
+## RC8: region-level enablement
+
+`guardduty-detector-disabled` only evaluates existing detectors, so a Region with no detector used to be evaluated as zero objects (grey, no finding). RC8 records a per-Region detector census in the facade (`complete` only when `ListDetectors` finished and every detector was described and normalised) and adds `guardduty-not-enabled` (`guardduty.regions.id`, evidence policy `guardduty-region-enablement-v1`). A complete, empty census is flagged; denied, unsupported or partial inventory stays UNKNOWN; a DISABLED detector keeps its own rule. Region data adds `detector_census_status`, `guardduty_status` and `enabled_detectors_count`. Delegated-administrator and organization coverage are not asserted.
+
 ## Rollback
 
 Revert the M10-B commits. No migrations and no AWS changes.

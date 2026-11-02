@@ -1,0 +1,17 @@
+<!-- RC8 GuardDuty region enablement: HTML escaped, no findings or payloads. -->
+<script id="services.guardduty.regions.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>Region: {{region}}</li>
+<li>GuardDuty status: <samp>{{guardduty_status}}</samp></li>
+<li>Detector inventory: <samp>{{detector_census_status}}</samp></li>
+<li>Detectors: {{detectors_count}} (enabled: {{enabled_detectors_count}})</li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.guardduty.regions",
+ $("#services\\.guardduty\\.regions\\.partial").html());</script>
+<script id="single_guardduty_regions-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.guardduty.regions' }}
+</script>
+<script>var single_guardduty_regions_template =
+ Handlebars.compile($("#single_guardduty_regions-template").html());</script>

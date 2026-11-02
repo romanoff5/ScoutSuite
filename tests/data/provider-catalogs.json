@@ -96,6 +96,7 @@
     ],
     "default_rule_keys": [
       "accessanalyzer-analyzer-inactive.json",
+      "accessanalyzer-not-configured.json",
       "acm-certificate-with-close-expiration-date.json",
       "acm-certificate-with-transparency-logging-disabled.json",
       "awslambda-function-deprecated-runtime.json",
@@ -160,6 +161,7 @@
       "elbv2-no-deletion-protection.json",
       "elbv2-older-ssl-policy.json",
       "guardduty-detector-disabled.json",
+      "guardduty-not-enabled.json",
       "iam-assume-role-lacks-external-id-and-mfa.json",
       "iam-assume-role-no-mfa.json",
       "iam-assume-role-policy-allows-all.json",
@@ -302,6 +304,7 @@
     "templates": [
       "partials/aws/left_menu_for_region.html",
       "partials/aws/left_menu_for_vpc.html",
+      "partials/aws/services.accessanalyzer.regions.html",
       "partials/aws/services.accessanalyzer.regions.id.analyzers.html",
       "partials/aws/services.acm.regions.id.certificates.html",
       "partials/aws/services.awslambda.regions.id.functions.html",
@@ -356,6 +359,7 @@
       "partials/aws/services.elb.regions.id.vpcsid.elbs.linked_policy.html",
       "partials/aws/services.elbv2.regions.id.vpcs.id.elbs.html",
       "partials/aws/services.emr.regions.id.vpcs.id.clusters.html",
+      "partials/aws/services.guardduty.regions.html",
       "partials/aws/services.guardduty.regions.id.detectors.html",
       "partials/aws/services.iam.credential_reports.html",
       "partials/aws/services.iam.groups.html",

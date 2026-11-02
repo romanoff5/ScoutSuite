@@ -492,6 +492,10 @@
     },
     "accessanalyzer": {
       "resources": {
+        "regions": {
+          "cols": 2,
+          "path": "services.accessanalyzer.regions"
+        },
         "analyzers": {
           "cols": 2,
           "path": "services.accessanalyzer.regions.id.analyzers"

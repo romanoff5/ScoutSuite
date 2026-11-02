@@ -35,6 +35,10 @@ Future independent M10 slices: Organizations and org logging,
 GuardDuty/Security Hub/Inspector, ECR/ECS/EKS, SSM/Backup/WAFv2, and
 selected services such as Bedrock. Never advertise unimplemented support.
 
+## RC8: region-level configuration
+
+`accessanalyzer-analyzer-inactive` only evaluates existing analyzers. RC8 records a per-Region analyzer census (`complete` only when `ListAnalyzers` finished on every path and all rows normalised) and adds `accessanalyzer-not-configured` (`accessanalyzer.regions.id`, evidence policy `accessanalyzer-region-configured-v1`). A complete, empty census is flagged; any denial or partial inventory stays UNKNOWN. An organization analyzer owned by another account is not visible to a member account, so the finding text asks the reviewer to verify organization-level coverage before closing it.
+
 ## Rollback
 
 Revert this slice's commits. No changes to customer resources or migrations

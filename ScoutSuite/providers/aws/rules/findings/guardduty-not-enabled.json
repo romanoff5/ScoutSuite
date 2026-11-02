@@ -1,0 +1,21 @@
+{
+    "description": "GuardDuty is not enabled in the observed AWS Region",
+    "rationale": "The GuardDuty detector inventory for the Region was fully enumerated and contains no detector, so the account receives no GuardDuty threat detection there. A denied, unsupported or incomplete inventory remains UNKNOWN and never triggers this finding. A DISABLED detector is reported separately by guardduty-detector-disabled. This does not assess delegated-administrator or organization-wide coverage.",
+    "remediation": "Enable GuardDuty in this Region (or through the organization's delegated administrator with auto-enable for member accounts) and confirm that the expected protection plans are active.",
+    "references": [
+        "https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_settingup.html",
+        "https://docs.aws.amazon.com/guardduty/latest/APIReference/API_ListDetectors.html"
+    ],
+    "dashboard_name": "Regions",
+    "path": "guardduty.regions.id",
+    "conditions": [
+        "and",
+        [
+            "guardduty_not_enabled",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "NotEnabled",
+    "evidence_policy": "guardduty-region-enablement-v1"
+}

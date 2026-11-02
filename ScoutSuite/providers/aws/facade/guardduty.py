@@ -79,6 +79,7 @@ class GuardDutyPublicFacade(AWSBaseFacade):
             issue('partial', 'PageLimit')
 
         if not listing_complete and not identifiers:
+            self._record_census(region, False, 0)
             return []
 
         results = []
@@ -109,4 +110,15 @@ class GuardDutyPublicFacade(AWSBaseFacade):
                 'data_sources': response.get('DataSources') or {},
                 'tags': response.get('Tags') or {},
             })
+        self._record_census(region, listing_complete and len(results) == len(identifiers), len(results))
         return results
+
+    def _record_census(self, region, complete, count):
+        """Region-level proof that the detector inventory is complete.
+
+        An empty list after a denial or a failed page is never evidence that
+        GuardDuty is not enabled; only a fully enumerated region is.
+        """
+        if not hasattr(self, 'detector_census'):
+            self.detector_census = {}
+        self.detector_census[region] = {'complete': bool(complete), 'count': count}

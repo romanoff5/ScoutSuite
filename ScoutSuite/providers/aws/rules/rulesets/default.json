@@ -25,7 +25,19 @@
                 "level": "warning"
             }
         ],
+        "guardduty-not-enabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "guardduty-detector-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "accessanalyzer-not-configured.json": [
             {
                 "enabled": true,
                 "level": "warning"

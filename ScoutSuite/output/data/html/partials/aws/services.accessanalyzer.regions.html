@@ -1,0 +1,17 @@
+<!-- RC8 Access Analyzer region configuration: HTML escaped, no findings. -->
+<script id="services.accessanalyzer.regions.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>Region: {{region}}</li>
+<li>Access Analyzer status: <samp>{{analyzer_status}}</samp></li>
+<li>Analyzer inventory: <samp>{{analyzer_census_status}}</samp></li>
+<li>Analyzers visible to this account: {{analyzers_count}} (active: {{active_analyzers_count}})</li>
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.accessanalyzer.regions",
+ $("#services\\.accessanalyzer\\.regions\\.partial").html());</script>
+<script id="single_accessanalyzer_regions-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.accessanalyzer.regions' }}
+</script>
+<script>var single_accessanalyzer_regions_template =
+ Handlebars.compile($("#single_accessanalyzer_regions-template").html());</script>

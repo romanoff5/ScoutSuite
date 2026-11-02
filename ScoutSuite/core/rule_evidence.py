@@ -224,6 +224,30 @@ def classify_s3_block_public_access(bucket):
     return 'unknown'
 
 
+def classify_guardduty_region(region):
+    """No detector in a fully enumerated Region; denials stay UNKNOWN."""
+    if not isinstance(region, dict) or region.get('detector_census_status') != 'complete':
+        return 'unknown'
+    status = region.get('guardduty_status')
+    if status == 'not_enabled':
+        return 'insecure'
+    if status in ('enabled', 'detector_disabled'):
+        return 'secure'  # Detector exists; its state has a separate rule.
+    return 'unknown'
+
+
+def classify_accessanalyzer_region(region):
+    """No visible analyzer in a fully enumerated Region; denials stay UNKNOWN."""
+    if not isinstance(region, dict) or region.get('analyzer_census_status') != 'complete':
+        return 'unknown'
+    status = region.get('analyzer_status')
+    if status == 'not_configured':
+        return 'insecure'
+    if status in ('active', 'inactive_only'):
+        return 'secure'  # Analyzer exists; its state has a separate rule.
+    return 'unknown'
+
+
 def classify_securityhub_subscription(region):
     """Known subscription or explicit AWS not-subscribed response, not a permissions guess."""
     if not isinstance(region, dict):
@@ -884,6 +908,8 @@ def _classify_scoped_review(resource, field):
 CLASSIFIERS = {
     'cis71-s3-bpa-v1': classify_s3_block_public_access,
     'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
+    'guardduty-region-enablement-v1': classify_guardduty_region,
+    'accessanalyzer-region-configured-v1': classify_accessanalyzer_region,
     'cis71-rds-deletion-protection-v1': classify_rds_deletion_protection,
     'cis71-rds-cluster-deletion-protection-v1': classify_rds_cluster_deletion_protection,
     'cis71-efs-encryption-v1': classify_efs_encryption,
