@@ -23,6 +23,14 @@ class Repositories(AWSResources):
                 if context is not None:
                     context.record_collection_issue('partial', 'ecr', 'DuplicateRepositoryKey')
                 continue
+            if hasattr(self.facade.ecr, 'get_image_scan_evidence'):
+                try:
+                    value['operational_image_scans'] = await self.facade.ecr.get_image_scan_evidence(
+                        self.region, value['repository_name'])
+                except Exception:
+                    context = get_current_run_context()
+                    if context is not None:
+                        context.record_collection_issue('partial', 'ecr', 'ImageScanCollectionFailed')
             self[key] = value
 
     def _parse_repository(self, raw):
