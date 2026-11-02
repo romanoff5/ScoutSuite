@@ -1,6 +1,7 @@
 """Dependency contracts, checked without downloading or building in pytest."""
 
 import importlib.metadata
+import sys
 import tomllib
 
 from packaging.markers import default_environment
@@ -23,21 +24,26 @@ def requirements(path):
 
 def test_requirement_syntax_and_default_install_contract():
     default = requirements(ROOT / 'requirements.txt')
-    assert len(default) == 49
+    env = dict(default_environment(), extra='')
+    active = [req for req in default if req.marker is None or req.marker.evaluate(env)]
+    assert len(active) == 49
     requirements(ROOT / 'dev-requirements.txt')
     core = requirements(ROOT / 'requirements-core.txt')
     aws = requirements(ROOT / 'requirements-aws.txt')
-    declared = {canonicalize_name(req.name): req for req in default}
+    declared = {}
+    for req in default:
+        declared.setdefault(canonicalize_name(req.name), []).append(req)
     for req in core + aws:
-        assert req == declared[canonicalize_name(req.name)]
+        assert req in declared[canonicalize_name(req.name)]
     assert 'policyuniverse' in {canonicalize_name(req.name) for req in core}
     metadata = tomllib.loads((ROOT / 'pyproject.toml').read_text())
     assert metadata['project']['scripts']['scout'] == 'ScoutSuite.__main__:run_from_cli'
 
 
 def test_aws_core_constraints_cover_transitive_requirements():
+    runtime = f'py{sys.version_info.major}{sys.version_info.minor}'
     constraints = {canonicalize_name(req.name): req
-                   for req in requirements(ROOT / 'constraints/aws-core-py311.txt')}
+                   for req in requirements(ROOT / 'constraints' / f'aws-core-{runtime}.txt')}
     # Check the installed platform's complete graph. The suite is run on both
     # Windows and Linux; foreign-platform distributions are not faked or skipped.
     env = dict(default_environment(), extra='')
