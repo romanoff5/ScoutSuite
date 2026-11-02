@@ -308,6 +308,18 @@ def classify_access_analyzer(analyzer):
     return 'unknown'
 
 
+def classify_inspector2_state(item):
+    """Inspector2 account/scan-type enablement; transient and missing stay unknown."""
+    if not isinstance(item, dict):
+        return 'unknown'
+    status = item.get('status')
+    if status == 'ENABLED':
+        return 'secure'
+    if status in ('DISABLED', 'SUSPENDED'):
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_securityhub_standard(standard):
     """Only READY is healthy; FAILED/INCOMPLETE are confirmed unhealthy."""
     if not isinstance(standard, dict):
@@ -363,6 +375,8 @@ CLASSIFIERS = {
     'organizations-root-scp-v1': classify_organizations_scp,
     'guardduty-detector-state-v1': classify_guardduty_detector,
     'securityhub-standard-state-v1': classify_securityhub_standard,
+    'inspector2-account-state-v1': classify_inspector2_state,
+    'inspector2-scan-type-state-v1': classify_inspector2_state,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
     'lambda-managed-runtime-v1': classify_lambda_runtime,

@@ -4,6 +4,7 @@ from ScoutSuite.providers.aws.facade.acm import AcmFacade
 from ScoutSuite.providers.aws.facade.accessanalyzer import AccessAnalyzerFacade
 from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade
 from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
+from ScoutSuite.providers.aws.facade.inspector2 import Inspector2PublicFacade
 from ScoutSuite.providers.aws.facade.organizations import OrganizationsFacade
 from ScoutSuite.providers.aws.facade.awslambda import LambdaFacade
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
@@ -182,6 +183,7 @@ class AWSFacade(AWSBaseFacade):
         self.emr = EMRFacade(self.session)
         self.guardduty = GuardDutyPublicFacade(self.session)
         self.securityhub = SecurityHubPublicFacade(self.session)
+        self.inspector2 = Inspector2PublicFacade(self.session, self.owner_id)
         self.organizations = OrganizationsFacade(self.session, self.partition)
 
         # Instantiate facades for proprietary services

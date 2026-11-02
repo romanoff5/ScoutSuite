@@ -482,6 +482,18 @@
                 }
             }
         },
+        "inspector2": {
+            "resources": {
+                "regions": {
+                    "cols": 2,
+                    "path": "services.inspector2.regions"
+                },
+                "accounts": {
+                    "cols": 2,
+                    "path": "services.inspector2.regions.id.accounts"
+                }
+            }
+        },
         "securityhub": {
             "resources": {
                 "regions": {

@@ -1,0 +1,29 @@
+<!-- M10-D Inspector2: all dynamic values are escaped by Handlebars. -->
+<script id="services.inspector2.regions.id.accounts.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active">
+    <h4 class="list-group-item-heading">{{name}}</h4>
+  </div>
+  <div class="list-group-item">
+    <h4>Amazon Inspector v2 account status</h4>
+    <ul>
+      <li>Account: <samp>{{account_id}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Inspector state: {{status}}</li>
+    </ul>
+    <h4>Scan type states (not resource-level coverage)</h4>
+    {{#each scan_types}}
+      <p>{{name}}: {{status}}</p>
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.inspector2.regions.id.accounts",
+    $("#services\\.inspector2\\.regions\\.id\\.accounts\\.partial").html());
+</script>
+<script id="single_inspector2_account-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.inspector2.regions.id.accounts' }}
+</script>
+<script>
+  var single_inspector2_account_template = Handlebars.compile(
+    $("#single_inspector2_account-template").html());
+</script>

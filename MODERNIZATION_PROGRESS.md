@@ -208,3 +208,14 @@ findings; bounded pagination; explicit access/partial states; account emails exc
 See [M10-C scope and rollback](docs/modernization/M10_ORGANIZATIONS.md).
 M10 remains partially delivered (Organizations does not include policy contents,
 OU hierarchy, effective SCP evaluation, or organization-wide proof).
+
+## Task 13 / M10-D — Inspector v2 account/scan-type state (2026-11-02)
+
+Opt-in regional current-account Inspector v2 via
+`BatchGetAccountStatus(accountIds=[authenticated_account_id])`.
+No organization enumeration, findings or resource coverage queries.
+Denied, malformed and failed-account responses remain incomplete.
+Account and scan-type ENABLED/DISABLED/SUSPENDED evidence-aware rules,
+escaped renderer and synthetic SDK tests. See
+[docs/modernization/M10_INSPECTOR2.md](docs/modernization/M10_INSPECTOR2.md).
+Bounded ListCoverage remains an explicitly unimplemented M10-D2 follow-up.

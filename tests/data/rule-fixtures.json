@@ -354,6 +354,8 @@
       "iam-user-with-password-and-key.json",
       "iam-user-with-policies.json",
       "iam-user-without-mfa.json",
+      "inspector2-account-inactive.json",
+      "inspector2-scan-type-inactive.json",
       "kms-cmk-rotation-disabled.json",
       "logs-no-alarm-aws-configuration-changes.json",
       "logs-no-alarm-cloudtrail-configuration-changes.json",
