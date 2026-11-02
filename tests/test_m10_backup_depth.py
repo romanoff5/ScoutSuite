@@ -245,3 +245,26 @@ def test_escaped_report_templates_registered_and_no_raw_html():
         assert 'javascript:' not in source
         assert 'onclick=' not in source
         assert 'Handlebars.registerPartial' in source
+
+
+def test_duplicate_protected_resource_is_marked_incomplete():
+    async def run():
+        repeated = BoundedResults([{'ResourceArn': RESOURCE}, {'ResourceArn': RESOURCE}])
+        service = BackupPublic(SimpleNamespace(
+            build_region_list=AsyncMock(return_value=[REGION]),
+            backup=SimpleNamespace(
+                get_vaults=AsyncMock(return_value=[]),
+                get_plans=AsyncMock(return_value=[{
+                    'arn': ARN, 'name': 'daily', 'plan_id': 'plan-1', 'rules': [],
+                    'selections': [{'BackupSelection': {'Resources': [RESOURCE]}}],
+                    'selection_collection_complete': True}]),
+                get_protected_resources=AsyncMock(return_value=repeated),
+                get_backup_jobs=AsyncMock(return_value=BoundedResults()),
+                get_restore_jobs=AsyncMock(return_value=BoundedResults()),
+                get_restore_testing_plans=AsyncMock(return_value=BoundedResults()))))
+        await service.fetch_all(regions=[REGION])
+        region = service['regions'][REGION]
+        assert region['backup_inventory_status']['protected_resources'] == 'partial'
+        assert region['protected_resources_count'] == 1
+        assert next(iter(region['plans'].values()))['correlation_status'] == 'partial'
+    asyncio.run(run())

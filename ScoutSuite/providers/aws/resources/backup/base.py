@@ -22,16 +22,17 @@ def _issue(reason):
 
 def _store(rows, field, prefix):
     """Index intact AWS evidence without silently dropping duplicate records."""
-    indexed = {}
+    indexed, malformed = {}, False
     for row in rows:
         key = row.get(field) if isinstance(row, dict) else None
         hashed = get_non_provider_id(key) if isinstance(key, str) and key else None
         if not hashed or hashed in indexed:
             _issue(prefix + 'InvalidOrDuplicateIdentity')
+            malformed = True
             continue
         indexed[hashed] = {'id': hashed, 'name': row.get(
             'ResourceName') or row.get('RestoreTestingPlanName') or key, **row}
-    return indexed
+    return indexed, malformed
 
 
 def _matches_selection(arn, detail):
@@ -89,9 +90,9 @@ class BackupPublic(Regions):
                 complete = False
             else:
                 complete = getattr(result, 'complete', True)
-            data[key] = _store(result, identity, key)
+            data[key], malformed = _store(result, identity, key)
             data[key + '_count'] = len(data[key])
-            status[key] = 'complete' if complete else 'partial'
+            status[key] = 'complete' if complete and not malformed else 'partial'
         data['backup_inventory_status'] = status
 
         protected = {
