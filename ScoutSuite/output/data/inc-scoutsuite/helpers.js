@@ -232,11 +232,15 @@ Handlebars.registerHelper('fixBucketName', function (bucketName) {
     }
 })
 
-Handlebars.registerHelper('dashboard_color', function (level, checked, flagged) {
+Handlebars.registerHelper('dashboard_color', function (level, checked, flagged, assessment) {
+    // Optional 4th argument: a finding's assessment_status or a service's
+    // incomplete_rules count. Zero flagged items on incomplete evidence is
+    // not a verified pass, so it must not be rendered as "good".
+    const incomplete = assessment === 'incomplete' || (typeof assessment === 'number' && assessment > 0)
     if (checked === 0) {
         return 'unknown disabled-link'
     } else if (flagged === 0) {
-        return 'good disabled-link'
+        return incomplete ? 'unknown disabled-link' : 'good disabled-link'
     } else {
         return level
     }

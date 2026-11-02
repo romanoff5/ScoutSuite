@@ -17,6 +17,8 @@ def main():
     tests = runpy.run_path(str(ROOT / 'tests' / 'test_m09b_xss_audit.py'))
     tests['check_legacy_js_action_parser_rejects_code_injection_and_malicious_urls']()
     print('XSS action parser adversarial checks: PASSED', flush=True)
+    tests['check_dashboard_color_never_renders_incomplete_evidence_as_good']()
+    print('Incomplete-evidence status rendering checks: PASSED', flush=True)
     with tempfile.TemporaryDirectory(prefix='scoutsuite-xss-browser-') as directory:
         ran = tests['check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available'](
             Path(directory))

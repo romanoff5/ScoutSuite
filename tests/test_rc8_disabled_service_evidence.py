@@ -226,3 +226,39 @@ def test_reports_show_where_disabled_state_and_regional_absence_came_from():
     assert '<samp>{{session_status_source}}</samp>' in macie
     assert '<samp>{{regional_availability.model_jobs}}</samp>' in bedrock
     assert '{{{' not in macie + bedrock
+
+
+def test_service_summary_counts_incomplete_rules_for_the_dashboard():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    from ScoutSuite.providers.base.provider import BaseProvider
+
+    provider = SimpleNamespace(services={
+        'securityhub': {'findings': {
+            'not-subscribed': {'checked_items': 1, 'flagged_items': 0, 'level': 'warning', 'items': [],
+                               'assessment_status': 'incomplete'},
+            'standards': {'checked_items': 0, 'flagged_items': 0, 'level': 'warning', 'items': []}},
+            'regions_count': 1},
+        'iam': {'findings': {
+            'root-mfa': {'checked_items': 1, 'flagged_items': 0, 'level': 'danger', 'items': []}},
+            'users_count': 2},
+        'legacy': None})
+    ruleset = SimpleNamespace(name='synthetic', about='synthetic')
+    BaseProvider._update_last_run(provider, datetime(2026, 11, 2, tzinfo=timezone.utc), ruleset, {})
+    summary = provider.last_run['summary']
+    assert summary['securityhub']['incomplete_rules'] == 1
+    assert summary['iam']['incomplete_rules'] == 0
+    assert summary['legacy']['incomplete_rules'] == 0
+    assert summary['iam']['resources_count'] == 2
+
+
+def test_templates_pass_assessment_state_to_status_colour():
+    from pathlib import Path
+    html = Path(__file__).resolve().parents[1] / 'ScoutSuite/output/data/html'
+    dashboard = (html / 'partials/dashboard.html').read_text(encoding='utf-8')
+    report = (html / 'report.html').read_text(encoding='utf-8')
+    assert dashboard.count('dashboard_color level checked_items flagged_items assessment_status') == 2
+    assert 'Assessment status: {{assessment_status}}' in dashboard
+    assert 'with unknown evidence: {{evaluation_summary.counts.unknown}}' in dashboard
+    assert 'dashboard_color max_level checked_items flagged_items incomplete_rules' in report
+    assert '{{{' not in dashboard

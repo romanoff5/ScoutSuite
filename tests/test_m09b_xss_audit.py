@@ -145,6 +145,32 @@ def check_legacy_js_action_parser_rejects_code_injection_and_malicious_urls():
     assert proc.returncode == 0, proc.stdout + '\n' + proc.stderr
 
 
+def check_dashboard_color_never_renders_incomplete_evidence_as_good():
+    """RC8: zero flagged items on incomplete evidence must not render as a green pass."""
+    node = shutil.which('node')
+    if not node:
+        raise RuntimeError('Node is required for report status rendering verification')
+    script = r"""
+    const assert = require('assert');
+    const helpers = {};
+    globalThis.Handlebars = {registerHelper(name, fn) { helpers[name] = fn; }};
+    require(process.argv[1]);
+    const color = helpers.dashboard_color;
+    const options = {hash: {}, data: {}};  // Handlebars always appends this argument.
+    assert.strictEqual(color('warning', 3, 0, options), 'good disabled-link');
+    assert.strictEqual(color('warning', 3, 0, 'incomplete', options), 'unknown disabled-link');
+    assert.strictEqual(color('warning', 3, 0, 'not_applicable', options), 'good disabled-link');
+    assert.strictEqual(color('danger', 3, 2, 'incomplete', options), 'danger');
+    assert.strictEqual(color('warning', 0, 0, 'incomplete', options), 'unknown disabled-link');
+    assert.strictEqual(color('warning', 5, 0, 2, options), 'unknown disabled-link');
+    assert.strictEqual(color('warning', 5, 0, 0, options), 'good disabled-link');
+    assert.strictEqual(color('danger', 5, 1, 2, options), 'danger');
+    """
+    proc = subprocess.run([node, '-e', script, str(ASSETS / 'inc-scoutsuite' / 'helpers.js')],
+                          capture_output=True, text=True, timeout=15, check=False)
+    assert proc.returncode == 0, proc.stdout + '\n' + proc.stderr
+
+
 def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_path):
     chrome = next((shutil.which(binary) for binary in (
         'chromium', 'chromium-browser', 'google-chrome', 'chrome')

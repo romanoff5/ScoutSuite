@@ -129,6 +129,7 @@ class BaseProvider:
                                             'flagged_items': 0,
                                             'max_level': 'warning',
                                             'rules_count': 0,
+                                            'incomplete_rules': 0,
                                             'resources_count': 0}
             if self.services[service] is None:
                 # Not supported yet
@@ -138,6 +139,8 @@ class BaseProvider:
                     last_run['summary'][service]['rules_count'] += 1
                     last_run['summary'][service]['checked_items'] += finding['checked_items']
                     last_run['summary'][service]['flagged_items'] += finding['flagged_items']
+                    if finding.get('assessment_status') == 'incomplete':
+                        last_run['summary'][service]['incomplete_rules'] += 1
                     items = finding.get('items', [])
                     if last_run['summary'][service]['max_level'] != 'danger' and len(items) > 0:
                         last_run['summary'][service]['max_level'] = finding['level']
