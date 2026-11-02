@@ -16,5 +16,5 @@
         ]
     ],
     "id_suffix": "UnmanagedRunningEc2",
-    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+    "evidence_policy": "ssm-unmanaged-ec2-v1"
 }
