@@ -42,7 +42,7 @@ zero warnings**. The failure is
 `test_zip_symlink_and_existing_symlink_destinations_are_rejected`:
 Windows refuses OS symlink creation with `WinError 1314`. No assertion,
 guard or test was weakened. The final focused selection additionally includes
-two new malformed-page regressions.
+two new malformed-page regressions: **159 passed, zero warnings**.
 
 Commands from repository root (use the private interpreters):
 
@@ -83,3 +83,10 @@ pre-repair launcher backup and remove only `runtime_hotfix` from its provenance
 JSON. Preserve all reports. The original RC1 still contains the documented
 bugs; rollback is for recovery, not a passing assessment baseline.
 Live cloud behavior and new-release publication remain unverified.
+
+Installed validation passed: 1,560 packaged files matched source, 50 runtime
+requirements matched, and guarded AWS/Azure/GCP CLI/rules/report checks passed.
+Two launcher `-SkipGitSync -InstallOnly` invocations passed installation and
+reuse, checking 55 AWS policies and denied-API diagnostics. Source commit:
+`70cf29d5579864543b6363e7a271a84216bb6837`. Local repair wheel SHA256:
+`bcf9ca2e419f6f745cdf9ee14c1f0186074f6d07c85ab8a8987c940f00970c0e`.

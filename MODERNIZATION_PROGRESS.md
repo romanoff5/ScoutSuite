@@ -13,9 +13,20 @@
 - Local wheel build 1 is used by the external user launcher with a pinned hash,
   explicit repair provenance and offline installed-byte/runtime checks. Published
   RC1 assets and stable installation remain unchanged. No cloud run was made.
-- Implementation branch: `fix/rc1-scanner-runtime`; integration SHA and installed
-  verification are recorded in the follow-up evidence entry after those steps.
-  See [repair details and rollback](docs/releases/RC1_RUNTIME_HOTFIX1.md).
+- Implementation branch: `fix/rc1-scanner-runtime`; implementation, pushed branch
+  and verified default-branch integration:
+  `70cf29d5579864543b6363e7a271a84216bb6837` (origin is `romanoff5/ScoutSuite`).
+- Installed validation passed outside the checkout with the fork interpreter:
+  `python -I -B tools/verify_distribution.py --source <checkout> --profile combined
+  --output <local-evidence.json>`: 1,560 packaged files byte-verified, 50 runtime
+  requirements, guarded AWS/Azure/GCP rules and reports, all evidence policies.
+  Repair wheel SHA256:
+  `bcf9ca2e419f6f745cdf9ee14c1f0186074f6d07c85ab8a8987c940f00970c0e`.
+- External launcher `-SkipGitSync -InstallOnly` passed installation and a second
+  reuse invocation, verifying 55 AWS evidence policies and denied API handling
+  with a scoped allowance only for Windows asyncio's internal socketpair.
+  Stable scanner executable SHA256 was unchanged before/after. No assessment
+  was rerun. See [repair details and rollback](docs/releases/RC1_RUNTIME_HOTFIX1.md).
 
 Current policy: local implementation and offline validation, commit/push only to
 `romanoff5/ScoutSuite`, then automatic integration of passing assigned slices into
