@@ -34,7 +34,10 @@ def _date(value):
 
 def _failure(facade, operation, error):
     # Expose stable reason codes, not exception messages containing account data.
-    facade.failure(operation, error, partial=True)
+    if hasattr(facade, 'failure'):
+        facade.failure(operation, error, partial=True)
+    else:
+        facade.issue('partial', operation + 'Failed')
 
 
 async def collect_ecr_images(facade, region, repo_name):
@@ -287,13 +290,13 @@ async def collect_backup_rpo(facade, region, arns, jobs):
                     and j.get('State') in ('FAILED', 'ABORTED', 'EXPIRED')]
         entry['failed_job_ids'] = [v for v in failures if isinstance(v, str)]
         entry['census_complete'] = complete
-        if rpo is None:
+        if complete and any(p['status'] == 'STOPPED' for p in entry['recovery_points']):
+            entry['state'] = 'gap_observed'
+            entry['reasons'].append('continuous_recovery_point_stopped')
+        elif rpo is None:
             entry['reasons'].append('rpo_objective_not_configured')
         elif not complete:
             entry['reasons'].append('recovery_point_history_incomplete')
-        elif any(p['status'] == 'STOPPED' for p in entry['recovery_points']):
-            entry['state'] = 'gap_observed'
-            entry['reasons'].append('continuous_recovery_point_stopped')
         elif entry['age_minutes'] is not None and entry['age_minutes'] > rpo:
             entry['state'] = 'gap_observed'
             entry['reasons'].append('latest_point_exceeds_rpo')
