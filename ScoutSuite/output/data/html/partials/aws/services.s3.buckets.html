@@ -84,7 +84,7 @@
             {{#each m10q_s3_entrypoints}}<p>{{kind}}: <samp>{{reference}}</samp>; Region: {{region}}; public policy: {{policy_public}}</p>{{/each}}
             <p>Canonical bucket ARN: <samp>{{m10q_backup.canonical_bucket_arn}}</samp></p>
             <p>Region: {{m10q_backup.region}}</p>
-            <p>Ongoing schedule verified: {{m10q_backup.ongoing_schedule_verified}}</p>
+            <p>Ongoing schedule verified: {{m10q_backup.ongoing_schedule_verified}} <p>Operational RPO state: {{m10q_backup.operational_rpo.state}}; latest point: {{m10q_backup.operational_rpo.latest_available_point_at}}; age (minutes): {{m10q_backup.operational_rpo.age_minutes}}</p></p>
             <p>Latest completed backup job: {{m10q_backup.last_completed_job_at}}</p>
             {{#each m10q_backup.completed_job_ids}}<p>Completed job: <samp>{{this}}</samp></p>{{/each}}
             {{#each m10q_backup.recovery_point_arns}}<p>Recovery point resource: <samp>{{this}}</samp></p>{{/each}}
