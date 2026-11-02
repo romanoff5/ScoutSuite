@@ -101,6 +101,11 @@ class IdentityCenterFacade(AWSBaseFacade):
         key = (store, kind, identifier)
         if key in cache:
             return cache[key]
+        if client is None:
+            item = {'principal_id': identifier, 'principal_type': kind,
+                    'resolution_status': 'unknown'}
+            cache[key] = item
+            return item
         method = client.describe_user if kind == 'USER' else client.describe_group
         response, ok = await self._call(
             method, {'IdentityStoreId': store,
@@ -127,6 +132,10 @@ class IdentityCenterFacade(AWSBaseFacade):
         key = (store, group_id)
         if key in membership_cache:
             return membership_cache[key]
+        if client is None:
+            result = {'members': [], 'members_complete': False}
+            membership_cache[key] = result
+            return result
         rows, complete = await self._pages(
             client.list_group_memberships, {'IdentityStoreId': store, 'GroupId': group_id},
             'GroupMemberships', 'ListGroupMemberships')
@@ -267,8 +276,7 @@ class IdentityCenterFacade(AWSBaseFacade):
             if identity_client is None:
                 identity_client = AWSFacadeUtils.get_client('identitystore', self.session, region)
                 if identity_client is None:
-                    self.issue('failed', 'IdentityStoreClientUnavailable')
-                    return results
+                    self.issue('partial', 'IdentityStoreClientUnavailable')
             record = {
                 'instance_arn': arn, 'identity_store_id': store,
                 'owner_account_id': item.get('OwnerAccountId'),
@@ -285,7 +293,7 @@ class IdentityCenterFacade(AWSBaseFacade):
             record['permission_sets_complete'] = sets_ok
             seen_sets = set()
             for ps in sets:
-                if not isinstance(ps, str) or ps in seen_sets or '/permissionSet/' in ps:
+                if not isinstance(ps, str) or ps in seen_sets:
                     self.issue('partial', 'InvalidOrDuplicatePermissionSet')
                     record['permission_sets_complete'] = False
                     continue
