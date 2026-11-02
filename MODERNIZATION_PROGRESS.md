@@ -262,3 +262,13 @@ registry-level vulnerability scanning is **not** inferred from scanOnPush.
 Unsupported/denied, malformed/looped pagination and overflow produce explicit
 incomplete statuses. See `docs/modernization/M10_ECR.md`. ECS and EKS are
 separate unimplemented next slices. No Azure/GCP collector changes.
+
+## Task 13 / M10-F — ECS cluster inventory (2026-11-02)
+
+Public opt-in ECS `ListClusters`/`DescribeClusters` by selected region.
+Max 50 pages × 100 ARNs and batched details; collect full ARN/name, tags,
+metrics, ECS Exec logging/KMS config, capacity strategy and Container Insights
+state. Only explicitly disabled Container Insights triggers a scoped warning;
+unknown/missing settings stay incomplete. Invalid/foreign/duplicate ARNs,
+malformed/denied responses and pagination limits create collection issues.
+See `docs/modernization/M10_ECS.md`. No resource mutation or live AWS test.

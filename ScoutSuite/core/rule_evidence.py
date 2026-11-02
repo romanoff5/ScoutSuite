@@ -320,6 +320,18 @@ def classify_securityhub_standard(standard):
     return 'unknown'
 
 
+def classify_ecs_container_insights(cluster):
+    """Only explicit ECS Container Insights settings constitute evidence."""
+    if not isinstance(cluster, dict):
+        return 'unknown'
+    mode = cluster.get('container_insights')
+    if mode in ('enabled', 'enhanced'):
+        return 'secure'
+    if mode == 'disabled':
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_ecr_tag_mutability(repository):
     """Only plain MUTABLE is an actionable tag-overwrite configuration warning."""
     if not isinstance(repository, dict):
@@ -406,6 +418,7 @@ CLASSIFIERS = {
     'organizations-root-scp-v1': classify_organizations_scp,
     'guardduty-detector-state-v1': classify_guardduty_detector,
     'ecr-tag-mutability-v1': classify_ecr_tag_mutability,
+    'ecs-container-insights-v1': classify_ecs_container_insights,
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,

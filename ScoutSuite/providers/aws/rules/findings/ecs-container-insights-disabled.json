@@ -1,0 +1,20 @@
+{
+    "description": "ECS Container Insights is explicitly disabled",
+    "rationale": "The ECS cluster explicitly reports containerInsights=disabled, limiting enhanced metrics and troubleshooting telemetry. This is a scoped observability recommendation, not proof that logging or monitoring is absent.",
+    "remediation": "Where appropriate, enable Container Insights (standard or enhanced) and verify logging, CloudWatch costs and security observability independently.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-container-insights.html"
+    ],
+    "dashboard_name": "Clusters",
+    "path": "ecs.regions.id.clusters.id",
+    "conditions": [
+        "and",
+        [
+            "container_insights_disabled",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "ContainerInsightsDisabled",
+    "evidence_policy": "ecs-container-insights-v1"
+}
