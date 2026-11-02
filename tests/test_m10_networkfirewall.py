@@ -78,21 +78,26 @@ def test_full_stubber_inventory_unknown_vs_referenced_routing():
                 n.add_response('list_rule_groups', {'RuleGroups': [
                     {'Name': 'rules', 'Arn': GROUP}]}, {'MaxResults': PAGE_SIZE})
                 n.add_response('describe_firewall_policy', {
-                    'FirewallPolicyResponse': {'FirewallPolicyArn': POLICY},
+                    'UpdateToken': 'token',
+                    'FirewallPolicyResponse': {'FirewallPolicyArn': POLICY,
+                                               'FirewallPolicyName': 'policy',
+                                               'FirewallPolicyId': 'policy-id'},
                     'FirewallPolicy': {
                         'StatelessDefaultActions': ['aws:pass'],
                         'StatelessFragmentDefaultActions': ['aws:forward_to_sfe'],
                         'StatefulRuleGroupReferences': [{'ResourceArn': GROUP}],
                     }}, {'FirewallPolicyArn': POLICY})
                 n.add_response('describe_rule_group', {
-                    'RuleGroupResponse': {'RuleGroupArn': GROUP, 'Type': 'STATEFUL'},
+                    'UpdateToken': 'token',
+                    'RuleGroupResponse': {'RuleGroupArn': GROUP, 'RuleGroupName': 'rules',
+                                          'RuleGroupId': 'rule-group-id', 'Type': 'STATEFUL'},
                     'RuleGroup': {'RulesSource': {'StatefulRules': [{
                         'Action': 'PASS',
                         'Header': {'Protocol': 'IP', 'Source': 'ANY', 'Destination': 'ANY',
                                    'SourcePort': 'ANY', 'DestinationPort': 'ANY',
-                                   'Direction': 'ANY'}}]}}}, {'RuleGroupArn': GROUP})
+                                   'Direction': 'ANY'}, 'RuleOptions': []}]}}}, {'RuleGroupArn': GROUP})
                 n.add_response('describe_firewall', {
-                    'Firewall': {'FirewallName': 'fw', 'FirewallArn': FW,
+                    'Firewall': {'FirewallId': 'firewall-id', 'FirewallName': 'fw', 'FirewallArn': FW,
                                  'FirewallPolicyArn': POLICY, 'VpcId': 'vpc-123',
                                  'SubnetMappings': [{'SubnetId': 'subnet-123'}]},
                     'FirewallStatus': {
