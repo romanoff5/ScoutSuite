@@ -224,7 +224,8 @@ def _ecr(services, selected, inspector, account_id):
             # Report a specific gap, without claiming images exist or are unscanned.
             repo_gap = (inspector_evidence['state'] in ('not_reported', 'inactive_reported')
                         and scanning['status'] in ('not_scan_on_push', 'not_matched'))
-            repository['m10q_repository_scan_gap_candidate'] = repo_gap
+            repository['m10q_repository_scan_gap_candidate'] = (
+                repo_gap or (observed and operational.get('status') == 'gap_observed'))
             total += 1
     return total
 
