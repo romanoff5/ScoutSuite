@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -25,6 +26,29 @@ ACTIONLINT = {
     'Windows': ('windows_amd64.zip', '6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9'),
     'Linux': ('linux_amd64.tar.gz', '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'),
 }
+
+
+
+# Cache only dependency wheels. Installed virtual environments are always fresh.
+# The content hashes protect against incomplete or damaged cache restores.
+WHEELHOUSE_FORMAT = 1
+
+
+def wheelhouse_inputs():
+    """Fingerprint all pinned requirements, constraints, Python and platform."""
+    paths = list(SOURCE.glob('requirements*.txt'))
+    paths += list((SOURCE / 'tests').glob('requirements*.txt'))
+    paths += [p for p in (SOURCE / 'constraints').rglob('*')
+              if p.is_file() and p.suffix in ('.txt', '.lock')]
+    paths.append(SOURCE / 'pyproject.toml')
+    digest = hashlib.sha256()
+    digest.update(repr((WHEELHOUSE_FORMAT, sys.version.split()[0],
+                        platform.system(), platform.machine())).encode('utf-8'))
+    for path in sorted(set(paths)):
+        digest.update(path.relative_to(SOURCE).as_posix().encode('utf-8'))
+        digest.update(b'\\0')
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
 
 
 def clean_environment(root, offline):
@@ -117,7 +141,41 @@ class Pipeline:
             raise RuntimeError('Parallel CI gates failed: ' + names) from errors[0][1]
 
     def pip(self, name, *arguments):
+        # Bytecode is compiled on demand during smoke/tests. Repeated eager
+        # compilation across six disposable venvs has no validation benefit.
+        if arguments and arguments[0] == 'install':
+            arguments = ('install', '--no-compile', *arguments[1:])
         self.run([python_at(self.root, name), '-m', 'pip', '--isolated', *arguments])
+
+    def wheelhouse_valid(self):
+        directory = self.root / 'wheelhouse'
+        try:
+            manifest = json.loads((self.root / 'wheelhouse-manifest.json').read_text(
+                encoding='utf-8'))
+            wheel_hashes = manifest['wheels']
+            if (manifest['format'] != WHEELHOUSE_FORMAT
+                    or manifest['inputs'] != wheelhouse_inputs()
+                    or not isinstance(wheel_hashes, dict) or not wheel_hashes):
+                return False
+            wheels = sorted(directory.glob('*.whl'))
+            if set(p.name for p in wheels) != set(wheel_hashes):
+                return False
+            return all(hashlib.sha256(p.read_bytes()).hexdigest() == wheel_hashes[p.name]
+                       for p in wheels if p.is_file()) and len(wheels) == len(wheel_hashes)
+        except (OSError, ValueError, TypeError, KeyError):
+            return False
+
+    def record_wheelhouse(self):
+        directory = self.root / 'wheelhouse'
+        wheels = sorted(directory.glob('*.whl'))
+        if not wheels:
+            raise RuntimeError('Cannot cache empty dependency wheelhouse')
+        manifest = {'format': WHEELHOUSE_FORMAT,
+                    'inputs': wheelhouse_inputs(),
+                    'wheels': {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                               for p in wheels}}
+        (self.root / 'wheelhouse-manifest.json').write_text(
+            json.dumps(manifest, sort_keys=True) + '\\n', encoding='utf-8')
 
     def create(self, name):
         assert not (self.root / name).exists(), 'Use a fresh CI root: ' + name
@@ -127,10 +185,19 @@ class Pipeline:
         self.create('build')
         self.pip('build', 'install', '--cache-dir', self.root / 'pip-cache',
                  '-r', SOURCE / 'constraints/build-py311.txt', '-r', SOURCE / 'constraints/ci-py311.txt')
-        self.pip('build', 'wheel', '--no-build-isolation', '--cache-dir', self.root / 'pip-cache',
-                 '-r', SOURCE / 'tests/requirements-offline.txt', '-r', SOURCE / 'constraints/build-py311.txt',
-                 '-c', SOURCE / 'constraints/ci-py311.txt', '-c', SOURCE / 'constraints/combined-py311.txt',
-                 '--wheel-dir', self.root / 'wheelhouse')
+        if self.wheelhouse_valid():
+            print('Validated cached dependency wheelhouse: reuse (fresh venvs retained)', flush=True)
+        else:
+            # Never permit a partial restore to contaminate a rebuilt wheelhouse.
+            shutil.rmtree(self.root / 'wheelhouse', ignore_errors=True)
+            (self.root / 'wheelhouse-manifest.json').unlink(missing_ok=True)
+            self.pip('build', 'wheel', '--no-build-isolation', '--cache-dir', self.root / 'pip-cache',
+                     '-r', SOURCE / 'tests/requirements-offline.txt',
+                     '-r', SOURCE / 'constraints/build-py311.txt',
+                     '-c', SOURCE / 'constraints/ci-py311.txt',
+                     '-c', SOURCE / 'constraints/combined-py311.txt',
+                     '--wheel-dir', self.root / 'wheelhouse')
+            self.record_wheelhouse()
         def prepare_profile(name):
             self.create(name)
             self.pip(name, 'install', '--cache-dir', self.root / 'pip-cache', 'pip==24.0',

@@ -47,13 +47,16 @@ jobs:
       - name: Set private environment root
         shell: pwsh
         run: '"SCOUT_CI_ROOT=$env:RUNNER_TEMP/scoutsuite-ci" >> $env:GITHUB_ENV'
-      - name: Cache dependency downloads and compiled dependency wheels
+      - name: Cache dependency downloads and validated dependency wheelhouse
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ${{ runner.temp }}/scoutsuite-ci/pip-cache
-          key: offline-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-${{ hashFiles('requirements*.txt', 'dev-requirements.txt', 'tests/requirements*.txt', 'constraints/**', 'pyproject.toml') }}
+          path: |
+            ${{ runner.temp }}/scoutsuite-ci/pip-cache
+            ${{ runner.temp }}/scoutsuite-ci/wheelhouse
+            ${{ runner.temp }}/scoutsuite-ci/wheelhouse-manifest.json
+          key: offline-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-${{ hashFiles('requirements*.txt', 'dev-requirements.txt', 'tests/requirements*.txt', 'constraints/**', 'pyproject.toml') }}
           restore-keys: |
-            offline-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-
+            offline-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.python }}-
       - name: Acquire pinned dependencies and workflow validator (online setup only)
         id: acquire
         run: python -B tools/ci.py acquire
