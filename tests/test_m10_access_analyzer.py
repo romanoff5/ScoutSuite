@@ -152,9 +152,10 @@ def test_malformed_and_token_loop_are_recorded_without_unbounded_work():
             try:
                 with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk), \
                      patch('ScoutSuite.providers.aws.facade.accessanalyzer.MAX_PAGES', 8), \
-                     patch('ScoutSuite.providers.aws.facade.accessanalyzer.MAX_ANALYZERS', 5):
+                     patch('ScoutSuite.providers.aws.facade.accessanalyzer.MAX_ANALYZERS',
+                           5 if reason == 'ResultLimit' else 100):
                     items = await AccessAnalyzerFacade(object()).get_analyzers(REGION)
-                assert len(items) <= 5
+                assert len(items) <= (5 if reason == 'ResultLimit' else 100)
                 assert ctx.collection_issues[-1]['reason_code'] == reason
                 assert sdk.list_analyzers.call_count <= 8
             finally:
