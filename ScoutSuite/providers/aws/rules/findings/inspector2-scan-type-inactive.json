@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Inspector v2 scan type is disabled or suspended",
+    "rationale": "A returned Inspector v2 scan type for this account and region is DISABLED or SUSPENDED. Not all scan types are required for all workloads; validate applicability before treating the configuration as a gap.",
+    "remediation": "Verify whether this scan type is required for the in-scope workload, then enable or resume it if appropriate.",
+    "references": [
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html"
+    ],
+    "dashboard_name": "Scan types",
+    "path": "inspector2.regions.id.accounts.id.scan_types.id",
+    "conditions": [
+        "and",
+        [
+            "inactive",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Inactive",
+    "evidence_policy": "inspector2-scan-type-state-v1"
+}

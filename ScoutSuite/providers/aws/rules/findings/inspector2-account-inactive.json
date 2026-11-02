@@ -1,0 +1,20 @@
+{
+    "description": "Amazon Inspector v2 account is disabled or suspended",
+    "rationale": "The current account's regional Inspector v2 account state is confirmed DISABLED or SUSPENDED. This does not establish coverage for individual resources, nor prove desired scan types are enabled.",
+    "remediation": "Review the Inspector v2 regional account state, enable or resume the service as required, and independently verify scan-type and resource-level coverage.",
+    "references": [
+        "https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html"
+    ],
+    "dashboard_name": "Accounts",
+    "path": "inspector2.regions.id.accounts.id",
+    "conditions": [
+        "and",
+        [
+            "inactive",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Inactive",
+    "evidence_policy": "inspector2-account-state-v1"
+}

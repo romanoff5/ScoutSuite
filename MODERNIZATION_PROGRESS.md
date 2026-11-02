@@ -199,3 +199,14 @@ report partial. AWS/region and organization-wide coverage are not implied.
 See [M10-B scope](docs/modernization/M10_GUARDDUTY.md).
 M10 overall remains incomplete; no other service is advertised without an
 independent complete vertical slice.
+
+## Task 13 / M10-D — Inspector v2 account/scan-type state (2026-11-02)
+
+Opt-in, own-account Inspector v2 regional state via bounded single-call
+`BatchGetAccountStatus(accountIds=[authenticated_account_id])`. The collector
+never enumerates organization accounts, findings or resource coverage.
+Denied, empty, malformed and failed-account responses do not imply clean.
+Normalized current-account and scan-type states, two evidence-aware inactive
+rules and escaped offline HTML were added. `ENABLING` and absent scan
+types remain unknown. See [M10-D contract](docs/modernization/M10_INSPECTOR2.md).
+M10-D2 `ListCoverage` aggregation remains explicitly unimplemented.
