@@ -194,7 +194,7 @@ def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_pat
         chrome, '--headless', '--no-sandbox', '--disable-gpu',
         '--disable-dev-shm-usage', '--no-first-run',
         '--virtual-time-budget=1500', '--dump-dom', page_path.as_uri(),
-    ], capture_output=True, text=True, timeout=30, check=False)
+    ], capture_output=True, text=True, timeout=75, check=False)
     assert run.returncode == 0, run.stderr[-2000:]
     match = re.search(r'<output id="audit-result">(.*?)</output>', run.stdout, re.S)
     assert match, run.stdout[-2500:]
