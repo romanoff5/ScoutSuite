@@ -2,6 +2,7 @@ from boto3.session import Session
 
 from ScoutSuite.providers.aws.facade.acm import AcmFacade
 from ScoutSuite.providers.aws.facade.accessanalyzer import AccessAnalyzerFacade
+from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade
 from ScoutSuite.providers.aws.facade.awslambda import LambdaFacade
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.cloudformation import CloudFormation
@@ -177,6 +178,7 @@ class AWSFacade(AWSBaseFacade):
         self.sqs = SQSFacade(self.session)
         self.secretsmanager = SecretsManagerFacade(self.session)
         self.emr = EMRFacade(self.session)
+        self.guardduty = GuardDutyPublicFacade(self.session)
 
         # Instantiate facades for proprietary services
         try:
