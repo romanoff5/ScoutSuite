@@ -143,8 +143,6 @@ class BedrockFacade(AWSBaseFacade):
                     }
             calls = [
                 ('guardrails', 'list_guardrails', 'guardrails'),
-                ('enforced_guardrails', 'list_enforced_guardrails_configuration',
-                 'guardrailsConfig'),
                 ('inference_profiles', 'list_inference_profiles', 'inferenceProfileSummaries'),
                 ('provisioned_models', 'list_provisioned_model_throughputs',
                  'provisionedModelSummaries'),
@@ -289,6 +287,35 @@ class BedrockFacade(AWSBaseFacade):
                     self.issue('partial', 'DataSourceDetailLimit')
             raw['collection']['knowledge_base_details'] = (
                 kb_detail_complete and len(raw['knowledge_bases']) <= MAX_DETAILS)
+        if control is not None:
+            # An account may invoke on-demand foundation models without
+            # provisioned throughput or customer-created guardrails. Therefore
+            # an empty resource inventory is only "not observed", never proof
+            # that Bedrock is unused or account-level guardrails are absent.
+            # Avoid a restricted secondary API on fully verified empty
+            # customer-workload inventory; retain UNKNOWN coverage explicitly.
+            workload_keys = ('guardrails', 'provisioned_models', 'model_jobs',
+                             'agents', 'knowledge_bases', 'flows', 'prompts')
+            discovery_complete = (raw['logging_verified'] and all(
+                raw['collection'].get(k) is True for k in workload_keys))
+            workload_observed = (
+                any(raw.get(k) for k in workload_keys)
+                or any(raw['logging_config'].get(k) is True for k in (
+                    'text_enabled', 'image_enabled', 'embedding_enabled',
+                    'audio_enabled', 'video_enabled')))
+            if discovery_complete and not workload_observed:
+                raw['collection']['enforced_guardrails'] = False
+                raw['enforced_guardrails_evidence_status'] = (
+                    'deferred_no_customer_workload_evidence')
+            else:
+                rows, complete = await self.pages(
+                    control, 'list_enforced_guardrails_configuration',
+                    'guardrailsConfig')
+                raw['enforced_guardrails'] = rows
+                raw['collection']['enforced_guardrails'] = complete
+                raw['enforced_guardrails_evidence_status'] = (
+                    'verified' if complete else 'incomplete')
+
         if control is None:
             for k in ('guardrails', 'enforced_guardrails', 'inference_profiles',
                       'provisioned_models', 'model_jobs', 'guardrail_details'):
