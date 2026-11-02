@@ -5,8 +5,15 @@ sensitive information retrieval. The `macie` service is included in default
 AWS scans; `--skip-services macie` disables it.
 
 ## Regional AWS API surface
-- `macie2:GetMacieSession`: verified ENABLED, PAUSED or not-enabled (404);
-  AccessDenied/other failures are UNKNOWN, not a clean passing inventory.
+- `macie2:GetMacieSession`: verified ENABLED, PAUSED or NOT_ENABLED
+  (404 ResourceNotFoundException **or** 403 AccessDeniedException containing
+  the explicit service message `Macie is not enabled.`). A generic IAM
+  AccessDenied or any other error is UNKNOWN, **not** NOT_ENABLED.
+  The service-disabled result has `session_verified: true`, triggers
+  `macie-session-not-enabled`, and does not attempt jobs/buckets collection.
+  A CLI `macie2 list-findings` failure with the same explicit message is
+  independent corroborating evidence; the scanner itself does **not** call
+  `ListFindings` or retrieve sensitive finding IDs.
 - `macie2:GetAutomatedDiscoveryConfiguration` and
   `macie2:GetClassificationScope`: automated discovery and bucket exclusions.
 - `macie2:ListClassificationJobs` and

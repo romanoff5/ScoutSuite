@@ -44,6 +44,33 @@ def age_days(value, now=None):
     return max(0, (now - parsed).total_seconds() / 86400)
 
 
+def is_macie_session_not_enabled(error):
+    """Classify only explicit Macie-disabled responses, not generic IAM denials.
+
+    Macie can return AccessDeniedException with the message "Macie is not
+    enabled." for a disabled regional account. An AccessDeniedException without
+    that exact service-state message remains UNKNOWN/denied.
+    """
+    if not isinstance(error, ClientError):
+        return False
+    details = error.response.get('Error', {})
+    code = details.get('Code')
+    if code == 'ResourceNotFoundException':
+        return True
+    if code != 'AccessDeniedException':
+        return False
+    message = details.get('Message', '')
+    if not isinstance(message, str):
+        return False
+    normalized = ' '.join(message.split()).strip().rstrip('.').casefold()
+    return normalized in (
+        'macie is not enabled',
+        'amazon macie is not enabled',
+        "macie isn't enabled",
+        "amazon macie isn't enabled",
+    )
+
+
 class PageRows(list):
     def __init__(self, iterable=()):
         super().__init__(iterable)
@@ -125,7 +152,7 @@ class MacieFacade(AWSBaseFacade):
         try:
             session = await run_concurrently(client.get_macie_session)
         except ClientError as error:
-            if error.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            if is_macie_session_not_enabled(error):
                 result['session_status'] = 'NOT_ENABLED'
                 result['session_verified'] = True
                 return result
