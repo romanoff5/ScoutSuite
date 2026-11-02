@@ -1,0 +1,24 @@
+<!-- M10-L: all Identity Center evidence is escaped by Handlebars. -->
+<script id="services.identitycenter.regions.id.instances.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>IAM Identity Center instance</h4>
+    <p>Instance ARN: <samp>{{arn}}</samp></p>
+    <p>Identity Store ID: <samp>{{identity_store_id}}</samp>; Owner account: <samp>{{owner_account_id}}</samp></p>
+    <p>Region: {{region}}; Status: {{status}}; Created: {{created_date}}</p>
+    <p>Permission sets: {{permission_sets_count}}; Users: {{users_count}}; Groups: {{groups_count}}</p>
+    <p>Organization coverage: {{organization_coverage_status}}; Inventory complete: {{collection_complete}}</p>
+    <h4>Collection status</h4>
+    {{#each collection}}<p>{{@key}}: {{this}}</p>{{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.identitycenter.regions.id.instances", $("#services\\.identitycenter\\.regions\\.id\\.instances\\.partial").html());
+</script>
+<script id="single_identitycenter_instance-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.identitycenter.regions.id.instances' }}
+</script>
+<script>
+  var single_identitycenter_instance_template =
+    Handlebars.compile($("#single_identitycenter_instance-template").html());
+</script>
