@@ -1,93 +1,90 @@
-# ScoutSuite RC2 — Ridgepay installation, preflight and rollback
+# ScoutSuite RC3 — Ridgepay install, read-only preflight and rollback
 
-**Fork-only RC2:** 5.14.0+romanoff5.m10rc2. Published RC1 and the local RC1
-hotfix remain immutable. Default RC2 runtime: Windows PowerShell 7+ and Python 3.11.
+The published RC1 and RC2 releases are immutable. RC3 is a new candidate
+including a real-scan ECR false-negative correction and offline report
+consistency utility. Requirements: Windows, PowerShell 7, CPython 3.11.
 
-## Isolated installation
+## Install the verified RC3 release side-by-side
 
-The installer creates only `<ToolkitRoot>\.venv-scout-fork-rc2`.
-It never replaces `<ToolkitRoot>\.venv-scout` (stable) or
-`<ToolkitRoot>\.venv-scout-fork` (RC1/hotfix).
-It refuses to overwrite an existing RC2 installation; do not delete or
-replace a working scanner automatically. A failed first installation removes
-only the newly created RC2 environment.
-
-From a trusted clone of `romanoff5/ScoutSuite` on Windows:
+From the trusted `romanoff5/ScoutSuite` clone:
 
 ```powershell
+git checkout master
+git pull --ff-only origin master
 $toolkit = Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'
-# Scope execution-policy override to this new PowerShell process (never LocalMachine).
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-fork.ps1 `
-  -FromRelease -ReleaseTag fork-v5.14.0-m10-rc2 -ToolkitRoot $toolkit
+  -FromRelease -ReleaseTag fork-v5.14.0-m10-rc3 -ToolkitRoot $toolkit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 `
+  -Mode Fork -ToolkitRoot $toolkit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\invoke-selected-scout.ps1 `
+  -ToolkitRoot $toolkit aws --help
 ```
 
-The release installer fetches wheel, `manifest.json`, `SHA256SUMS` and
-`runtime-py311.constraints.txt` from this fork's pinned release. It
-checks hashes and metadata before installing, performs `pip check` and
-CLI help smoke, then records SHA/provenance and executable hash. Independently
-verify release SHA256SUMS through a trusted channel; cohosted hashes are not
-signatures. Group Policy enforcement can override process execution policy.
+The installer verifies SHA256SUMS, manifest, pinned Python 3.11 constraints
+and the wheel before creating `<ToolkitRoot>\.venv-scout-fork-rc3`.
+It performs `pip check`, CLI smoke and records provenance and executable
+SHA256. Hashes distributed by the same publisher are not cryptographic
+signatures. Windows Group Policy may prohibit an execution-policy override.
+No credentials, AWS API calls or scans are performed by installation.
 
-For a locally built wheel use the **matching** reviewed source revision:
+Existing environments are preserved:
+- RC3: `.venv-scout-fork-rc3`
+- RC2: `.venv-scout-fork-rc2`
+- RC1/hotfix: `.venv-scout-fork`
+- Stable: `.venv-scout`
 
-```powershell
-$wheel = (Get-ChildItem .\dist\scoutsuite-5.14.0+romanoff5.m10rc2-*.whl |
-    Select-Object -First 1).FullName
-$hash = (Get-FileHash -LiteralPath $wheel -Algorithm SHA256).Hash
-$commit = git rev-parse HEAD
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-fork.ps1 `
-  -WheelPath $wheel -CommitSha $commit -ExpectedSha256 $hash -ToolkitRoot $toolkit
-```
-
-Local installs use the checkout's `constraints/combined-py311.txt` by
-default. The caller must audit and trust the specified source and wheel.
-
-## Explicit selection
+To explicitly change scanner or roll back without deleting reports:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 -Mode Fork -ToolkitRoot $toolkit
-# Explicit rollback: choose old installed fork, or stable.
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 -Mode ForkRc2 -ToolkitRoot $toolkit
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 -Mode ForkRc1 -ToolkitRoot $toolkit
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\select-scanner.ps1 -Mode Stable -ToolkitRoot $toolkit
 ```
 
-`Fork` selects RC2, `ForkRc1` selects the existing old fork installation,
-and `Stable` selects stable ScoutSuite. A missing config defaults to stable;
-invalid config refuses to launch. The wrapper checks RC2 executable hash,
-package version and provenance before launching. It does not hash-verify every
-installed library on each invocation. Use the installed-wheel verification
-gate for complete package-byte checks.
+`Fork` selects RC3; `ForkRc2` selects existing RC2. Invalid configuration
+or missing provenance is rejected rather than silently switching versions.
+The external Audit Toolkit must be deliberately wired to
+`scripts/invoke-selected-scout.ps1` if its existing hardcoded invocation
+otherwise bypasses selection.
 
-To use selection, **explicitly integrate** `scripts/invoke-selected-scout.ps1`
-into the external AWS Audit Toolkit. This repository does not silently modify
-the toolkit launcher. Without that one-time integration, an existing toolkit
-script can continue using its hardcoded scanner.
+## Authorized Ridgepay preflight
 
-## Ridgepay read-only preflight (authorized user action)
+1. Check source Identity Center authentication and configured profile, region
+   and expected cross-account role. Do not print credentials. Confirm the
+   read-only role and any ExternalId.
+2. Verify `aws sts get-caller-identity --profile <audit-profile>` and
+   expected account context before scanning.
+3. Run a **single approved Region** with `--no-browser` into a separate
+   output directory; avoid concurrent scans writing the same report files.
+4. Inspect account/region identity, collection status, exceptions and
+   service-level API gaps. Exit code 0 is not complete collection.
+5. Run the postscan offline evidence integrity checker against the local
+   RESULTS JS file:
 
-1. Confirm the configured AWS profile and target role, including ExternalId,
-   source Identity Center login and target account. Do not print credentials.
-2. Confirm expected Regions, partition, role permissions and any
-   `AccessDenied`/SCP restrictions. Use the existing audit scripts and
-   `aws sts get-caller-identity --profile <audit-profile>`.
-3. Execute a **single authorized read-only smoke scan**, with
-   `--no-browser`, isolated report output and no production mutations.
-4. Verify account and Region identity, scan exit code, and any
-   `collection_issues` or partial service status in JSON/SQLite/HTML.
-   Specifically check ECR/Inspector, SSM, Backup, WAFv2, CloudTrail,
-   Organizations, Macie and Bedrock when those services are in scope.
-5. Review throttling, API access and unsupported services, then run only the
-   agreed full scope. Keep client report files local and confidential.
+   ```powershell
+   python -B .\tools\audit_scan_evidence.py `
+     "C:\path\to\private\scoutsuite-results\scoutsuite_results_<id>.js" `
+     --fail-on-discrepancy
+   ```
 
-Neither the installer nor CI invokes AWS APIs or looks up credentials. All
-cloud preflight actions require authorized user execution.
+6. Review JSON/SQLite/HTML, especially ECR BASIC/ENHANCED rule alignment,
+   Inspector2 coverage stats, SSM Patch Baselines, Identity Center,
+   Organizations, Security Hub, Macie, Bedrock, advanced S3 and Backup.
+   AccessDenied and unsupported/partial are neither PASS nor evidence of
+   absent security controls.
 
-## Recovery
+The offline checker writes no report or other files, makes no network calls
+and prints only rule names and numeric counts. Keep full reports and any
+manual validation results local. All cloud calls require an authorized
+read-only invocation; no credential use is part of CI.
 
-If the RC2 scanner fails a preflight, switch to `ForkRc1` or `Stable`
-with `select-scanner.ps1`; never delete reports, credentials or venvs
-automatically. RC1 was known to lack the fixed evidence policies, so the
-stable path is preferable to uncorrected RC1 for a fallback assessment.
-Do not run two simultaneous scans to the same output directory.
+## Troubleshooting and recovery
 
-Release notes: [fork-v5.14.0-m10-rc2.md](fork-v5.14.0-m10-rc2.md).
+The default selection is stable if no selection file exists.
+`ForkRc2` is the recommended explicit rollback to the preceding fixed fork.
+RC1 was known to have missing evidence-policy evaluators unless the separate
+runtime hotfix is installed. Do not delete virtual environments, credentials,
+client reports or preexisting assets in an automated fallback.
+
+Detailed evidence: [RIDGEPAY_RC1_FIELD_FEEDBACK.md](RIDGEPAY_RC1_FIELD_FEEDBACK.md).
