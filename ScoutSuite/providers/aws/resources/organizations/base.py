@@ -1,4 +1,6 @@
-"""M10-C global Organizations resource schema with no emails or policy bodies."""
+"""M10-C global Organizations account and policy diagnostics (no secret values)."""
+from datetime import datetime
+
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.resources.base import AWSResources
 
@@ -26,7 +28,14 @@ class Organizations(AWSResources):
             'feature_set': feature_set if feature_set in
                            ('ALL', 'CONSOLIDATED_BILLING') else 'UNKNOWN',
             'management_account_id': raw.get('ManagementAccountId') or raw.get('MasterAccountId'),
-            # Deliberately exclude MasterAccountEmail / ManagementAccountEmail.
+            'management_account_arn': raw.get('ManagementAccountArn') or raw.get('MasterAccountArn'),
+            'management_account_email': raw.get('ManagementAccountEmail') or raw.get('MasterAccountEmail'),
+            # Deprecated on AWS; retained for diagnostic completeness, never used for root SCP evaluation.
+            'available_policy_types': [
+                {'type': item.get('Type'), 'status': item.get('Status')}
+                for item in (raw.get('AvailablePolicyTypes') or [])
+                if isinstance(item, dict)
+            ],
         }
 
     @classmethod
@@ -55,6 +64,10 @@ class Organizations(AWSResources):
             'arn': raw.get('Arn'), 'scp_status': state,
             'scp_enabled': state == 'ENABLED' if state not in
                            ('UNKNOWN', 'NOT_APPLICABLE') else None,
+            'policy_types': [
+                {'type': item.get('Type'), 'status': item.get('Status')}
+                for item in policy_types if isinstance(item, dict)
+            ] if isinstance(policy_types, list) else [],
         }
 
     @classmethod
@@ -65,11 +78,14 @@ class Organizations(AWSResources):
             state = 'UNKNOWN'
             cls._issue('UnknownAccountState')
         identifier = raw['Id']
+        joined_at = raw.get('JoinedTimestamp')
+        if isinstance(joined_at, datetime):
+            joined_at = joined_at.isoformat()
         return {
             'id': identifier, 'name': raw.get('Name') or identifier,
-            'arn': raw.get('Arn'), 'state': state,
-            'joined_method': raw.get('JoinedMethod'),
-            # Email and legacy Status are intentionally NOT included.
+            'arn': raw.get('Arn'), 'email': raw.get('Email'),
+            'state': state, 'legacy_status': raw.get('Status'),
+            'joined_method': raw.get('JoinedMethod'), 'joined_timestamp': joined_at,
         }
 
     async def fetch_all(self, **kwargs):
