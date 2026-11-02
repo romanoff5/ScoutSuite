@@ -99,7 +99,8 @@ def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
                 b.add_response('describe_user', {
                     'UserId': USER, 'IdentityStoreId': STORE,
                     'UserName': 'synthetic-admin', 'DisplayName': '<admin & member>',
-                    'Emails': [{'Value': 'admin@example.test', 'Primary': True}]},
+                    'Emails': [{'Value': 'admin@example.test', 'Primary': True},
+                               {'Value': 'secondary@example.test', 'Primary': False}]},
                     {'IdentityStoreId': STORE, 'UserId': USER})
                 with patch.object(AWSFacadeUtils, 'get_client',
                                   side_effect=lambda svc, session, region: (
@@ -120,6 +121,8 @@ def test_sdk_stubber_reconstructs_group_to_account_admin_access_with_email():
         assert raw['principal_name'] == 'Security Administrators'
         assert raw['group_members_complete'] is True
         assert raw['group_members'][0]['email'] == 'admin@example.test'
+        assert raw['group_members'][0]['emails'][1]['Value'] == 'secondary@example.test'
+        assert raw['group_members'][0]['membership_id'] == 'membership-1'
         assert raw['permission_boundary']['ManagedPolicyArn'].endswith('ReadOnlyAccess')
         assert raw['account_id'] == ACCOUNT and raw['permission_set_arn'] == PERMISSION
         source = SimpleNamespace(
@@ -254,3 +257,39 @@ def test_default_selection_and_escaped_confidential_report_fields():
     assert '{{{' not in template
     assert 'onclick=' not in template
     assert 'javascript:' not in template
+
+
+def test_missing_identitystore_client_preserves_assignment_and_marks_unknown():
+    async def scenario():
+        sso = Mock()
+        sso.list_instances.return_value = {
+            'Instances': [{'InstanceArn': INSTANCE, 'IdentityStoreId': STORE}]}
+        sso.list_permission_sets.return_value = {'PermissionSets': [PERMISSION]}
+        sso.describe_permission_set.return_value = {'PermissionSet': {
+            'Name': 'Admin', 'PermissionSetArn': PERMISSION}}
+        sso.list_managed_policies_in_permission_set.return_value = {
+            'AttachedManagedPolicies': [{'Name': 'AdministratorAccess', 'Arn': ADMIN}]}
+        sso.list_customer_managed_policy_references_in_permission_set.return_value = {
+            'CustomerManagedPolicyReferences': []}
+        sso.get_inline_policy_for_permission_set.return_value = {'InlinePolicy': ''}
+        sso.get_permissions_boundary_for_permission_set.return_value = {}
+        sso.list_accounts_for_provisioned_permission_set.return_value = {'AccountIds': [ACCOUNT]}
+        sso.list_account_assignments.return_value = {'AccountAssignments': [{
+            'AccountId': ACCOUNT, 'PermissionSetArn': PERMISSION,
+            'PrincipalId': GROUP, 'PrincipalType': 'GROUP'}]}
+        ctx = RunContext('aws').setup()
+        try:
+            with patch.object(AWSFacadeUtils, 'get_client',
+                              side_effect=lambda svc, session, region: (
+                                  sso if svc == 'sso-admin' else None)):
+                records = await IdentityCenterFacade(object()).get_instances(REGION)
+            assert len(records) == 1
+            assert len(records[0]['assignments']) == 1
+            assert records[0]['assignments'][0]['principal_id'] == GROUP
+            assert records[0]['assignments'][0]['identity_resolution_status'] == 'unknown'
+            assert records[0]['assignments'][0]['group_members_complete'] is False
+            assert any(issue['reason_code'] == 'IdentityStoreClientUnavailable'
+                       for issue in ctx.collection_issues)
+        finally:
+            await ctx.aclose()
+    asyncio.run(scenario())
