@@ -1,0 +1,43 @@
+<!-- M10-O: offline escaped Handlebars; no untrusted HTML sinks. -->
+<script id="services.ssm.regions.id.managed_nodes.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>SSM managed node and patch posture</h4>
+    <p>Instance ID: <samp>{{instance_id}}</samp>; Resource type: {{resource_type}}</p>
+<p>Platform: {{platform_type}} / {{platform_name}} {{platform_version}}</p>
+<p>IAM role: {{iam_role}}; Agent: {{agent_version}} / {{agent_status}}</p>
+<p>Last ping: {{last_agent_ping_at}}; Age (hours): {{agent_ping_age_hours}}</p>
+<p>Agent recently online: {{agent_online_recent}}; Agent latest: {{agent_is_latest}}</p>
+<p>Patch health: <strong>{{patch_health}}</strong>; Inventory complete: {{patch_inventory_complete}}</p>
+<p>Patch baseline: <samp>{{patch_baseline_id}}</samp>; Resolution: {{baseline_resolution}}</p>
+<p>Patch group: {{patch_group}}; Snapshot ID: <samp>{{patch_snapshot_id}}</samp></p>
+<p>Most recent patch operation: {{latest_patch_operation}}</p>
+<p>Operation started: {{latest_patch_operation_started_at}}; Ended: {{latest_patch_operation_ended_at}}</p>
+<p>Operation age (hours): {{latest_patch_operation_age_hours}}; Snapshot fresh: {{patch_snapshot_fresh}}</p>
+<p>Last **confirmed successful scan** timestamp: {{last_successful_scan_at}}</p>
+<p>Timestamp source: {{scan_timestamp_source}}; Confirmed: {{scan_evidence}}</p>
+<p>Successful scan fresh: {{successful_scan_fresh}}; Age (hours): {{last_successful_scan_age_hours}}</p>
+<p>Scan command ID: <samp>{{scan_command_id}}</samp></p>
+<p>Critical non-compliant patches: {{critical_noncompliant_count}}</p>
+<p>Security non-compliant patches: {{missing_security_patch_count}}</p>
+<p>Missing: {{patch_counts.MissingCount}}; Failed: {{patch_counts.FailedCount}}</p>
+<p>Installed pending reboot: {{patch_counts.InstalledPendingRebootCount}}</p>
+<p>Installed rejected: {{patch_counts.InstalledRejectedCount}}</p>
+<p>Available security updates not yet approved (if supported): {{patch_counts.AvailableSecurityUpdateCount}}</p>
+<p>Patch state collection: {{patch_state_collection}}; Patch detail collection: {{patch_details_collection}}</p>
+<p>Command scan evidence collection: {{scan_evidence_collection}}</p>
+<h4>Known missing and non-compliant patches (bounded inventory)</h4>
+{{#each missing_patch_details}}
+<p>Patch: <samp>{{kb_id}}</samp> — {{title}}; State: {{state}}; Severity: {{severity}}; Classification: {{classification}}</p>
+{{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions.id.managed_nodes", $("#services\\.ssm\\.regions\\.id\\.managed_nodes\\.partial").html());
+</script>
+<script id="single_ssm_managed_nodes-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions.id.managed_nodes' }}
+</script>
+<script>
+  var single_ssm_managed_nodes_template = Handlebars.compile($("#single_ssm_managed_nodes-template").html());
+</script>
