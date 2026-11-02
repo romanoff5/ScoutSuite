@@ -199,3 +199,12 @@ report partial. AWS/region and organization-wide coverage are not implied.
 See [M10-B scope](docs/modernization/M10_GUARDDUTY.md).
 M10 overall remains incomplete; no other service is advertised without an
 independent complete vertical slice.
+
+## Task 13 / M10-C — AWS Organizations vertical slice (2026-11-02)
+
+Branch: `modernization/m10c-organizations-vertical-slice`. Opt-in global partition-aware Organizations read-only inventory
+(DescribeOrganization, ListRoots, ListAccounts); evidence-aware ALL features/SCP root
+findings; bounded pagination; explicit access/partial states; account emails excluded.
+See [M10-C scope and rollback](docs/modernization/M10_ORGANIZATIONS.md).
+M10 remains partially delivered (Organizations does not include policy contents,
+OU hierarchy, effective SCP evaluation, or organization-wide proof).
