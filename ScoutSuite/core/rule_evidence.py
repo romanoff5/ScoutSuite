@@ -519,7 +519,47 @@ def classify_backup_vault_lock(vault):
     return 'unknown'
 
 
+def classify_identitycenter_admin(assignment):
+    """Finding if explicitly observed; otherwise unknown on incomplete scope."""
+    if not isinstance(assignment, dict):
+        return 'unknown'
+    if assignment.get('admin_candidate') is True:
+        return 'insecure'
+    if (assignment.get('policy_analysis_complete') is True
+            and assignment.get('principal_resolved') is True
+            and assignment.get('organization_coverage_status') == 'complete'):
+        return 'secure'
+    return 'unknown'
+
+
+def classify_identitycenter_broad(assignment):
+    if not isinstance(assignment, dict):
+        return 'unknown'
+    if assignment.get('broad_permissions_candidate') is True:
+        return 'insecure'
+    if (assignment.get('policy_analysis_complete') is True
+            and assignment.get('principal_resolved') is True
+            and assignment.get('organization_coverage_status') == 'complete'):
+        return 'secure'
+    return 'unknown'
+
+
+def classify_identitycenter_cross_account(assignment):
+    if not isinstance(assignment, dict):
+        return 'unknown'
+    if assignment.get('cross_account_admin_candidate') is True:
+        return 'insecure'
+    if (assignment.get('policy_analysis_complete') is True
+            and assignment.get('principal_resolved') is True
+            and assignment.get('organization_coverage_status') == 'complete'):
+        return 'secure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'identitycenter-admin-assignment-v1': classify_identitycenter_admin,
+    'identitycenter-broad-assignment-v1': classify_identitycenter_broad,
+    'identitycenter-cross-account-admin-v1': classify_identitycenter_cross_account,
     'backup-vault-lock-v1': classify_backup_vault_lock,
     'inspector2-member-state-v1': classify_inspector2_member,
     'inspector2-account-state-v1': classify_inspector2_account,
