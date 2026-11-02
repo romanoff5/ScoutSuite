@@ -125,9 +125,6 @@ def test_verified_empty_region_and_unknown_detail_are_distinct():
             with Stubber(ctrl) as sc, Stubber(s3) as ss:
                 sc.add_response('list_access_points', {'AccessPointList': []},
                                 {'AccountId': ACCOUNT, 'MaxResults': 100})
-                sc.add_response('list_access_points_for_directory_buckets',
-                                {'AccessPointList': []},
-                                {'AccountId': ACCOUNT, 'MaxResults': 100})
                 ss.add_response('list_directory_buckets', {'Buckets': []},
                                 {'MaxDirectoryBuckets': 100})
                 sc.add_response('list_access_grants_instances',
@@ -139,7 +136,8 @@ def test_verified_empty_region_and_unknown_detail_are_distinct():
                     result = await facade._scan_region(REGION)
                 sc.assert_no_pending_responses()
                 ss.assert_no_pending_responses()
-            assert result['coverage_status'] == 'complete'
+            assert result['coverage_status'] == 'incomplete'
+            assert result['collection']['directory_access_points'] == 'deferred_cross_account_scope_unknown'
             assert result['collection']['access_grants'] == 'not_configured'
             assert result['directory_buckets_count'] == 0
         finally:
