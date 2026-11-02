@@ -96,3 +96,103 @@ def test_new_rules_are_enabled_in_default_and_detailed_without_legacy_mutation()
             assert data['rules'][rule][0]['enabled'] is True
     legacy = json.loads((base / 'cis-1.2.0.json').read_text(encoding='utf-8'))
     assert legacy.get('benchmark', {}).get('version') != '7.1.0'
+
+
+def test_s3_effective_bpa_and_securityhub_state_fail_closed():
+    import asyncio
+    from unittest.mock import Mock, patch
+    from botocore.exceptions import ClientError
+    from ScoutSuite.core.rule_evidence import (
+        classify_s3_block_public_access, classify_securityhub_subscription)
+    from ScoutSuite.providers.aws.resources.s3.base import S3
+    from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
+    from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
+
+    flags = ('BlockPublicAcls', 'IgnorePublicAcls',
+             'BlockPublicPolicy', 'RestrictPublicBuckets')
+    all_true = {k: True for k in flags}
+    partial = dict(all_true, RestrictPublicBuckets=False)
+    source = SimpleNamespace(s3=Mock(), owner_id='000000000000')
+    s3 = S3(source)
+    s3['public_access_block_configuration'] = all_true
+    s3['buckets'] = {
+        'safe': {'public_access_block_configuration': partial},
+        'bad': {'public_access_block_configuration': {k: False for k in flags}},
+        'unknown': {'public_access_block_configuration': None},
+    }
+    asyncio.run(s3.finalize())
+    # Account-level explicit blocks protect safe even if bucket-level options differ.
+    assert s3['buckets']['safe']['effective_bpa_review'] == 'complete'
+    assert s3['buckets']['bad']['effective_bpa_review'] == 'complete'
+    assert s3['buckets']['unknown']['effective_bpa_review'] == 'complete'
+    for bucket in s3['buckets'].values():
+        assert classify_s3_block_public_access(bucket) == 'secure'
+
+    s3['public_access_block_configuration'] = {k: False for k in flags}
+    asyncio.run(s3.finalize())
+    assert s3['buckets']['bad']['effective_bpa_review'] == 'missing'
+    assert classify_s3_block_public_access(s3['buckets']['bad']) == 'insecure'
+    assert s3['buckets']['unknown']['effective_bpa_review'] == 'unknown'
+    assert classify_s3_block_public_access(s3['buckets']['unknown']) == 'unknown'
+
+    assert classify_securityhub_subscription({'hub_subscription_status': 'enabled'}) == 'secure'
+    assert classify_securityhub_subscription({'hub_subscription_status': 'not_subscribed'}) == 'insecure'
+    assert classify_securityhub_subscription({'hub_subscription_status': 'unknown'}) == 'unknown'
+
+    facade = SecurityHubPublicFacade.__new__(SecurityHubPublicFacade)
+    facade.session = object()
+    denied = Mock()
+    denied.describe_hub.side_effect = ClientError(
+        {'Error': {'Code': 'AccessDeniedException', 'Message': 'synthetic'}},
+        'DescribeHub')
+    unsubscribed = Mock()
+    unsubscribed.describe_hub.side_effect = ClientError(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'synthetic'}},
+        'DescribeHub')
+
+    async def scenario():
+        with patch.object(AWSFacadeUtils, 'get_client', side_effect=[denied, unsubscribed]):
+            assert await facade.get_hub('eu-west-1') is None
+            assert await facade.get_hub('eu-west-2') is None
+    asyncio.run(scenario())
+    assert facade.hub_states['eu-west-1'] == 'unknown'
+    assert facade.hub_states['eu-west-2'] == 'not_subscribed'
+
+
+def test_cis71_s3_and_securityhub_findings_do_not_promote_unknown_to_pass(tmp_path):
+    rules = {'about': 'Synthetic only', 'rules': {
+        's3-bucket-public-access-block-incomplete.json': [
+            {'enabled': True, 'level': 'warning'}],
+        'securityhub-region-not-subscribed.json': [
+            {'enabled': True, 'level': 'warning'}],
+    }}
+    target = tmp_path / 'synthetic-cis71.json'
+    target.write_text(json.dumps(rules), encoding='utf-8')
+    provider = SimpleNamespace(
+        service_list=['s3', 'securityhub'],
+        services={
+            's3': {'buckets': {
+                'ok': {'effective_bpa_review': 'complete'},
+                'bad': {'effective_bpa_review': 'missing'},
+                'unknown': {'effective_bpa_review': 'unknown'},
+            }},
+            'securityhub': {'regions': {
+                'eu-west-1': {'hub_subscription_status': 'enabled'},
+                'eu-west-2': {'hub_subscription_status': 'not_subscribed'},
+                'eu-central-1': {'hub_subscription_status': 'unknown'},
+            }},
+        })
+    ctx = RunContext('aws').setup()
+    try:
+        ProcessingEngine(Ruleset('aws', filename=str(target))).run(provider)
+        for service, key in (
+                ('s3', 's3-bucket-public-access-block-incomplete'),
+                ('securityhub', 'securityhub-region-not-subscribed')):
+            finding = provider.services[service]['findings'][key]
+            assert finding['flagged_items'] == 1
+            assert finding['evaluation_summary']['counts'] == {
+                'secure': 1, 'insecure': 1, 'unknown': 1, 'not_applicable': 0}
+            assert finding['assessment_status'] == 'incomplete'
+            assert finding['evaluation_summary']['compliance_verified'] is False
+    finally:
+        ctx.cleanup()
