@@ -25,7 +25,7 @@ policyuniverse==1.5.1.20231109
 portend==3.2.1
 pygments==2.21.0
 pyreadline3==3.5.6; sys_platform == "win32"
-python-dateutil==2.8.0
+python-dateutil==2.9.0.post0
 rich==15.0.0
 s3transfer==0.19.3
 setuptools==80.9.0
