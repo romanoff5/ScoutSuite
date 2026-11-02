@@ -1,0 +1,20 @@
+{
+    "description": "Security Hub standard subscription is failed or incomplete",
+    "rationale": "A regional Security Hub standards subscription reports FAILED or INCOMPLETE. PENDING, DELETING and missing status are not considered healthy. This check does not assert organization-wide coverage or compliance.",
+    "remediation": "Inspect the subscription status reason and repair standard enablement or controls; independently confirm the intended standards and delegated administrator configuration.",
+    "references": [
+        "https://docs.aws.amazon.com/securityhub/1.0/APIReference/API_GetEnabledStandards.html"
+    ],
+    "dashboard_name": "Standards",
+    "path": "securityhub.regions.id.hubs.id.standards.id",
+    "conditions": [
+        "and",
+        [
+            "unhealthy",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "Unhealthy",
+    "evidence_policy": "securityhub-standard-state-v1"
+}

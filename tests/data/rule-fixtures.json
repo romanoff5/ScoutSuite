@@ -396,6 +396,7 @@
       "s3-bucket-world-acl.json",
       "s3-bucket-world-policy-arg.json",
       "s3-bucket-world-policy-star.json",
+      "securityhub-standard-status-unhealthy.json",
       "ses-identity-dkim-not-enabled.json",
       "ses-identity-dkim-not-verified.json",
       "ses-identity-world-policy.json",

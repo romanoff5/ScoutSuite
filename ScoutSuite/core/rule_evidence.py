@@ -308,6 +308,18 @@ def classify_access_analyzer(analyzer):
     return 'unknown'
 
 
+def classify_securityhub_standard(standard):
+    """Only READY is healthy; FAILED/INCOMPLETE are confirmed unhealthy."""
+    if not isinstance(standard, dict):
+        return 'unknown'
+    status = standard.get('status')
+    if status == 'READY':
+        return 'secure'
+    if status in ('FAILED', 'INCOMPLETE'):
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_guardduty_detector(detector):
     """Disabled is a confirmed finding; unknown and missing status never pass."""
     if not isinstance(detector, dict):
@@ -322,6 +334,7 @@ def classify_guardduty_detector(detector):
 
 CLASSIFIERS = {
     'guardduty-detector-state-v1': classify_guardduty_detector,
+    'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
     'lambda-managed-runtime-v1': classify_lambda_runtime,

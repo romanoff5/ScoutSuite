@@ -1,0 +1,28 @@
+<!-- M10-C Security Hub: escape every account-controlled field. -->
+<script id="services.securityhub.regions.id.hubs.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Regional Security Hub</h4>
+    <ul>
+      <li>Hub ARN: <samp>{{hub_arn}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Auto-enable controls: {{auto_enable_controls}}</li>
+      <li>Standards: {{standards_count}}</li>
+      <li>Standards inventory complete: {{standards_inventory_complete}}</li>
+    </ul>
+    {{#each standards}}
+      <p><samp>{{standards_arn}}</samp>: {{status}}</p>
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.securityhub.regions.id.hubs",
+    $("#services\\.securityhub\\.regions\\.id\\.hubs\\.partial").html());
+</script>
+<script id="single_securityhub_hub-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.securityhub.regions.id.hubs' }}
+</script>
+<script>
+  var single_securityhub_hub_template = Handlebars.compile(
+    $("#single_securityhub_hub-template").html());
+</script>

@@ -422,6 +422,18 @@
                 }
             }
         },
+        "securityhub": {
+            "resources": {
+                "regions": {
+                    "cols": 2,
+                    "path": "services.securityhub.regions"
+                },
+                "hubs": {
+                    "cols": 2,
+                    "path": "services.securityhub.regions.id.hubs"
+                }
+            }
+        },
         "guardduty": {
             "resources": {
                 "regions": {
