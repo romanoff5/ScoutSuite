@@ -453,6 +453,28 @@
                 "instances": {
                     "cols": 2,
                     "path": "services.identitycenter.regions.id.instances"
+                },
+                "permission_sets": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.permission_sets"
+                },
+                "assignments": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.permission_sets.id.assignments"
+                },
+                "users": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.users"
+                },
+                "groups": {
+                    "cols": 2,
+                    "path": "services.identitycenter.regions.id.instances.id.groups"
+                }
+            },
+            "summaries": {
+                "organization_coverage": {
+                    "cols": 1,
+                    "path": "services.identitycenter.organization_coverage"
                 }
             }
         },
