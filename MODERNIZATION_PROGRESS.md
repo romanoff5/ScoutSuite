@@ -46,6 +46,7 @@
   rule of that service incomplete (19 EC2 rules in the field report, driven by
   the by-design Inspector2 UNKNOWN); the report now shows that honestly, but
   the propagation scope itself is unchanged.
+- Owner request: dark report theme by default. `report.html` now links the dark stylesheets, `theme.js` treats dark as the default (light only when stored, storage failures stay dark), and `scoutsuite-dark.css` gets a tuned palette. Browser review of the re-rendered RC7 results also showed that the settings menu items, the theme switch and the S3 ACL grantee toggle had been dead since M09-B: the sanitizer strips inline handlers and non-allowlisted `javascript:` actions. Five argument-free first-party menu actions were added to `ALLOWED_ACTIONS`, the switch and the ACL toggle use delegated handlers, and a test forbids inline `on*` attributes in sanitized partials. Verified by real clicks (Execution Details) and native click events (Resources Details, About), theme toggle persistence across reload, no console errors; export actions were checked for wiring only, to avoid downloading report data.
 - RC8 installs in `.venv-scout-fork-rc8`; `ForkRc7` is added as a rollback
   mode. Release notes state the expected RC7 -> RC8 field delta.
 

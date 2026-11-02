@@ -122,3 +122,119 @@ span.slider.round {
 .disabled-link a .finding-title {
     color: rgb(173, 173, 173) !important;
 }
+
+/* Default dark palette: neutral surfaces, readable text, status colours that
+   keep their meaning on a dark background. Incomplete/unknown stays muted so
+   it never reads as a pass or as an alert. */
+body {
+    background-color: #1b1d22;
+    color: #e6e8eb;
+}
+
+.navbar.bg-primary,
+.bg-primary {
+    background-color: #24272e !important;
+}
+
+.card,
+.list-group-item,
+#double-column-left .list-group {
+    background-color: #23262d;
+    border-color: #363b44;
+    color: #e6e8eb;
+}
+
+.card-header,
+.card-header-dark {
+    background-color: #2d3139 !important;
+    border-color: #363b44;
+    color: #e6e8eb !important;
+}
+
+.card-body,
+.scout-finding-text {
+    color: #d5d9de;
+}
+
+a,
+.card-body a {
+    color: #79b0ff;
+}
+
+.plain-link a:link,
+.plain-link a:visited,
+.plain-link a:active {
+    color: #e6e8eb;
+}
+
+.disabled-link a:link,
+.disabled-link a:active,
+.disabled-link a:visited,
+.disabled-link a:hover,
+.disabled-link a .finding-title {
+    color: #9aa1ab !important;
+}
+
+/* Text fields only: filter buttons also carry .form-control and keep their
+   Good/Warning/Danger colours. */
+input.form-control,
+select.form-control,
+textarea.form-control {
+    background-color: #23262d;
+    border: 1px solid #3f4550;
+    color: #e6e8eb;
+}
+
+input.form-control::placeholder {
+    color: #8b929c;
+}
+
+.btn-light,
+.btn-secondary {
+    background-color: #2d3139;
+    border-color: #3f4550;
+    color: #e6e8eb;
+}
+
+.btn-light:hover,
+.btn-secondary:hover {
+    background-color: #3a3f48;
+    color: #fff;
+}
+
+.finding.btn::before {
+    color: #e6e8eb !important;
+}
+
+.dropdown-menu {
+    background: #24272e;
+    border-color: #363b44;
+}
+
+.modal-content,
+.modal-body {
+    background-color: #23262d;
+    color: #e6e8eb;
+}
+
+.modal-header {
+    background: #2d3139;
+}
+
+samp,
+code {
+    color: #f0b37e;
+}
+
+.finding-badge-good:before { color: #3fb950; }
+.finding-badge-warning:before { color: #f2b705; }
+.finding-badge-danger:before { color: #ff5c5c; }
+.finding-badge-unknown:before { color: #6b727d; }
+
+.finding-good { color: #3fb950; }
+.finding-warning { color: #f2b705; }
+.finding-danger { color: #ff5c5c; }
+
+::-webkit-scrollbar-thumb {
+    background-color: #4a505b;
+}

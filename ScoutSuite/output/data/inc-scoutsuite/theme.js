@@ -5,35 +5,22 @@ const DARK_SCOUT_THEME = 'inc-scoutsuite/css/scoutsuite-dark.css';
 const LIGHT_SCOUT_THEME = 'inc-scoutsuite/css/scoutsuite-light.css';
 
 $(document).ready(() => {
-  if (isDarkThemeEnabled()) {
-    document.getElementById('theme_checkbox').checked = true
+  const checkbox = document.getElementById('theme_checkbox')
+  if (checkbox) {
+    checkbox.checked = isDarkThemeEnabled()
   }
 });
 
-/**
- * Load the last theme used by looking into localstorage
- */
-function loadLastTheme() {
-  if (isDarkThemeEnabled()) {
-    setBootstrapTheme(DARK_BOOTSTRAP_THEME)
-    setScoutTheme(DARK_SCOUT_THEME)
-  }
-}
+// The report sanitizer strips inline on* handlers from rendered templates, so
+// the theme switch is bound here (delegated: the menu is rendered later).
+$(document).on('change', '#theme_checkbox', toggleTheme);
 
 /**
- * Toggles between light and dark themes
+ * Apply the stored theme. Dark is the default; light only when chosen.
  */
-function toggleTheme() {
-  localStorage.setItem('dark_theme_enabled', document.getElementById('theme_checkbox').checked)
-  if (document.getElementById('theme_checkbox').checked) {
-    this.setBootstrapTheme(DARK_BOOTSTRAP_THEME)
-    this.setScoutTheme(DARK_SCOUT_THEME)
-  }
-  else {
-    this.setBootstrapTheme(LIGHT_BOOTSTRAP_THEME)
-    this.setScoutTheme(LIGHT_SCOUT_THEME)
-  }
-};
+function loadLastTheme() {
+  applyTheme(isDarkThemeEnabled())
+}
 
 /**
  * Toggles between light and dark themes
@@ -41,16 +28,17 @@ function toggleTheme() {
 function toggleTheme() {
   const darkThemeEnabled = document.getElementById('theme_checkbox').checked
   saveIsDarkThemeEnabled(darkThemeEnabled)
-
-  if (darkThemeEnabled) {
-    this.setBootstrapTheme(DARK_BOOTSTRAP_THEME)
-    this.setScoutTheme(DARK_SCOUT_THEME)
-  }
-  else {
-    this.setBootstrapTheme(LIGHT_BOOTSTRAP_THEME)
-    this.setScoutTheme(LIGHT_SCOUT_THEME)
-  }
+  applyTheme(darkThemeEnabled)
 };
+
+/**
+ * Sets both stylesheets for the selected theme
+ * @param {boolean} dark
+ */
+function applyTheme(dark) {
+  setBootstrapTheme(dark ? DARK_BOOTSTRAP_THEME : LIGHT_BOOTSTRAP_THEME)
+  setScoutTheme(dark ? DARK_SCOUT_THEME : LIGHT_SCOUT_THEME)
+}
 
 /**
  * Sets the css file location received as the bootstrap theme
@@ -69,17 +57,26 @@ function setScoutTheme(file) {
 }
 
 /**
- * Tells us if the dark theme is enabled or not
+ * Dark unless the viewer explicitly chose light. Storage can be unavailable
+ * (private mode, blocked site data); the report then stays dark.
  * @returns {boolean}
  */
 function isDarkThemeEnabled() {
-  return localStorage.getItem('dark_theme_enabled') === 'true'
+  try {
+    return localStorage.getItem('dark_theme_enabled') !== 'false'
+  } catch (error) {
+    return true
+  }
 }
 
 /**
  * Saves which theme is selected within the localstorage
- * @param {boolean} isDarkThemeEnabled 
+ * @param {boolean} isDarkThemeEnabled
  */
 function saveIsDarkThemeEnabled(isDarkThemeEnabled) {
-  localStorage.setItem('dark_theme_enabled', isDarkThemeEnabled)
+  try {
+    localStorage.setItem('dark_theme_enabled', isDarkThemeEnabled)
+  } catch (error) {
+    // Preference is a convenience only; the theme still switches for this view.
+  }
 }

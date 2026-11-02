@@ -262,3 +262,22 @@ def test_templates_pass_assessment_state_to_status_colour():
     assert 'with unknown evidence: {{evaluation_summary.counts.unknown}}' in dashboard
     assert 'dashboard_color max_level checked_items flagged_items incomplete_rules' in report
     assert '{{{' not in dashboard
+
+
+def test_dark_report_default_and_menu_actions_survive_sanitizer():
+    import re
+    from pathlib import Path
+    data = Path(__file__).resolve().parents[1] / 'ScoutSuite/output/data'
+    report = (data / 'html/report.html').read_text(encoding='utf-8')
+    theme = (data / 'inc-scoutsuite/theme.js').read_text(encoding='utf-8')
+    sanitizer = (data / 'inc-scoutsuite/report_sanitizer.js').read_text(encoding='utf-8')
+    assert 'id="bootstrap-theme" href="inc-bootstrap/css/bootstrap-dark.min.css"' in report
+    assert 'id="scout-theme" href="inc-scoutsuite/css/scoutsuite-dark.css"' in report
+    assert "!== 'false'" in theme and "$(document).on('change', '#theme_checkbox', toggleTheme)" in theme
+    # Compiled templates pass through the sanitizer, which strips inline on*
+    # handlers: they would silently become dead controls.
+    for partial in (data / 'html/partials').rglob('*.html'):
+        assert not re.search(r'\son[a-z]+\s*=', partial.read_text(encoding='utf-8')), partial.name
+    metadata = (data / 'html/partials/metadata.html').read_text(encoding='utf-8')
+    for action in re.findall(r'href="javascript:([A-Za-z_]+)\(', metadata):
+        assert "'" + action + "'" in sanitizer, action
