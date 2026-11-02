@@ -1,0 +1,20 @@
+<!-- M10-O: offline escaped Handlebars; no untrusted HTML sinks. -->
+<script id="services.ssm.regions.id.patch_groups.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Patch group mapping</h4>
+    <p>Patch group: {{PatchGroup}}</p>
+<p>Baseline ID: <samp>{{BaselineIdentity.BaselineId}}</samp></p>
+<p>Baseline name: {{BaselineIdentity.BaselineName}}</p>
+<p>Operating system: {{BaselineIdentity.OperatingSystem}}</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions.id.patch_groups", $("#services\\.ssm\\.regions\\.id\\.patch_groups\\.partial").html());
+</script>
+<script id="single_ssm_patch_groups-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions.id.patch_groups' }}
+</script>
+<script>
+  var single_ssm_patch_groups_template = Handlebars.compile($("#single_ssm_patch_groups-template").html());
+</script>
