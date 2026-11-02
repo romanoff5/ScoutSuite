@@ -356,6 +356,7 @@
             "iam-user-without-mfa.json",
             "inspector2-account-disabled.json",
             "inspector2-coverage-inactive.json",
+            "inspector2-member-account-disabled.json",
             "inspector2-scan-type-inactive.json",
             "kms-cmk-rotation-disabled.json",
             "logs-no-alarm-aws-configuration-changes.json",
