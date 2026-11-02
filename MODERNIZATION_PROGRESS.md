@@ -305,3 +305,13 @@ with a strictly sanitized report (no environment values or logging tokens);
 EKS evaluates `audit` control-plane logging from DescribeCluster.
 Collection failures stay explicit, and no resource modification is used.
 See M10_ECR.md, M10_ECS.md and M10_EKS.md for scope and limits.
+
+
+## CI warning root-cause remediation — 2026-11-02
+
+- Baseline on [Offline CI #41376017062](https://github.com/romanoff5/ScoutSuite/actions/runs/41376017062): both Windows 2022 / Python 3.11.9 and Ubuntu 24.04 / Python 3.11.18 had **441 passed, 34 subtests passed, 206 warnings**.
+- Warning source classification by structured `conftest.py` evidence: **50** first-party invalid regex string escapes in `ScoutSuite/providers/utils.py`; **127** in pinned legacy GCP KMS SDK, **17** in legacy GCP Monitoring, **10** in `pkg_resources` namespaces, **2** in legacy Azure SQL SDK.
+- Converted **87** secret-detector regex source literals to raw strings without altering regular-expression expressions. Added warning-as-error Python compile test, synthetic detector regressions, and explicit CI `verify_warning_debt()` with **14** precisely identified third-party warning path/category maximums. Any new first-party or unrecognized warning now **fails CI**, while known third-party warnings remain visible and are not filtered. Azure/GCP SDKs remain pinned and unmodified.
+- Detailed breakdown and phased follow-up for the 156 third-party warnings: `docs/modernization/CI_WARNING_AUDIT_2026-11-02.md`; eliminating them requires separate, tested SDK/provider compatibility migration, not silencing deprecations or weakening tests.
+- Source branch `maintenance/m10-ci-deprecation-warning-cleanup-20261102` passed both systems; reconciled parallel M10-H AWS changes in two-parent merge `21cd77c479248059675d70f81bbdbf7f2dd16656`, preserving both histories. [Integrated Offline CI #41413294264](https://github.com/romanoff5/ScoutSuite/actions/runs/41413294264): **461 passed, 156 warnings, 34 subtests passed** per OS, lint, XSS/browser and packaging gates passed. **Zero first-party warnings**, explicit 156-vendor ceiling enforced. Fast-forward merged and remotely verified `master`.
+- No production/cloud credentials, live scans, external assessment artifacts, Azure/GCP modernization, vendor SDK monkeypatching, warning suppression or disabled tests.
