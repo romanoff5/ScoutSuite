@@ -101,22 +101,26 @@ def test_azure_sql_real_operation_groups_and_credential_free_client():
         credential=NoToken(),
         subscription_id='00000000-0000-0000-0000-000000000000')
     try:
+        # Bind the exact arguments made by the production facade to the SDK's
+        # real bound method signatures, without making an HTTP request.
         operations = {
-            'database_blob_auditing_policies': 'get',
-            'database_security_alert_policies': 'get',
-            'databases': 'list_by_server',
-            'replication_links': 'list_by_database',
-            'server_azure_ad_administrators': 'list_by_server',
-            'server_blob_auditing_policies': 'get',
-            'server_security_alert_policies': 'get',
-            'servers': 'list',
-            'transparent_data_encryptions': 'get',
-            'server_vulnerability_assessments': 'get',
-            'encryption_protectors': 'get',
-            'firewall_rules': 'list_by_server',
+            'database_blob_auditing_policies': ('get', ('rg', 'server', 'db')),
+            'database_security_alert_policies': ('get', ('rg', 'server', 'db', 'Default')),
+            'databases': ('list_by_server', ('rg', 'server')),
+            'replication_links': ('list_by_database', ('rg', 'server', 'db')),
+            'server_azure_ad_administrators': ('list_by_server', ('rg', 'server')),
+            'server_blob_auditing_policies': ('get', ('rg', 'server')),
+            'server_security_alert_policies': ('get', ('rg', 'server', 'Default')),
+            'servers': ('list', ()),
+            'transparent_data_encryptions': ('get', ('rg', 'server', 'db', 'current')),
+            'server_vulnerability_assessments': ('get', ('rg', 'server', 'default')),
+            'encryption_protectors': ('get', ('rg', 'server', 'current')),
+            'firewall_rules': ('list_by_server', ('rg', 'server')),
         }
-        for group, method in operations.items():
-            assert callable(getattr(getattr(client, group), method)), group
+        for group, (method, arguments) in operations.items():
+            operation = getattr(getattr(client, group), method)
+            assert callable(operation), group
+            inspect.signature(operation).bind(*arguments)
     finally:
         client.close()
 
