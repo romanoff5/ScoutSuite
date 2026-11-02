@@ -212,7 +212,7 @@ class Inspector2OrganizationMixin:
                     success = False
                     continue
                 account = row.get('accountId')
-                if account not in batch or account in seen or account in failed_ids:
+                if not _account_id(account) or account not in batch or account in seen or account in failed_ids:
                     self._issue('partial', 'UnexpectedMemberStatus')
                     success = False
                     continue
