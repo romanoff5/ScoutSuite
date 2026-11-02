@@ -10,7 +10,8 @@ Regional APIs: `guardduty:ListDetectors` and
 `ec2:DescribeRegions`. No writes, no GetFindings, no member account
 enumeration, no sensitive payloads.
 
-Bounded to 5 listing pages and 100 detector IDs per region. All API
+Bounded to 1000 listing pages and 50,000 detector IDs per region
+(former arbitrary caps of 5 pages/100 detectors). All API
 requests use per-run throttling/executor limits. Denied/unsupported API
 errors, duplicate IDs, bad tokens, malformed pages, limits, and partial
 detail retrieval mark the collection explicitly incomplete.
@@ -22,7 +23,10 @@ but this slice does not yet create an absence-of-detector finding.
 
 `guardduty.regions.<region>.detectors.<stable-id>` includes
 `detector_id`, `status`, `disabled`,
-`finding_publishing_frequency` and `region`.
+`finding_publishing_frequency`, `region`, creation/update dates,
+service-role ARN, enabled protection features with nested configurations,
+data-source status, and tags. These details allow configuration remediation;
+actual GuardDuty findings and credential values are not retrieved.
 The `guardduty-detector-disabled` rule flags only confirmed DISABLED,
 with UNKNOWN evidence for malformed or missing status. Does not claim
 organization-wide coverage or validate enablement of each GuardDuty
