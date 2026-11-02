@@ -220,3 +220,21 @@ OU hierarchy, effective SCP evaluation, or organization-wide proof).
 - Reconciled parallel Security Hub and Organizations changes using a genuine two-parent merge in `integration/m10-inspector2-all-20261102`. CI [#41370950308](https://github.com/romanoff5/ScoutSuite/actions/runs/41370950308): Windows Python 3.11.9 and Ubuntu Python 3.11.18 — **394 passed, 34 subtests passed**, 206 warnings each, lint/packaging passed.
 - Fast-forward integrated `master` to `050926522c3b520794e8b9020ce6cd0d91c54e0f`, remote ref verified. No live AWS calls or customer scans. Next work: scoped coverage quality/organization-level assessment and robust region-specific behavior; avoid treating empty verified coverage as complete service enrollment.
 - Rollback: revert the merge through normal history-preserving commits; no AWS state or report migration involved.
+
+## M10 report evidence completeness correction (2026-11-02)
+
+Branch: `fix/m10-report-evidence-completeness-20261102`. Owner requirement: security reports must retain actionable
+diagnostic evidence, including account/contact emails, full ARNs, resource
+names, status/reason, timestamps, tags, policy type status and OU paths.
+Do not blanket-anonymize local reports. Secrets remain prohibited.
+Rules codified in `AGENTS.md`.
+
+Organizations now persists management/account emails, management ARN,
+joined timestamps, OU paths, root policy types and deprecated status only
+as secondary context. Access Analyzer keeps tags, timestamps, last-analyzed
+resource and configuration when returned by ListAnalyzers. GuardDuty keeps
+feature/data-source configuration, service-role and lifecycle metadata;
+Security Hub keeps status reasons, providers and controls-updatable state.
+Fixed low M10 pagination caps are raised, with explicit partial state on
+exhaustion. New synthetic scale and SQLite-preservation regression tests.
+Windows/Ubuntu offline CI required before integration. No live credentials.

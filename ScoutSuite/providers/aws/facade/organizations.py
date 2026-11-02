@@ -16,10 +16,10 @@ HOME_REGIONS = {
     'aws-us-gov': 'us-gov-west-1',
     'aws-cn': 'cn-northwest-1',
 }
-MAX_ACCOUNTS = 5000
-MAX_ROOTS = 100
-MAX_ACCOUNT_PAGES = 250
-MAX_ROOT_PAGES = 10
+MAX_ACCOUNTS = 100000
+MAX_ROOTS = 10000
+MAX_ACCOUNT_PAGES = 5000
+MAX_ROOT_PAGES = 500
 PAGE_SIZE = 20
 
 _ACCESS_DENIED = frozenset(('AccessDenied', 'AccessDeniedException',

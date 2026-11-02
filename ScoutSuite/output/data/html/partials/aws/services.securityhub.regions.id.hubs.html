@@ -7,11 +7,19 @@
       <li>Hub ARN: <samp>{{hub_arn}}</samp></li>
       <li>Region: {{region}}</li>
       <li>Auto-enable controls: {{auto_enable_controls}}</li>
+      <li>Control finding generator: {{control_finding_generator}}</li>
       <li>Standards: {{standards_count}}</li>
       <li>Standards inventory complete: {{standards_inventory_complete}}</li>
     </ul>
     {{#each standards}}
-      <p><samp>{{standards_arn}}</samp>: {{status}}</p>
+      <p><samp>{{standards_arn}}</samp>: {{status}}
+        <ul>
+          <li>Subscription ARN: <samp>{{subscription_arn}}</samp></li>
+          <li>Status reason: {{status_reason}}</li>
+          <li>Controls updatable: {{standards_controls_updatable}}</li>
+          <li>Provider: {{provider}}</li>
+        </ul>
+      </p>
     {{/each}}
   </div>
 </script>

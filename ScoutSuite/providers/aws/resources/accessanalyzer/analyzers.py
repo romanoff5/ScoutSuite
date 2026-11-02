@@ -36,4 +36,14 @@ class Analyzers(AWSResources):
             'status_reason': reason.get('code') if isinstance(reason, dict) else None,
             'inactive': status in ('DISABLED', 'FAILED'),
             'evaluation_status': 'partial' if status == 'CREATING' else 'complete',
+            'created_at': row['createdAt'].isoformat() if hasattr(row.get('createdAt'), 'isoformat')
+                          else row.get('createdAt'),
+            'last_resource_analyzed': row.get('lastResourceAnalyzed'),
+            'last_resource_analyzed_at': (
+                row['lastResourceAnalyzedAt'].isoformat()
+                if hasattr(row.get('lastResourceAnalyzedAt'), 'isoformat')
+                else row.get('lastResourceAnalyzedAt')
+            ),
+            'configuration': row.get('configuration') or {},
+            'tags': row.get('tags') or {},
         }

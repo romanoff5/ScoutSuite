@@ -1,6 +1,7 @@
 """M10-C: strict offline Organizations API, governance evidence and report tests."""
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -51,7 +52,8 @@ def account(identifier='222222222222', state='ACTIVE'):
     return {'Id': identifier, 'Name': '<img src=x onerror=alert(1)>',
             'Arn': 'arn:aws:organizations::' + ACCOUNT_ID + ':account/'
             + ORG_ID + '/' + identifier, 'State': state,
-            'Status': 'SUSPENDED', 'Email': 'private-account@example.invalid'}
+            'Status': 'SUSPENDED', 'Email': 'private-account@example.invalid',
+            'JoinedMethod': 'CREATED', 'JoinedTimestamp': datetime(2026, 1, 2, tzinfo=timezone.utc)}
 
 
 def test_sdk_contract_state_and_endpoints():
@@ -67,7 +69,7 @@ def test_sdk_contract_state_and_endpoints():
                             'aws-cn': 'cn-northwest-1'}
 
 
-def test_full_stubber_inventory_with_empty_intermediate_page_and_no_pii():
+def test_full_stubber_inventory_with_empty_intermediate_page_and_actionable_contacts():
     async def scenario():
         client = sdk()
         ctx = RunContext('aws').setup()
@@ -97,11 +99,18 @@ def test_full_stubber_inventory_with_empty_intermediate_page_and_no_pii():
             assert resources['organizations'][ORG_ID]['feature_set'] == 'ALL'
             assert resources['roots'][ROOT_ID]['scp_enabled'] is True
             acc = resources['accounts']['222222222222']
-            assert acc['state'] == 'ACTIVE'  # Never use retired Status.
+            assert acc['state'] == 'ACTIVE'  # Legacy Status cannot override current State.
+            assert acc['email'] == 'private-account@example.invalid'
+            assert acc['joined_timestamp'] == '2026-01-02T00:00:00+00:00'
+            assert acc['legacy_status'] == 'SUSPENDED'
+            assert resources['organizations'][ORG_ID]['management_account_email'] == (
+                'secret-management@example.invalid')
+            assert resources['roots'][ROOT_ID]['policy_types'] == [
+                {'type': 'SERVICE_CONTROL_POLICY', 'status': 'ENABLED'}]
             serialized = json.dumps(dict(resources))
-            assert 'private-account@example.invalid' not in serialized
-            assert 'secret-management@example.invalid' not in serialized
-            assert '"Status"' not in serialized
+            assert 'private-account@example.invalid' in serialized
+            assert 'secret-management@example.invalid' in serialized
+            assert '"legacy_status": "SUSPENDED"' in serialized
             assert not ctx.collection_issues
         finally:
             await ctx.aclose()
@@ -193,9 +202,9 @@ def test_bounded_pagination_and_invalid_pages_fail_closed():
             ([{'Accounts': [account()], 'NextToken': 'next'},
               {'Accounts': [account()], 'NextToken': 'later'}],
              'list_accountsDuplicateIdentifier'),
-            ([{'Accounts': [], 'NextToken': str(i)} for i in range(MAX_ACCOUNT_PAGES)],
+            ([{'Accounts': [], 'NextToken': str(i)} for i in range(12)],
              'list_accountsPageLimit'),
-            ([{'Accounts': [account(str(100000000000+i)) for i in range(5001)]}],
+            ([{'Accounts': [account(str(100000000000+i)) for i in range(6)]}],
              'list_accountsItemLimit'),
         ]
         for responses, reason in cases:
@@ -203,12 +212,14 @@ def test_bounded_pagination_and_invalid_pages_fail_closed():
             try:
                 client = Mock()
                 client.list_accounts.side_effect = responses
+                pages = 12 if reason == 'list_accountsPageLimit' else MAX_ACCOUNT_PAGES
+                items = 5 if reason == 'list_accountsItemLimit' else 100000
                 records, status = await OrganizationsFacade(object(), 'aws')._list(
-                    client, 'list_accounts', 'Accounts', MAX_ACCOUNT_PAGES, 5000)
-                assert len(records) <= 5000
+                    client, 'list_accounts', 'Accounts', pages, items)
+                assert len(records) <= items
                 assert status != 'complete'
                 assert any(x['reason_code'] == reason for x in context.collection_issues)
-                assert client.list_accounts.call_count <= MAX_ACCOUNT_PAGES
+                assert client.list_accounts.call_count <= pages
             finally:
                 await context.aclose()
     asyncio.run(scenario())
@@ -320,4 +331,10 @@ def test_opt_in_metadata_templates_and_packaging_contract():
         assert '{{name}}' in html and '{{{' not in html
         assert 'onclick=' not in html and 'javascript:' not in html
         assert 'single_organizations_' + resource[:-1] + '_template' in html
-        assert 'Email' not in html
+        if resource == 'accounts':
+            assert '{{email}}' in html and '{{joined_timestamp}}' in html
+        if resource == 'organizations':
+            assert '{{management_account_email}}' in html
+            assert '{{management_account_arn}}' in html
+        if resource == 'roots':
+            assert '{{#each policy_types}}' in html

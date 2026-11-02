@@ -8,12 +8,14 @@ account/member lists, policies, controls or organization configuration.
 
 Regional permissions: `securityhub:DescribeHub`,
 `securityhub:GetEnabledStandards`. Existing region selection may request
-`ec2:DescribeRegions`. At most 10 pages of 50 standards each (500 total)
-are accepted per region. AWS SDK retries/timeouts and per-run contexts are
+`ec2:DescribeRegions`. At most 500 pages/25,000 standards per region are accepted as a safety
+budget (the previous 10-page/500-subscription cap could omit inventories). AWS SDK retries/timeouts and per-run contexts are
 unchanged. A subscribed hub is stored at
 `services.securityhub.regions.<region>.hubs.<stable-id>`, with normalized
 `standards` entries under the hub and a verified
-`standards_inventory_complete` boolean.
+`standards_inventory_complete` boolean. Subscription ARN, full
+standards ARN, status and reason, control updatability and provider
+are preserved for remediation.
 
 Denied, unsupported, missing hub, malformed payloads, duplicate subscription
 ARNs, cycles in pagination and exceeded limits are **not** reported as clean

@@ -7,8 +7,8 @@ from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
 
-MAX_PAGES = 10
-MAX_STANDARDS = 500
+MAX_PAGES = 500
+MAX_STANDARDS = 25000
 PAGE_SIZE = 50
 DENIED_CODES = frozenset(('AccessDeniedException', 'AccessDenied', 'UnauthorizedOperation',
                           'InvalidAccessException'))
@@ -111,6 +111,9 @@ class SecurityHubPublicFacade(AWSBaseFacade):
                     'status': row.get('StandardsStatus'),
                     'status_reason': (row.get('StandardsStatusReason') or {}).get('StatusReasonCode')
                     if isinstance(row.get('StandardsStatusReason'), dict) else None,
+                    'standards_controls_updatable': row.get('StandardsControlsUpdatable'),
+                    'provider': row.get('Provider'),
+                    'status_reason_details': row.get('StandardsStatusReason') or {},
                 })
             if stop:
                 break

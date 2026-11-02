@@ -1,4 +1,4 @@
-<!-- M10-C Organizations. Escaped text only, no inline URLs or AWS email addresses. -->
+<!-- M10-C Organizations. Escaped root policy diagnostic fields. -->
 <script id="services.organizations.roots.id.partial" type="text/x-handlebars-template">
   <div class="list-group-item active"><h4 class="list-group-item-heading">{{name}}</h4></div>
   <div class="list-group-item"><h4>Organizations inventory</h4>
@@ -6,6 +6,9 @@
       <li>Root ID: <samp>{{id}}</samp></li>
       <li>ARN: <samp>{{arn}}</samp></li>
       <li>SCP status: {{scp_status}}</li>
+      <li>Policy types:
+        <ul>{{#each policy_types}}<li>{{type}}: {{status}}</li>{{/each}}</ul>
+      </li>
     </ul>
   </div>
 </script>

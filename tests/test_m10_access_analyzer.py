@@ -14,7 +14,7 @@ from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import classify_access_analyzer
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
-from ScoutSuite.providers.aws.facade.accessanalyzer import AccessAnalyzerFacade, MAX_PAGES
+from ScoutSuite.providers.aws.facade.accessanalyzer import AccessAnalyzerFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.provider import AWSProvider
 from ScoutSuite.providers.aws.resources.accessanalyzer.analyzers import Analyzers
@@ -78,7 +78,7 @@ def test_two_page_stubber_and_regional_resources():
         items = list(resource['regions'][REGION]['analyzers'].values())
         assert {item['status'] for item in items} == {'ACTIVE', 'DISABLED'}
         assert all(item['id'].startswith('scoutid-') for item in items)
-        assert all('tags' not in item and 'findings' not in item for item in items)
+        assert all(item['tags'] == {} and 'findings' not in item for item in items)
         assert items[0]['arn'].startswith('arn:aws:')
     asyncio.run(scenario())
 
@@ -142,19 +142,21 @@ def test_malformed_and_token_loop_are_recorded_without_unbounded_work():
             ([{}], 'MalformedPage'),
             ([{'analyzers': [], 'nextToken': 'repeat'},
               {'analyzers': [], 'nextToken': 'repeat'}], 'InvalidPaginationToken'),
-            ([{'analyzers': [record(str(i))] , 'nextToken': str(i)} for i in range(MAX_PAGES)],
+            ([{'analyzers': [record(str(i))] , 'nextToken': str(i)} for i in range(8)],
              'PageLimit'),
-            ([{'analyzers': [record(str(i)) for i in range(2001)]}], 'ResultLimit'),
+            ([{'analyzers': [record(str(i)) for i in range(6)]}], 'ResultLimit'),
         ]:
             sdk = Mock()
             sdk.list_analyzers.side_effect = responses
             ctx = RunContext('aws').setup()
             try:
-                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
+                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk), \
+                     patch('ScoutSuite.providers.aws.facade.accessanalyzer.MAX_PAGES', 8), \
+                     patch('ScoutSuite.providers.aws.facade.accessanalyzer.MAX_ANALYZERS', 5):
                     items = await AccessAnalyzerFacade(object()).get_analyzers(REGION)
-                assert len(items) <= 2000
+                assert len(items) <= 5
                 assert ctx.collection_issues[-1]['reason_code'] == reason
-                assert sdk.list_analyzers.call_count <= MAX_PAGES
+                assert sdk.list_analyzers.call_count <= 8
             finally:
                 await ctx.aclose()
     asyncio.run(scenario())

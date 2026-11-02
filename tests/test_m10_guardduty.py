@@ -13,7 +13,7 @@ from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import classify_guardduty_detector
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
-from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade, MAX_PAGES
+from ScoutSuite.providers.aws.facade.guardduty import GuardDutyPublicFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.provider import AWSProvider
 from ScoutSuite.providers.aws.resources.guardduty.base import GuardDutyPublic
@@ -139,8 +139,8 @@ def test_bounded_pages_duplicate_and_malformed_responses():
             ([{'DetectorIds': [], 'NextToken': 'loop'},
               {'DetectorIds': [], 'NextToken': 'loop'}], 'InvalidPaginationToken'),
             ([{'DetectorIds': ['a', 'a']}], 'DuplicateDetector'),
-            ([{'DetectorIds': [str(i) for i in range(101)]}], 'DetectorLimit'),
-            ([{'DetectorIds': [], 'NextToken': str(i)} for i in range(MAX_PAGES)],
+            ([{'DetectorIds': [str(i) for i in range(6)]}], 'DetectorLimit'),
+            ([{'DetectorIds': [], 'NextToken': str(i)} for i in range(8)],
              'PageLimit'),
         ]:
             sdk = Mock()
@@ -148,10 +148,12 @@ def test_bounded_pages_duplicate_and_malformed_responses():
             sdk.get_detector.return_value = {'Status': 'ENABLED'}
             ctx = RunContext('aws').setup()
             try:
-                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
+                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk), \
+                     patch('ScoutSuite.providers.aws.facade.guardduty.MAX_PAGES', 8), \
+                     patch('ScoutSuite.providers.aws.facade.guardduty.MAX_DETECTORS', 5):
                     rows = await GuardDutyPublicFacade(object()).get_detectors(REGION)
-                assert len(rows) <= 100
-                assert sdk.list_detectors.call_count <= MAX_PAGES
+                assert len(rows) <= 5
+                assert sdk.list_detectors.call_count <= 8
                 assert any(issue['reason_code'] == reason for issue in ctx.collection_issues)
             finally:
                 await ctx.aclose()

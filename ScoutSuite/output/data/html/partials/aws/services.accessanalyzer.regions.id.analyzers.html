@@ -12,6 +12,10 @@
       <li>Status: {{status}}</li>
       <li>Status reason: {{status_reason}}</li>
       <li>Evaluation: {{evaluation_status}}</li>
+      <li>Created: {{created_at}}</li>
+      <li>Last resource analyzed: <samp>{{last_resource_analyzed}}</samp></li>
+      <li>Last analysis: {{last_resource_analyzed_at}}</li>
+      <li>Tags: <ul>{{#each tags}}<li>{{@key}}: {{this}}</li>{{/each}}</ul></li>
     </ul>
   </div>
 </script>

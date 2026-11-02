@@ -1,6 +1,6 @@
 # M10-C: AWS Organizations global read-only vertical slice
 
-Status: implementation in `modernization/m10c-organizations-vertical-slice`; **M10 overall remains incomplete**.
+Status: integrated M10-C slice; **M10 overall remains incomplete**.
 
 ## AWS API and permissions
 
@@ -26,12 +26,13 @@ assume-role traversal, member enumeration, tagging or AWS writes.
 Report schema:
 
 - `services.organizations.organizations.<organization-id>`: feature_set,
-  organization ARN, management_account_id
-- `services.organizations.roots.<root-id>`: name, ARN, SCP status and
-  nullable enabled state
-- `services.organizations.accounts.<account-id>`: name, ARN, **State**
-  and joined_method. **No account email is persisted**, and the retired
-  `Status` field is not used.
+  organization ARN, management account ID, ARN, e-mail and a deprecated policy-type diagnostic
+- `services.organizations.roots.<root-id>`: name, ARN, SCP status,
+  nullable enabled state, full available root policy types and states
+- `services.organizations.accounts.<account-id>`: name, ARN, **e-mail**,
+  **State** (authoritative), optional deprecated legacy status,
+  joined_method, joined_timestamp and organization OU paths. Contact e-mail
+  and paths are essential for identifying the affected account and owner.
 - `services.organizations.collection`: per-API complete, partial,
   denied, unsupported, failed or not_collected indicators.
 
@@ -42,8 +43,9 @@ is retained and both inventories are explicitly marked incomplete.
 **not** as a proof that the organization is compliant.
 
 `ListAccounts` follows `NextToken` even after an empty page.
-MaxResults=20 per call; max 250 pages/5000 accounts; roots max 10 pages/
-100 roots. A token cycle, duplicate/invalid id, malformed page, failure,
+MaxResults=20 per call; maximum 5000 pages/100000 accounts; roots
+maximum 500 pages/10000 roots. These are safety budgets above the former
+arbitrary caps, not routine report truncation. A token cycle, duplicate/invalid id, malformed page, failure,
 or bound triggers incomplete status; no unbounded fan-out. No global
 business-as-usual success is claimed on truncated results.
 
@@ -69,7 +71,7 @@ https://docs.aws.amazon.com/organizations/latest/APIReference/API_ListAccounts.h
 Synthetic Botocore Stubber tests must exercise each endpoint, pagination
 including an empty page with token, authorization, member-account behavior,
 partial result preservation, sovereign endpoint selection, bounds,
-normalization/PII exclusion, rules and escaped report modal. Windows/Ubuntu
+normalization with actionable account/contact evidence, rules and escaped report modal. Windows/Ubuntu
 guarded offline tests, AWS/Azure/GCP preservation, wheel/sdist, XSS and
 installed-package verification must all pass before a non-forced merge.
 

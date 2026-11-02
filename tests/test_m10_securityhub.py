@@ -13,8 +13,7 @@ from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import classify_securityhub_standard
 from ScoutSuite.core.ruleset import Ruleset
 from ScoutSuite.core.run_context import RunContext
-from ScoutSuite.providers.aws.facade.securityhub import (
-    SecurityHubPublicFacade, MAX_PAGES, MAX_STANDARDS)
+from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.aws.provider import AWSProvider
 from ScoutSuite.providers.aws.resources.securityhub.base import SecurityHubPublic
@@ -149,7 +148,7 @@ def test_malformed_duplicate_limit_and_looped_pages_fail_closed():
               {'StandardsSubscriptions': [], 'NextToken': 'loop'}],
              'InvalidPaginationToken'),
             ([{'StandardsSubscriptions': [], 'NextToken': str(i)}
-              for i in range(MAX_PAGES)], 'PageLimit'),
+              for i in range(8)], 'PageLimit'),
         ]
         for pages, reason in cases:
             sdk = Mock()
@@ -157,22 +156,24 @@ def test_malformed_duplicate_limit_and_looped_pages_fail_closed():
             sdk.get_enabled_standards.side_effect = pages
             ctx = RunContext('aws').setup()
             try:
-                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
+                with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk), \
+                     patch('ScoutSuite.providers.aws.facade.securityhub.MAX_PAGES', 8):
                     output = await SecurityHubPublicFacade(object()).get_hub(REGION)
                 assert output['standards_inventory_complete'] is False
-                assert sdk.get_enabled_standards.call_count <= MAX_PAGES
+                assert sdk.get_enabled_standards.call_count <= 8
                 assert any(issue['reason_code'] == reason for issue in ctx.collection_issues)
             finally:
                 await ctx.aclose()
         sdk = Mock()
         sdk.describe_hub.return_value = {'HubArn': HUB}
         sdk.get_enabled_standards.return_value = {
-            'StandardsSubscriptions': [subscription(i) for i in range(MAX_STANDARDS + 1)]}
+            'StandardsSubscriptions': [subscription(i) for i in range(6)]}
         ctx = RunContext('aws').setup()
         try:
-            with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk):
+            with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk), \
+                 patch('ScoutSuite.providers.aws.facade.securityhub.MAX_STANDARDS', 5):
                 result = await SecurityHubPublicFacade(object()).get_hub(REGION)
-            assert len(result['standards']) == MAX_STANDARDS
+            assert len(result['standards']) == 5
             assert not result['standards_inventory_complete']
             assert any(issue['reason_code'] == 'StandardsLimit' for issue in ctx.collection_issues)
         finally:

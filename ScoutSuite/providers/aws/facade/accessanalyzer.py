@@ -7,8 +7,8 @@ from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 from ScoutSuite.providers.utils import run_concurrently
 
 
-MAX_PAGES = 20
-MAX_ANALYZERS = 2000
+MAX_PAGES = 500
+MAX_ANALYZERS = 50000
 
 
 class AccessAnalyzerFacade(AWSBaseFacade):
