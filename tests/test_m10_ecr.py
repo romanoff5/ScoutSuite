@@ -245,7 +245,7 @@ def test_registry_basic_scanning_real_report_contract_creates_finding():
     ruleset = Ruleset('aws', filename='default.json')
     ruleset.rules = {
         key: value for key, value in ruleset.rules.items()
-        if key == 'ecr-registry-not-enhanced-scanning'
+        if key == 'ecr-registry-not-enhanced-scanning.json'
     }
     assert len(ruleset.rules) == 1
     provider = SimpleNamespace(
