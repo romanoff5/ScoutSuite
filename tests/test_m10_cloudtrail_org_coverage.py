@@ -225,3 +225,44 @@ def test_default_reporting_rule_and_safe_escaped_evidence_template():
               'services.organizations.accounts.id.html').read_text(encoding='utf-8')
     assert '{{m10r_cloudtrail_coverage.state}}' in detail
     assert '{{{m10r_' not in detail
+
+
+def test_restricted_region_scan_and_missing_owner_region_data_cannot_prove_complete():
+    data = fixture()
+    del data['cloudtrail']['regions'][REGION]
+    summary = reconcile_cloudtrail_organization_coverage(
+        data, ['organizations', 'cloudtrail'], MASTER)
+    assert summary['cloudtrail_inventory_complete'] is False
+    assert summary['gap_regions'] == 0
+    assert summary['unknown_regions'] == 4
+    assert summary['all_accounts_configured'] is False
+    data = fixture()
+    data['organizations']['account_regions'][MASTER] = {
+        'collection_status': 'denied', 'regions': {}}
+    summary = reconcile_cloudtrail_organization_coverage(
+        data, ['organizations', 'cloudtrail'], MASTER)
+    assert summary['cloudtrail_inventory_complete'] is False
+    assert summary['all_accounts_configured'] is False
+
+
+def test_account_regions_page_loop_reports_partial_without_inventing_clean_state():
+    async def scenario():
+        client = Mock()
+        client.list_regions.side_effect = [
+            {'Regions': [], 'NextToken': 'same'},
+            {'Regions': [], 'NextToken': 'same'},
+        ]
+        ctx = RunContext('aws').setup()
+        try:
+            facade = OrganizationsFacade(object(), 'aws', MASTER)
+            with patch.object(AWSFacadeUtils, 'get_client', return_value=client):
+                records = await facade.get_account_region_inventory(
+                    {MASTER: {'state': 'ACTIVE'}}, MASTER)
+            assert records[MASTER]['collection_status'] == 'partial'
+            assert records[MASTER]['regions'] == {}
+            assert client.list_regions.call_count == 2
+            assert any(x['reason_code'].startswith('AccountListRegionsInvalidToken')
+                       for x in ctx.collection_issues)
+        finally:
+            await ctx.aclose()
+    asyncio.run(scenario())
