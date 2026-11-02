@@ -21,7 +21,7 @@ class RDSInstances(AWSResources):
         instance['name'] = raw_instance.get('DBInstanceIdentifier')
         for key in ['InstanceCreateTime', 'Engine', 'DBInstanceStatus', 'AutoMinorVersionUpgrade',
                     'DBInstanceClass', 'MultiAZ', 'Endpoint', 'BackupRetentionPeriod', 'PubliclyAccessible',
-                    'StorageEncrypted', 'VpcSecurityGroups', 'DBSecurityGroups', 'DBParameterGroups',
+                    'StorageEncrypted', 'DeletionProtection', 'VpcSecurityGroups', 'DBSecurityGroups', 'DBParameterGroups',
                     'EnhancedMonitoringResourceArn', 'StorageEncrypted', 'CACertificateIdentifier', 'Tags']:
             instance[key] = raw_instance[key] if key in raw_instance else None
 
