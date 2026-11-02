@@ -320,6 +320,7 @@
       "elbv2-no-access-logs.json",
       "elbv2-no-deletion-protection.json",
       "elbv2-older-ssl-policy.json",
+      "guardduty-detector-disabled.json",
       "iam-assume-role-lacks-external-id-and-mfa.json",
       "iam-assume-role-no-mfa.json",
       "iam-assume-role-policy-allows-all.json",
