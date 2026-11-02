@@ -11,8 +11,8 @@ from pathlib import Path
 import re
 import zipfile
 
-VERSION = "5.14.0+romanoff5.m10rc2"
-TAG = "fork-v5.14.0-m10-rc2"
+VERSION = "5.14.0+romanoff5.m10rc3"
+TAG = "fork-v5.14.0-m10-rc3"
 REPO = "romanoff5/ScoutSuite"
 M10 = {
     "accessanalyzer": "accessanalyzer", "guardduty": "guardduty",
