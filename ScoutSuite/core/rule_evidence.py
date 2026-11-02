@@ -491,7 +491,20 @@ def classify_inspector2_member(member):
     return 'unknown'
 
 
+def classify_backup_vault_lock(vault):
+    """Only explicit Vault Lock state is evidence; absent does not imply clean."""
+    if not isinstance(vault, dict):
+        return 'unknown'
+    state = vault.get('locked')
+    if state is True:
+        return 'secure'
+    if state is False:
+        return 'insecure'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'backup-vault-lock-v1': classify_backup_vault_lock,
     'inspector2-member-state-v1': classify_inspector2_member,
     'inspector2-account-state-v1': classify_inspector2_account,
     # Account and individual scan enrollment share the same AWS state model.

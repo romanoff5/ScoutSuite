@@ -1,0 +1,49 @@
+<!-- AWS Backup: no raw HTML interpolation or external assets. -->
+<script id="services.backup.regions.id.plans.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Backup plan</h4>
+    <ul>
+      <li>ARN: <samp>{{backup_plan_arn}}</samp></li>
+      <li>Plan ID: {{backup_plan_id}}</li>
+      <li>Region: {{region}}</li>
+      <li>Version: {{version_id}}</li>
+      <li>Creation date: {{creation_date}}</li>
+      <li>Last execution date: {{last_execution_date}}</li>
+      <li>Creator request ID: {{creator_request_id}}</li>
+    </ul>
+    <h4>Backup rules ({{rule_count}})</h4>
+    {{#each rules}}
+      <ul>
+        <li>Name: {{RuleName}}; ID: {{RuleId}}</li>
+        <li>Target vault: <samp>{{TargetBackupVaultName}}</samp></li>
+        <li>Schedule: {{ScheduleExpression}}; timezone: {{ScheduleExpressionTimezone}}</li>
+        <li>Start / completion windows (minutes): {{StartWindowMinutes}} / {{CompletionWindowMinutes}}</li>
+        <li>Lifecycle transition / deletion (days): {{Lifecycle.MoveToColdStorageAfterDays}} /
+          {{Lifecycle.DeleteAfterDays}}</li>
+        <li>Opt in for continuous backup: {{EnableContinuousBackup}}</li>
+        {{#each CopyActions}}
+          <li>Copy to <samp>{{DestinationBackupVaultArn}}</samp>;
+            delete after: {{Lifecycle.DeleteAfterDays}} days</li>
+        {{/each}}
+        {{#each RecoveryPointTags}}<li>Tag {{@key}}: {{this}}</li>{{/each}}
+      </ul>
+    {{/each}}
+    <h4>Advanced backup settings</h4>
+    {{#each advanced_backup_settings}}
+      <p>Resource type: {{ResourceType}}</p>
+      {{#each BackupOptions}}<p>{{@key}}: {{this}}</p>{{/each}}
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.backup.regions.id.plans",
+    $("#services\\.backup\\.regions\\.id\\.plans\\.partial").html());
+</script>
+<script id="single_backup_plan-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.backup.regions.id.plans' }}
+</script>
+<script>
+  var single_backup_plan_template = Handlebars.compile(
+    $("#single_backup_plan-template").html());
+</script>

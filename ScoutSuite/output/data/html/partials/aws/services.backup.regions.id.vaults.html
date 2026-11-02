@@ -1,0 +1,32 @@
+<!-- AWS Backup: all untrusted data is HTML-escaped by Handlebars. -->
+<script id="services.backup.regions.id.vaults.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Backup vault</h4>
+    <ul>
+      <li>ARN: <samp>{{backup_vault_arn}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Type / state: {{vault_type}} / {{vault_state}}</li>
+      <li>Encryption key: <samp>{{encryption_key_arn}}</samp></li>
+      <li>Encryption key type: {{encryption_key_type}}</li>
+      <li>Vault Lock enabled: {{locked}}</li>
+      <li>Minimum / maximum retention (days): {{min_retention_days}} / {{max_retention_days}}</li>
+      <li>Lock date: {{lock_date}}</li>
+      <li>Recovery points reported by AWS: {{number_of_recovery_points}}</li>
+      <li>Creation date: {{creation_date}}</li>
+      <li>Source vault: <samp>{{source_backup_vault_arn}}</samp></li>
+      <li>Creator request ID: {{creator_request_id}}</li>
+    </ul>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.backup.regions.id.vaults",
+    $("#services\\.backup\\.regions\\.id\\.vaults\\.partial").html());
+</script>
+<script id="single_backup_vault-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.backup.regions.id.vaults' }}
+</script>
+<script>
+  var single_backup_vault_template = Handlebars.compile(
+    $("#single_backup_vault-template").html());
+</script>
