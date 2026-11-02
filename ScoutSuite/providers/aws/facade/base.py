@@ -11,6 +11,7 @@ from ScoutSuite.providers.aws.facade.securityhub import SecurityHubPublicFacade
 from ScoutSuite.providers.aws.facade.wafv2 import WAFv2PublicFacade
 from ScoutSuite.providers.aws.facade.backup import BackupPublicFacade
 from ScoutSuite.providers.aws.facade.organizations import OrganizationsFacade
+from ScoutSuite.providers.aws.facade.identitycenter import IdentityCenterFacade
 from ScoutSuite.providers.aws.facade.awslambda import LambdaFacade
 from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.cloudformation import CloudFormation
@@ -195,6 +196,7 @@ class AWSFacade(AWSBaseFacade):
         self.wafv2 = WAFv2PublicFacade(self.session, self.owner_id)
         self.backup = BackupPublicFacade(self.session, self.owner_id)
         self.organizations = OrganizationsFacade(self.session, self.partition)
+        self.identitycenter = IdentityCenterFacade(self.session, self.owner_id)
 
         # Instantiate facades for proprietary services
         try:
