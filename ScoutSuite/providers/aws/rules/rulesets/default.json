@@ -1676,6 +1676,18 @@
         "level": "warning"
       }
     ],
+    "m10q-s3-access-point-bucket-unresolved.json": [
+      {
+        "enabled": true,
+        "level": "warning"
+      }
+    ],
+    "m10q-s3-directory-access-point-target-unresolved.json": [
+      {
+        "enabled": true,
+        "level": "warning"
+      }
+    ],
     "bedrock-invocation-logging-review.json": [
       {
         "enabled": true,

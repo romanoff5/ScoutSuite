@@ -682,7 +682,27 @@ def classify_m10q_s3_backup(bucket):
     return 'unknown'
 
 
+
+def classify_m10q_s3_target_reference(point):
+    """A missing target is actionable only with verified own-account census."""
+    if not isinstance(point, dict):
+        return 'unknown'
+    evidence = point.get('m10q_bucket_target')
+    if not isinstance(evidence, dict):
+        return 'unknown'
+    status = evidence.get('status')
+    if status in ('not_in_local_bucket_inventory',
+                  'not_in_local_directory_bucket_inventory'):
+        return 'insecure'
+    if status in ('observed_local_bucket', 'observed_directory_bucket'):
+        return 'secure'  # Inventory reference, NOT evidence of safe access.
+    if status == 'foreign_account':
+        return 'not_applicable'
+    return 'unknown'
+
+
 CLASSIFIERS = {
+    'm10q-s3-target-reference-v2': classify_m10q_s3_target_reference,
     'm10q-ec2-inspector-coverage-v1': classify_m10q_ec2_inspector,
     'm10q-ecr-image-scan-evidence-v1': classify_m10q_ecr_image_scanning,
     'm10q-s3-backup-evidence-v1': classify_m10q_s3_backup,

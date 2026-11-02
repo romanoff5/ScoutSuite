@@ -13,6 +13,8 @@
     <li>Policy is public (review, not proof of access): {{policy_public}}</li>
     <li>Detail collection complete: {{detail_complete}}</li>
     <li>Bucket region: {{BucketRegion}}</li><li>Policy evidence: {{policy_status}}</li><li>Encryption evidence verified: {{encryption_verified}}</li><li>End-to-end security: not evaluated</li>
+    <!-- M10-Q v2: all evidence remains escaped -->
+    <li>M10-Q backup support verified: {{m10q_backup_support_verified}}</li><li>M10-Q backup coverage: {{m10q_backup_coverage_status}}</li>{{#each m10q_access_points}}<li>Directory Access Point: <samp>{{this}}</samp></li>{{/each}}
   </ul>
 </div>
 </script>

@@ -46,6 +46,10 @@
             <h4>Cross-service coverage (M10-Q)</h4>
             <p>Independent target observation: {{m10q_protected_targets.state}}</p>
             <p>Actual request traffic independently verified: {{m10q_protected_targets.traffic_routing_through_waf_verified}}</p>
+            <p>Target resource existence observed: {{m10q_protected_targets.independent_target_existence_confirmed}}</p>
+            <p>Independent WAF attachment verified: {{m10q_protected_targets.independent_waf_attachment_verified}}</p>
+            <p>Real request inspection verified: {{m10q_protected_targets.inspection_applied_to_requests_verified}}</p>
+            <p>WAF attachment evidence: {{m10q_protected_targets.association_evidence_source}}</p>
             {{#each m10q_protected_targets.verified_resource_arns}}<p>Discovered target: <samp>{{this}}</samp></p>{{/each}}
             {{#each m10q_protected_targets.waf_association_arns}}<p>WAF association ARN: <samp>{{this}}</samp></p>{{/each}}
             <p>Scope: {{m10q_protected_targets.scope_note}}</p>
