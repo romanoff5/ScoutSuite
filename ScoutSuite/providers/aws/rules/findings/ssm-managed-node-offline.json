@@ -1,0 +1,20 @@
+{
+    "description": "SSM-managed node has no confirmed Online agent",
+    "rationale": "SSM has registered this node but its reported ping state is not Online. Previously recorded patch results can be stale.",
+    "remediation": "Restore agent communication and verify the managed-node status before trusting historical patch results.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-reports.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "agent_not_online",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "AgentNotOnline",
+    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+}

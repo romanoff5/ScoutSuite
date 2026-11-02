@@ -1,0 +1,20 @@
+{
+    "description": "Running EC2 instance is not reporting as an SSM-managed node",
+    "rationale": "A complete EC2 and SSM inventory found no SSM registration for this running instance. This does not prove that the agent is absent; IAM, network or registration problems can also cause this state.",
+    "remediation": "Check SSM Agent installation, instance profile, required network endpoints and managed-node registration; validate Patch Manager enrollment.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-reports.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "unmanaged_running_ec2",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "UnmanagedRunningEc2",
+    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+}

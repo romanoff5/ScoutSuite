@@ -8,6 +8,7 @@ from ScoutSuite.providers.aws.resources.inspector2.base import Inspector2
 from ScoutSuite.providers.aws.resources.securityhub.base import SecurityHubPublic
 from ScoutSuite.providers.aws.resources.wafv2.base import WAFv2Public
 from ScoutSuite.providers.aws.resources.networkfirewall.base import NetworkFirewallPublic
+from ScoutSuite.providers.aws.resources.ssm.base import SSMPublic
 from ScoutSuite.providers.aws.resources.backup.base import BackupPublic
 from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
@@ -63,10 +64,6 @@ except ImportError:
     pass
 try:
     from ScoutSuite.providers.aws.resources.private_guardduty.base import GuardDuty
-except ImportError:
-    pass
-try:
-    from ScoutSuite.providers.aws.resources.private_ssm.base import SSM
 except ImportError:
     pass
 
@@ -138,6 +135,7 @@ class AWSServicesConfig(BaseServicesConfig):
         self.wafv2 = WAFv2Public(facade)
         self.backup = BackupPublic(facade)
         self.networkfirewall = NetworkFirewallPublic(facade)
+        self.ssm = SSMPublic(facade)
         self.identitycenter = IdentityCenter(facade)
         self.organizations = Organizations(facade)
 
@@ -164,10 +162,6 @@ class AWSServicesConfig(BaseServicesConfig):
             pass
         try:
             self.guardduty = GuardDuty(facade)
-        except NameError as _:
-            pass
-        try:
-            self.ssm = SSM(facade)
         except NameError as _:
             pass
 

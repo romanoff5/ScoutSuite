@@ -1,0 +1,20 @@
+{
+    "description": "SSM reports critical or security-classified noncompliant patches",
+    "rationale": "The Patch Manager patch-state counters explicitly report critical/security noncompliant updates, including potentially failed or pending-reboot fixes.",
+    "remediation": "Review the baseline, missing patch details, CVEs and installation failures; remediate and rerun scan.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-reports.html"
+    ],
+    "dashboard_name": "SSM managed nodes",
+    "path": "ssm.regions.id.managed_nodes.id",
+    "conditions": [
+        "and",
+        [
+            "security_noncompliant",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "SecurityNoncompliant",
+    "evidence_policy": "m10-o-ssm-patch-evidence-v1"
+}

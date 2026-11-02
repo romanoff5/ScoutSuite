@@ -94,9 +94,21 @@
         },
         "ssm": {
             "resources": {
-                "parameters": {
+                "regions": {
                     "cols": 2,
-                    "path": "services.ssm.regions.id.parameters"
+                    "path": "services.ssm.regions"
+                },
+                "managed_nodes": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.managed_nodes"
+                },
+                "patch_baselines": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.patch_baselines"
+                },
+                "patch_groups": {
+                    "cols": 2,
+                    "path": "services.ssm.regions.id.patch_groups"
                 }
             }
         },
