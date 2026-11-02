@@ -1,7 +1,7 @@
 #requires -Version 7.0
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Stable', 'Fork', 'ForkRc1')][string]$Mode,
+    [Parameter(Mandatory)][ValidateSet('Stable', 'Fork', 'ForkRc2', 'ForkRc1')][string]$Mode,
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter')
 )
 Set-StrictMode -Version Latest
@@ -9,7 +9,8 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $ToolkitRoot -PathType Container)) { throw "Missing toolkit root: $ToolkitRoot" }
 $venvName = switch ($Mode) {
     'Stable' { '.venv-scout' }
-    'Fork' { '.venv-scout-fork-rc2' }
+    'Fork' { '.venv-scout-fork-rc3' }
+    'ForkRc2' { '.venv-scout-fork-rc2' }
     'ForkRc1' { '.venv-scout-fork' }
 }
 $exe = Join-Path $ToolkitRoot (Join-Path $venvName 'Scripts\scout.exe')
@@ -19,8 +20,11 @@ if ($Mode -ne 'Stable') {
     if (-not (Test-Path -LiteralPath $recordPath -PathType Leaf)) { throw 'Fork provenance record missing' }
     $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
     if ($record.repository -cne 'romanoff5/ScoutSuite' -or
-        $record.version -cne $(if ($Mode -eq 'Fork') { '5.14.0+romanoff5.m10rc2' }
-                              else { '5.14.0+romanoff5.m10rc1' })) {
+        $record.version -cne $(switch ($Mode) {
+            'Fork' { '5.14.0+romanoff5.m10rc3' }
+            'ForkRc2' { '5.14.0+romanoff5.m10rc2' }
+            'ForkRc1' { '5.14.0+romanoff5.m10rc1' }
+        })) {
         throw 'Fork provenance identity mismatch'
     }
 }

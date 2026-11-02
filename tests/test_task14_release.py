@@ -6,8 +6,8 @@ from ScoutSuite import __version__
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = "fork-v5.14.0-m10-rc2"
-VERSION = "5.14.0+romanoff5.m10rc2"
+TAG = "fork-v5.14.0-m10-rc3"
+VERSION = "5.14.0+romanoff5.m10rc3"
 
 
 def test_unique_fork_version_and_manifest_generator_syntax():
@@ -55,11 +55,13 @@ def test_stable_venv_and_external_client_toolkit_are_never_mutated_by_install():
     assert "if ($createdVenv -and -not $verifiedInstall)" in install
     assert "Remove-Item -LiteralPath $venv -Recurse -Force" in install
     assert "runtime-py311.constraints.txt" in install
-    assert ".venv-scout-fork-rc2" in install
+    assert ".venv-scout-fork-rc3" in install
     assert "scout_exe_sha256" in install + wrapper
     assert "Get-FileHash" in wrapper
-    assert "ForkRc1" in select
+    assert "ForkRc1" in select and "ForkRc2" in select
+    assert ".venv-scout-fork-rc3" in select + wrapper
     assert ".venv-scout-fork-rc2" in select + wrapper
+    assert "5.14.0+romanoff5.m10rc3" in wrapper
     assert "5.14.0+romanoff5.m10rc2" in wrapper
 
 
@@ -72,18 +74,18 @@ def test_release_notes_explicitly_disclaim_unverified_controls_and_containers():
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
     for entry in ("recursive-include scripts *.ps1",
                   "recursive-include docs/releases *.md",
-                  "include tools/fork_release.py"):
+                  "include tools/fork_release.py", "include tools/audit_scan_evidence.py"):
         assert entry in manifest
 
 
-def test_rc2_release_pins_installable_dependency_closure_and_runtime_hotfix():
+def test_rc3_release_pins_installable_dependency_closure_and_runtime_hotfix():
     flow = (ROOT / ".github/workflows/fork-rc-release.yml").read_text(encoding="utf-8")
     generator = (ROOT / "tools/fork_release.py").read_text(encoding="utf-8")
     assert "runtime-py311.constraints.txt" in flow
     assert "runtime_constraints_sha256" in generator
     assert "70cf29d5579864543b6363e7a271a84216bb6837" in flow
     assert "merge-base --is-ancestor" in flow
-    assert "fork-v5.14.0-m10-rc2" in flow
+    assert "fork-v5.14.0-m10-rc3" in flow
     assert "fork-v5.14.0-m10-rc1" not in flow
     assert "No real client AWS scanning" in (ROOT / "docs/releases" / (TAG + ".md")).read_text(encoding="utf-8")
 

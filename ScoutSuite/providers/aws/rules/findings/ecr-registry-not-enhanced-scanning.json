@@ -10,9 +10,9 @@
     "conditions": [
         "and",
         [
-            "basic_scanning",
-            "true",
-            ""
+            "scan_type",
+            "equal",
+            "BASIC"
         ]
     ],
     "id_suffix": "NotEnhanced",

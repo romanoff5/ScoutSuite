@@ -231,3 +231,45 @@ def test_optin_selection_and_html_escaping_and_no_scanning_false_positive():
     assert classify_ecr_tag_mutability({
         'image_tag_mutability': 'IMMUTABLE', 'image_scanning_configuration': {
             'scanOnPush': False}}) == 'secure'
+
+
+def test_registry_basic_scanning_real_report_contract_creates_finding():
+    """Live RC1 evidence revealed BASIC classified insecure but not flagged.
+
+    A synthetic resource in the same normalized shape must be flagged by the
+    regular finding engine; ENHANCED must not, and absent data stays UNKNOWN.
+    """
+    definition = json.loads((ROOT / 'ScoutSuite/providers/aws/rules/findings/'
+                             'ecr-registry-not-enhanced-scanning.json').read_text(encoding='utf-8'))
+    assert definition['conditions'] == ['and', ['scan_type', 'equal', 'BASIC']]
+    ruleset = Ruleset('aws', filename='default.json')
+    ruleset.rules = {
+        key: value for key, value in ruleset.rules.items()
+        if key == 'ecr-registry-not-enhanced-scanning.json'
+    }
+    assert len(ruleset.rules) == 1
+    provider = SimpleNamespace(
+        service_list=['ecr'],
+        services={'ecr': {'regions': {
+            'eu-central-1': {'registry_scanning': {
+                'basic': {'id': 'basic', 'scan_type': 'BASIC', 'rules': []},
+                'enhanced': {'id': 'enhanced', 'scan_type': 'ENHANCED', 'rules': []},
+                'unknown': {'id': 'unknown', 'rules': []},
+            }},
+        }}})
+    ctx = RunContext('aws').setup()
+    try:
+        ProcessingEngine(ruleset).run(provider)
+        result = provider.services['ecr']['findings']['ecr-registry-not-enhanced-scanning']
+        assert result['checked_items'] == 3
+        assert result['flagged_items'] == 1
+        assert len(result['items']) == 1
+        summary = result['evaluation_summary']
+        assert summary['policy'] == 'ecr-registry-scanning-v1'
+        assert summary['counts'] == {
+            'insecure': 1, 'secure': 1, 'unknown': 1, 'not_applicable': 0}
+        assert result['assessment_status'] == 'incomplete'
+        assert summary['compliance_verified'] is False
+        assert not any(issue['reason_code'] == 'RuleEvaluation' for issue in ctx.collection_issues)
+    finally:
+        ctx.cleanup()

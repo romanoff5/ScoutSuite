@@ -1,6 +1,6 @@
 {
-    "description": "CloudTrail Service Not Configured",
-    "rationale": "CloudTrail is not configured, which means that API activity is not logged.",
+    "description": "No CloudTrail trail observed in the scanned Region",
+    "rationale": "No CloudTrail trail was observed in the scanned Region. AWS CloudTrail Event History can still retain recent management events even without a configured trail. This rule does not prove absence of all API activity records or exclude organization trails, CloudTrail Lake event data stores, inaccessible resources or logs outside the scanned scope. Verify regional and organizational collection completeness before concluding a durable logging gap.",
     "references": [
         "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/best-practices-security.html"
     ],
@@ -14,5 +14,6 @@
             "0"
         ]
     ],
-    "id_suffix": "NotConfigured"
+    "id_suffix": "NotConfigured",
+    "remediation": "Verify organization-wide multi-Region trails, CloudTrail Lake event data stores, enabled Regions and IAM collection permissions. Where centralized and durable management/data-event delivery is required and absent, implement or restore the appropriate organization trail and verify actual event delivery, encryption and retention."
 }
