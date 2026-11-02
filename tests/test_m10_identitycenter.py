@@ -197,6 +197,48 @@ def test_full_inventory_with_group_emails_and_cross_account_admin():
     asyncio.run(run())
 
 
+def test_cross_account_admin_via_membership_in_distinct_groups():
+    async def run():
+        second_group = '33333333-3333-3333-3333-333333333333'
+        data = region_inventory()
+        instance = data['instances'][INSTANCE]
+        first = instance['permission_sets'][PS]['assignments']
+        first.clear()
+        for account, group_id in zip(ACCOUNTS, (GROUP, second_group)):
+            key = account + ':GROUP:' + group_id
+            first[key] = {'id': key, 'account_id': account, 'principal_type': 'GROUP',
+                          'principal_id': group_id, 'permission_set_arn': PS,
+                          'instance_arn': INSTANCE, 'region': 'eu-west-1'}
+        instance['groups'][second_group] = {
+            'id': second_group, 'name': 'Other admin group',
+            'member_emails': ['person@example.invalid'],
+            'members': {'mem2': {'user_id': USER, 'emails': ['person@example.invalid']}}}
+        facade = SimpleNamespace(
+            owner_id=ACCOUNTS[0], identitycenter=SimpleNamespace(
+                get_region=AsyncMock(return_value=data),
+                region_statuses={'eu-west-1': {'instances': 'complete'}}),
+            organizations=SimpleNamespace(
+                get_organization_inventory=AsyncMock(return_value=organization())),
+            build_region_list=AsyncMock(return_value=['eu-west-1']))
+        resource = IdentityCenter(facade)
+        await resource.fetch_all()
+        assignments = resource['regions']['eu-west-1']['instances'][INSTANCE][
+            'permission_sets'][PS]['assignments']
+        assert all(row['cross_account_admin_candidate'] for row in assignments.values())
+        assert all(row['cross_account_admin_user_ids'] == [USER] for row in assignments.values())
+        assert all(row['admin_account_ids'] == list(ACCOUNTS) for row in assignments.values())
+    asyncio.run(run())
+
+
+def test_wildcard_scoped_to_one_resource_is_broad_but_not_administrator():
+    record = ps_record()
+    record['managed_policies'] = []
+    record['inline_policy'] = {
+        'Statement': [{'Effect': 'Allow', 'Action': '*',
+                       'Resource': 'arn:aws:s3:::one-bucket'}]}
+    assert _risk(record) == (False, True, True)
+
+
 def test_missing_organization_admin_never_passes_even_with_visible_assignments():
     async def run():
         public = SimpleNamespace(
