@@ -1,7 +1,7 @@
 {
-    "description": "RDS instance deletion protection is disabled",
-    "rationale": "The RDS DB instance reports DeletionProtection=false. Accidental or unauthorized deletion can cause data loss; snapshots, backup retention and IAM controls must be assessed separately. This observation does not establish protection for clusters or replicas outside the collected instance scope.",
-    "remediation": "Review the DB instance lifecycle and enable DeletionProtection where applicable. Confirm production-change approvals, snapshots and backup/restore testing independently.",
+    "description": "Standalone RDS DB instance deletion protection is disabled",
+    "rationale": "A standalone RDS DB instance reports DeletionProtection=false. Aurora and Multi-AZ DB cluster members are excluded and must instead be assessed using DBCluster DeletionProtection. Missing or malformed cluster membership stays UNKNOWN, not compliant.",
+    "remediation": "For standalone DB instances, review the operational need and enable DeletionProtection where appropriate. For Aurora and Multi-AZ DB clusters, review cluster-level deletion protection separately.",
     "references": [
         "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html"
     ],
@@ -9,6 +9,11 @@
     "path": "rds.regions.id.vpcs.id.instances.id",
     "conditions": [
         "and",
+        [
+            "is_cluster_member",
+            "false",
+            ""
+        ],
         [
             "DeletionProtection",
             "false",
