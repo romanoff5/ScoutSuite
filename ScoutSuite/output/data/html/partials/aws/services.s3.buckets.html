@@ -72,6 +72,16 @@
         <div class="list-group-item">
             <h4>Cross-service coverage (M10-Q)</h4>
             <p>AWS Backup evidence: {{m10q_backup.state}}</p>
+            <p>Bucket census: {{../bucket_inventory_status}}</p>
+            <p>Backup plan selection: {{m10q_backup.plan_selection_status}}</p>
+            {{#each m10q_backup.selected_plan_ids}}<p>Explicitly selected backup plan: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_backup.conditional_plan_ids}}<p>Tag-based/conditional plan candidate: <samp>{{this}}</samp></p>{{/each}}
+            {{#each m10q_backup.cross_region_evidence_regions}}<p>Recovery evidence in other Region: {{this}}</p>{{/each}}
+            {{#each m10q_backup.restore_test_jobs_observed}}<p>Restore test: <samp>{{restore_job_id}}</samp>; status: {{status}}; validation: {{validation_status}}</p>{{/each}}
+            <p>Restore testing independently verified: {{m10q_backup.restore_test_success_verified}}</p>
+            <p>Advanced S3 inventory status: {{m10q_s3_entrypoint_inventory_status}}</p>
+            <p>Linked S3 Access Points/MRAP/Grants: {{m10q_s3_entrypoint_count}}; public Access Point candidates: {{m10q_s3_public_access_point_count}}</p>
+            {{#each m10q_s3_entrypoints}}<p>{{kind}}: <samp>{{reference}}</samp>; Region: {{region}}; public policy: {{policy_public}}</p>{{/each}}
             <p>Canonical bucket ARN: <samp>{{m10q_backup.canonical_bucket_arn}}</samp></p>
             <p>Region: {{m10q_backup.region}}</p>
             <p>Ongoing schedule verified: {{m10q_backup.ongoing_schedule_verified}}</p>
