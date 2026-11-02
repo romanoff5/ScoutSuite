@@ -1453,6 +1453,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "inspector2-scan-type-inactive.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

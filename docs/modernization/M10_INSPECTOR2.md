@@ -60,3 +60,51 @@ and dedicated account/resource-state checks only with new scoped tests.
 Revert the M10-D commits and related fixture changes; no migrations or
 cloud resource modifications are involved. Omit `inspector2` from selected
 services to restore pre-slice AWS calls.
+
+
+## Consolidation of independent Inspector2 implementations — 2026-11-02
+
+The earlier branch `modernization/m10d-inspector2-vertical-slice-20261102`
+is already merged in `master`, whereas the separate
+`modernization/m10d-inspector2-account-state-20261102` introduced
+valuable account **scan-type** checks but also repeated account-level
+facade/collector/rule definitions. This version retains a **single**
+`Inspector2Facade`, a **single** `InspectorAccounts` resource, the
+existing `InspectorCoverage` collection, and the two preexisting finding IDs.
+
+The account object now also has `scan_types`, containing normalized
+individual states for EC2, ECR, Lambda, Lambda Code and Code Repository.
+Each entry has `status` (an AWS state or `UNKNOWN`) and
+`inactive`, only true for confirmed DISABLED/SUSPENDED.
+The existing `resource_states` mapping is retained, including old
+known states; missing optional entries are represented by `null` there.
+EC2 and ECR are required by the Inspector2 ResourceState model; their
+absence/malformed status records partial collection. Missing optional
+resource categories are **unknown**, not considered disabled or healthy.
+`failedAccounts` now rejects even an otherwise apparently successful
+account record to prevent a false clean result.
+
+The **only new rule** is `inspector2-scan-type-inactive.json`. It checks
+`inspector2.regions.id.accounts.id.scan_types.id` using the existing
+account state classifier, not a duplicated implementation.
+Account and resource-level coverage checks remain
+`inspector2-account-disabled.json` and
+`inspector2-coverage-inactive.json` with unchanged finding IDs.
+Display renders the five states with escaped Handlebars expressions.
+No CIS mapping or compliance rating is inferred.
+
+The historical scan-type branch is **not merged wholesale**: its
+parallel facade, account resource, default ruleset and historical test
+fixtures would conflict with the already merged service and lose
+the bounded `ListCoverage` implementation. Instead the additional
+behavior is incorporated with tests for SDK stub contract, missing
+EC2/ECR, optional UNKNOWN, failedAccounts, preserved data shapes,
+independent scan-type finding, existing coverage finding, and XSS-safe
+renderer. All five categories are potential scan capabilities rather
+than a guarantee of workload applicability. This remains opt-in,
+read-only and restricted to the current AWS account.
+
+AWS source contracts:
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_BatchGetAccountStatus.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_ResourceState.html
+- https://docs.aws.amazon.com/inspector/v2/APIReference/API_ListCoverage.html

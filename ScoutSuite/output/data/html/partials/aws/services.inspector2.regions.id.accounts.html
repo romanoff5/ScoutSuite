@@ -5,10 +5,11 @@
     <p>Account: <samp>{{account_id}}</samp></p>
     <p>Region: {{region}}</p>
     <p>Inspector status: {{status}}</p>
-    <p>EC2: {{resource_states.ec2}}</p>
-    <p>ECR: {{resource_states.ecr}}</p>
-    <p>Lambda: {{resource_states.lambda}}</p>
-    <p>Lambda code: {{resource_states.lambdaCode}}</p>
+    <p>EC2: {{scan_types.ec2.status}}</p>
+    <p>ECR: {{scan_types.ecr.status}}</p>
+    <p>Lambda: {{scan_types.lambda.status}}</p>
+    <p>Lambda code: {{scan_types.lambdaCode.status}}</p>
+    <p>Code Repository: {{scan_types.codeRepository.status}}</p>
   </div>
 </script>
 <script>
