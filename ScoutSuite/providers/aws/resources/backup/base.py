@@ -56,17 +56,16 @@ def _selection_decision(arn, detail, tags=None):
     if any(fnmatchcase(arn, pattern) for pattern in exclude):
         return 'excluded'
     direct = any(fnmatchcase(arn, pattern) for pattern in include)
-    # Mixed legacy ListOfTags and Resources has undocumented combination
-    # semantics; do not infer which branch wins.
-    if legacy and include:
+    # Resources OR ListOfTags (AWS Backup), then Conditions AND.
+    if not include and not legacy and not conditions:
         return 'unknown'
     if not legacy and not conditions:
-        if not include:
-            return 'unknown'
         return 'matched' if direct else 'not_matched'
-    if include and not direct:
-        return 'not_matched'
     if tags is None:
+        if direct and legacy and not conditions:
+            return 'matched'
+        if include and not direct and not legacy:
+            return 'not_matched'
         return 'unknown'
 
     def compare(entry, op, *, legacy_tag=False):
@@ -92,13 +91,17 @@ def _selection_decision(arn, detail, tags=None):
             return not fnmatchcase(actual, expected)
         return None
 
+    legacy_match = False
     if legacy:
         checks = [compare(x, 'StringEquals', legacy_tag=True)
-                  if x.get('ConditionType') == 'STRINGEQUALS' else None
-                  for x in legacy if isinstance(x, dict)]
-        if len(checks) != len(legacy) or any(x is None for x in checks):
+                  if isinstance(x, dict) and isinstance(x.get('ConditionType'), str)
+                  and x['ConditionType'].upper() == 'STRINGEQUALS'
+                  else None for x in legacy]
+        if any(x is None for x in checks):
             return 'unknown'
-        if not any(checks):
+        legacy_match = any(checks)
+    if include or legacy:
+        if not (direct or legacy_match):
             return 'not_matched'
     for op, entries in conditions.items():
         if op not in ('StringEquals', 'StringNotEquals', 'StringLike', 'StringNotLike'):
