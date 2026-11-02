@@ -251,3 +251,14 @@ Windows/Ubuntu offline CI required before integration. No live credentials.
 - [Offline Windows/Ubuntu CI #41372856680](https://github.com/romanoff5/ScoutSuite/actions/runs/41372856680): each OS **406 passed, 34 subtests passed, 206 warnings**, enforced lint, packaging and browser/XSS checks passed.
 - No live AWS/customer scan was performed; no CIS certification is implied. Remaining limitations: small explicit `ListCoverage` result cap (500/Region, surfaced as incomplete on overflow), absent region/resource completeness comparison, no organization/delegated administrator coverage inference.
 - Rollback using history-preserving commit reverts; remove `inspector2` from opt-in service selection to avoid the new Inspector2 calls. Do not force-reset shared history or rewrite existing reports.
+
+## Task 13 / M10-E — ECR private repository inventory (2026-11-02)
+
+Public opt-in ECR, `DescribeRepositories` only for the authenticated account and
+selected Regions, max 100 pages × 100 repositories. Full ARN/URI/name,
+encryption, scan-on-push metadata, creation date, and tag mutability exclusions
+are retained for remediation. Mutable tags trigger a scoped warning; enhanced
+registry-level vulnerability scanning is **not** inferred from scanOnPush.
+Unsupported/denied, malformed/looped pagination and overflow produce explicit
+incomplete statuses. See `docs/modernization/M10_ECR.md`. ECS and EKS are
+separate unimplemented next slices. No Azure/GCP collector changes.

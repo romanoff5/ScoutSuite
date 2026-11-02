@@ -1,0 +1,34 @@
+<!-- M10-E ECR: all returned values use escaped Handlebars insertion. -->
+<script id="services.ecr.regions.id.repositories.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>ECR private repository</h4>
+    <ul>
+      <li>Name: <samp>{{repository_name}}</samp></li>
+      <li>Repository ARN: <samp>{{repository_arn}}</samp></li>
+      <li>Registry ID: <samp>{{registry_id}}</samp></li>
+      <li>Repository URI: <samp>{{repository_uri}}</samp></li>
+      <li>Region: {{region}}</li>
+      <li>Created at: {{created_at}}</li>
+      <li>Tag mutability: {{image_tag_mutability}}</li>
+      <li>Scan on push (basic-scanning metadata only): {{image_scanning_configuration.scanOnPush}}</li>
+      <li>Encryption type: {{encryption_configuration.encryptionType}}</li>
+      <li>KMS key: <samp>{{encryption_configuration.kmsKey}}</samp></li>
+    </ul>
+    <h4>Tag mutability exclusion filters</h4>
+    {{#each tag_mutability_exclusion_filters}}
+      <p>Filter type: {{filterType}} | Pattern: <samp>{{filter}}</samp></p>
+    {{/each}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ecr.regions.id.repositories",
+    $("#services\\.ecr\\.regions\\.id\\.repositories\\.partial").html());
+</script>
+<script id="single_ecr_repository-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ecr.regions.id.repositories' }}
+</script>
+<script>
+  var single_ecr_repository_template = Handlebars.compile(
+    $("#single_ecr_repository-template").html());
+</script>

@@ -1,0 +1,20 @@
+{
+    "description": "ECR repository permits all image tags to be overwritten",
+    "rationale": "ImageTagMutability=MUTABLE permits overwriting image tags; this can undermine deployment reproducibility. Pull-through cache repositories may intentionally require mutable tags. Exclusion-based policies require individual review and are not automatically considered secure or insecure.",
+    "remediation": "Where compatible with the image publishing workflow, configure IMMUTABLE image tags or scoped exclusions; validate cache workflows before changing policy.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-tag-mutability.html"
+    ],
+    "dashboard_name": "Repositories",
+    "path": "ecr.regions.id.repositories.id",
+    "conditions": [
+        "and",
+        [
+            "tag_mutable",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "MutableTags",
+    "evidence_policy": "ecr-tag-mutability-v1"
+}

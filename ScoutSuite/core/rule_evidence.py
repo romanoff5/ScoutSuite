@@ -320,6 +320,19 @@ def classify_securityhub_standard(standard):
     return 'unknown'
 
 
+def classify_ecr_tag_mutability(repository):
+    """Only plain MUTABLE is an actionable tag-overwrite configuration warning."""
+    if not isinstance(repository, dict):
+        return 'unknown'
+    mode = repository.get('image_tag_mutability')
+    if mode == 'MUTABLE':
+        return 'insecure'
+    if mode == 'IMMUTABLE':
+        return 'secure'
+    # Mixed policies, absent data and unexpected values require review.
+    return 'unknown'
+
+
 def classify_guardduty_detector(detector):
     """Disabled is a confirmed finding; unknown and missing status never pass."""
     if not isinstance(detector, dict):
@@ -392,6 +405,7 @@ CLASSIFIERS = {
     'organizations-features-v1': classify_organizations_features,
     'organizations-root-scp-v1': classify_organizations_scp,
     'guardduty-detector-state-v1': classify_guardduty_detector,
+    'ecr-tag-mutability-v1': classify_ecr_tag_mutability,
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,

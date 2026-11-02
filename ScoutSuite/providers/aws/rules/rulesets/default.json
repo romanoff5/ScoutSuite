@@ -7,6 +7,9 @@
                 "level": "warning"
             }
         ],
+        "ecr-repository-tags-mutable.json": [
+            {"enabled": true, "level": "warning"}
+        ],
         "guardduty-detector-disabled.json": [
             {
                 "enabled": true,
