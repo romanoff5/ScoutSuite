@@ -79,6 +79,7 @@ class BedrockPublic(Regions):
                     'collection': dict(raw.get('collection') or {}),
                     'logging_verified': raw.get('logging_verified') is True,
                     'logging_config': raw.get('logging_config') or {},
+                    'regional_availability': dict(raw.get('regional_availability') or {}),
                      'enforced_guardrails_evidence_status': raw.get(
                          'enforced_guardrails_evidence_status', 'unknown')}
             for kind, mapping in FIELDS.items():

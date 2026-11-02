@@ -26,6 +26,11 @@ DENIED = {'AccessDenied', 'AccessDeniedException', 'UnauthorizedOperation',
           'UnrecognizedClientException'}
 UNSUPPORTED = {'UnknownOperationException', 'UnsupportedOperationException',
                'UnsupportedRegionException', 'UnknownEndpoint'}
+# AWS does not offer every Bedrock control-plane feature in every Region (for
+# example model customization). Only for these list operations does
+# UnknownOperationException mean "not offered here", i.e. verified absence.
+REGION_OPTIONAL_OPERATIONS = frozenset(('list_model_customization_jobs',))
+REGION_UNAVAILABLE = 'operation_not_available_in_region'
 
 
 def safe_time(value):
@@ -66,6 +71,10 @@ class BedrockFacade(AWSBaseFacade):
                 return None, False
             return response, True
         except Exception as error:
+            code = (error.response.get('Error', {}).get('Code')
+                    if isinstance(error, ClientError) else None)
+            if operation in REGION_OPTIONAL_OPERATIONS and code == 'UnknownOperationException':
+                return REGION_UNAVAILABLE, False
             self.failure(operation, error)
             return None, False
 
@@ -80,6 +89,8 @@ class BedrockFacade(AWSBaseFacade):
                 params['nextToken'] = token
             page, valid = await self.one(client, operation, **params)
             if not valid:
+                if page == REGION_UNAVAILABLE and token is None:
+                    return rows, REGION_UNAVAILABLE
                 return rows, False
             items = page.get(key)
             if (not isinstance(items, list) or len(items) > PAGE_SIZE or
@@ -109,7 +120,7 @@ class BedrockFacade(AWSBaseFacade):
             'guardrails': [], 'enforced_guardrails': [], 'agents': [],
             'knowledge_bases': [], 'flows': [], 'prompts': [],
             'inference_profiles': [], 'provisioned_models': [],
-            'model_jobs': [],
+            'model_jobs': [], 'regional_availability': {},
         }
         control = AWSFacadeUtils.get_client('bedrock', self.session, region)
         agent = AWSFacadeUtils.get_client('bedrock-agent', self.session, region)
@@ -151,6 +162,10 @@ class BedrockFacade(AWSBaseFacade):
             ]
             for key, method, output in calls:
                 rows, complete = await self.pages(control, method, output)
+                if complete == REGION_UNAVAILABLE:
+                    # The Region cannot hold these resources: verified empty.
+                    raw['regional_availability'][key] = REGION_UNAVAILABLE
+                    complete = True
                 raw['collection'][key] = complete
                 raw[key] = rows
             details_complete = raw['collection']['guardrails']

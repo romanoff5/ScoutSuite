@@ -15,6 +15,15 @@ are embedded in source or tests.
 | Bedrock | Complete customer resource discovery and invocation-logging configuration, but no customer workloads or enabled logging observed | Defer `ListEnforcedGuardrailsConfiguration` | Account-level enforcement **UNKNOWN**, not absent; on-demand foundation-model inference without registered workloads is possible. |
 | Macie | Explicit service-not-enabled response for a region | No jobs/bucket API calls | Verified `NOT_ENABLED`; generic AccessDenied stays UNKNOWN. Implemented separately in PR #25. |
 
+RC8 field correction for Bedrock: in Regions where AWS does not offer model
+customization (for example `eu-central-1`), `ListModelCustomizationJobs`
+returns `UnknownOperationException`. RC7 treated that as incomplete discovery,
+so the deferral above never applied and the denied enforced-guardrail call
+still ran. RC8 records `regional_availability.model_jobs:
+operation_not_available_in_region` and counts that inventory as verified empty
+- only for this operation; `UnknownOperationException` elsewhere and any
+denial remain incomplete.
+
 Deferred AWS Backup job history does not hide the M10-Q S3 backup evidence
 gap. With a complete, empty plan/vault/protected-resource census no AWS Backup
 recovery point can exist for a bucket in that Region, so
