@@ -43,7 +43,13 @@ def _risk(permission_set):
                 continue
             normalized = action.lower()
             if normalized == '*':
-                admin = True
+                resources = statement.get('Resource')
+                if isinstance(resources, str):
+                    resources = [resources]
+                # Action '*' constrained to specific ARNs is still broad,
+                # but is not the same as unrestricted AdministratorAccess.
+                if isinstance(resources, list) and '*' in resources and not statement.get('Condition'):
+                    admin = True
                 broad = True
             elif normalized in ('iam:*', 'organizations:*', 'sso:*', 'sts:*') or normalized.endswith(':*'):
                 broad = True
@@ -149,14 +155,36 @@ class IdentityCenter(Regions):
             if ctx is not None:
                 ctx.record_collection_issue('partial', 'identitycenter', 'OrganizationManagementScopeUnverified')
         cross = defaultdict(set)
+        user_cross = defaultdict(set)
+        unknown_accounts = set()
         for region in self.get('regions', {}).values():
             for instance in region.get('instances', {}).values():
                 for ps in instance.get('permission_sets', {}).values():
                     for assignment in ps.get('assignments', {}).values():
+                        account_id = assignment['account_id']
+                        if admin_verified and account_id not in accounts:
+                            unknown_accounts.add(account_id)
+                        if not assignment['admin_candidate']:
+                            continue
                         key = (instance['arn'], assignment['principal_type'],
                                assignment['principal_id'])
-                        if assignment['admin_candidate']:
-                            cross[key].add(assignment['account_id'])
+                        cross[key].add(account_id)
+                        if assignment['principal_type'] == 'USER':
+                            user_ids = [assignment['principal_id']]
+                        else:
+                            group = instance.get('groups', {}).get(assignment['principal_id'], {})
+                            user_ids = [member['user_id'] for member in
+                                        group.get('members', {}).values()]
+                        for user_id in user_ids:
+                            user_cross[(instance['arn'], user_id)].add(account_id)
+        if unknown_accounts:
+            self['organization_coverage']['status'] = 'partial'
+            self['organization_coverage']['unrecognized_assignment_account_ids'] = (
+                sorted(unknown_accounts))
+            admin_verified = False
+            ctx = get_current_run_context()
+            if ctx is not None:
+                ctx.record_collection_issue('partial', 'identitycenter', 'AssignmentAccountOutsideVerifiedRoster')
         total_complete = admin_verified
         for region in self.get('regions', {}).values():
             # Region is partial if any Identity Center API is denied or if an
@@ -170,8 +198,20 @@ class IdentityCenter(Regions):
                         account = accounts.get(assignment['account_id'], {})
                         assignment['account_name'] = account.get('Name')
                         assignment['account_email'] = account.get('Email')
-                        assignment['cross_account_admin_candidate'] = len(cross[key]) > 1
-                        assignment['admin_account_ids'] = sorted(cross[key])
+                        if assignment['principal_type'] == 'USER':
+                            members = [assignment['principal_id']]
+                        else:
+                            members = assignment.get('member_user_ids', [])
+                        user_ids = [uid for uid in members if len(
+                            user_cross[(instance['arn'], uid)]) > 1]
+                        assignment['cross_account_admin_user_ids'] = sorted(user_ids)
+                        assignment['cross_account_admin_candidate'] = (
+                            assignment['admin_candidate']
+                            and (len(cross[key]) > 1 or bool(user_ids)))
+                        linked_accounts = set(cross[key])
+                        for uid in members:
+                            linked_accounts.update(user_cross[(instance['arn'], uid)])
+                        assignment['admin_account_ids'] = sorted(linked_accounts)
                         assignment['organization_coverage_status'] = (
                             self['organization_coverage']['status'])
                         assignment['effective_permissions_verified'] = False
