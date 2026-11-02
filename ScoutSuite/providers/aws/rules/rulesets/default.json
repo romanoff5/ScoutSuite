@@ -1705,6 +1705,18 @@
                 "enabled": true,
                 "level": "danger"
             }
+        ],
+        "rds-instance-deletion-protection-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "efs-filesystem-not-encrypted.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
         ]
     }
 }
