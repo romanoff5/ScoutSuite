@@ -1,3 +1,37 @@
+## Post-RC6 review: S3 backup evidence gap with deferred AWS Backup history (2026-11-02)
+
+- Review of the last three days of `master` found one changed-feature false
+  negative from PR #26 (M10 sparse collection). In a Region whose AWS Backup
+  plan, vault and protected-resource census is complete and empty, job history
+  is deferred (`deferred_no_current_backup_inventory`), but the M10-Q S3
+  correlation still required `backup_jobs == 'complete'`. Every S3 bucket in
+  that Region therefore moved from `not_reported` (rule
+  `m10q-s3-backup-evidence-gap` flagged) to `unknown` (not flagged) - exactly
+  the motivating field case with zero plans, vaults and protected resources.
+- Fix: the correlation accepts the deferred marker only together with a
+  complete, empty protected-resource inventory and
+  `backup_service_activity == 'no_current_resources_observed'`; it reports
+  `not_reported` with reason
+  `no_current_backup_inventory_job_history_not_assessed`. An additive
+  `job_history_status` field (`complete`, `not_assessed`, `unknown`) records
+  whether job history was actually enumerated. Partial/denied history,
+  contradictory inventory and a missing activity marker stay UNKNOWN;
+  cross-Region recovery points still clear the gap. No AWS API calls,
+  permissions, rule IDs or other providers change. Rollback: revert the fix
+  commit. The Bedrock region partial now also displays
+  `enforced_guardrails_evidence_status` beside the enforced-guardrail count.
+- Published RC6 is immutable and still contains this defect. Its field
+  acceptance comparison against the RC5 hotfix will show these S3 findings
+  missing in Regions without AWS Backup; that delta is this defect, not
+  improved posture. A later release needs fresh packaging and acceptance.
+- Reviewed without change: PR #26 SSM, S3 Express and Bedrock deferrals keep
+  coverage `incomplete`/UNKNOWN rather than PASS; RC5 Security Hub, RDS cache,
+  WAF metric and Macie disabled-state corrections.
+- Local guarded suite (reused M02-B test environment with exact AWS pins but
+  older Azure/GCP SDKs): 707 passed before the change; the 4 failures are
+  environmental (three M11 Azure/GCP SDK contract tests and one Windows
+  `WinError 1314` symlink-privilege test), matching the RC5 note.
+
 ## RC6 release preparation (2026-11-02)
 
 - RC6 derives from master `0955f56e65665c6eb54f14f37267a4b1eb3466ae`; RDS cache hotfix and conditional M10 collection are already merged. No customer evidence or credentials are included.

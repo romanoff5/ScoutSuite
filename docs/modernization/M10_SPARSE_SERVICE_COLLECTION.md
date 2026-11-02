@@ -15,6 +15,13 @@ are embedded in source or tests.
 | Bedrock | Complete customer resource discovery and invocation-logging configuration, but no customer workloads or enabled logging observed | Defer `ListEnforcedGuardrailsConfiguration` | Account-level enforcement **UNKNOWN**, not absent; on-demand foundation-model inference without registered workloads is possible. |
 | Macie | Explicit service-not-enabled response for a region | No jobs/bucket API calls | Verified `NOT_ENABLED`; generic AccessDenied stays UNKNOWN. Implemented separately in PR #25. |
 
+Deferred AWS Backup job history does not hide the M10-Q S3 backup evidence
+gap. With a complete, empty plan/vault/protected-resource census no AWS Backup
+recovery point can exist for a bucket in that Region, so
+`m10q-s3-backup-evidence-gap` still reports it (`not_reported`,
+`job_history_status: not_assessed`). Cross-Region recovery points still clear
+the gap; partial or denied inventory remains UNKNOWN.
+
 These guards do **not** operate from a bare empty list. They require
 collector-specific completeness evidence. The normal deep path continues if a
 plan, managed node, configured patch group, customer Bedrock workload, or
