@@ -1507,6 +1507,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "wafv2-web-acl-unassociated.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

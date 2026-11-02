@@ -78,6 +78,24 @@ class WebACLs(AWSResources):
         if after is not None and not isinstance(after, list):
             self.issue('MalformedFirewallManagerPostRules')
             after = None
+        associations = raw.get('associated_resources')
+        completeness = raw.get('association_scope_complete')
+        if (not isinstance(associations, list)
+                or any(not isinstance(row, dict) or
+                       not isinstance(row.get('resource_arn'), str)
+                       for row in associations)):
+            self.issue('MalformedAssociationResource')
+            associations = []
+            completeness = False
+        status = raw.get('association_status')
+        if status not in ('associated', 'unused_candidate', 'unknown'):
+            status = 'unknown'
+        if status == 'unused_candidate' and (completeness is not True or associations):
+            self.issue('ConflictingAssociationStatus')
+            status = 'unknown'
+        if status == 'associated' and not associations:
+            self.issue('ConflictingAssociationStatus')
+            status = 'unknown'
         key = get_non_provider_id(arn)
         return key, {
             'id': key, 'name': name, 'web_acl_id': raw.get('id'),
@@ -93,6 +111,13 @@ class WebACLs(AWSResources):
             'unprotected_allow_all': (
                 default == 'ALLOW' and rules == []
                 and fms is False and before in (None, []) and after in (None, [])),
+            'association_status': status,
+            'association_scope_complete': completeness is True,
+            'unused_candidate': status == 'unused_candidate',
+            'associated_resource_count': len(associations),
+            'associated_resources': associations,
+            'checked_resource_types': raw.get('checked_resource_types') or [],
+            'unknown_resource_types': raw.get('unknown_resource_types') or [],
             'capacity': raw.get('capacity'),
             'visibility_config': raw.get('visibility_config') or {},
             'logging_status': raw.get('logging_status'),

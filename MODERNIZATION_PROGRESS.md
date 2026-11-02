@@ -342,3 +342,16 @@ finding payload requests, or changes to configured collection caps.
 ## M10-J — AWS WAFv2 regional and CloudFront Web ACL inventories (2026-11-02)
 
 Adds the public `wafv2` service to the default AWS scan, with bounded read-only `ListWebACLs`, `GetWebACL` and `GetLoggingConfiguration`. Regional Web ACLs are collected for selected Regions and CLOUDFRONT scope only in `us-east-1`. Preserves full ARN/ID/name, priority-ordered rule names and type summaries, logging destinations, scope and default action without retaining raw rule statements/request bodies. Empty ALLOW ACLs not managed by Firewall Manager are flagged; missing/ambiguous management, details, logging and API responses remain partial/unknown. CloudFront scope is not claimed if `us-east-1` is not scanned. See `docs/modernization/M10_WAFV2.md`. No AWS writes or Azure/GCP modernization.
+
+## M10-K — WAFv2 associations (2026-11-02)
+
+Extended default-scan WAFv2 to discover actual Regional Web ACL associations
+via `ListResourcesForWebACL` (ALB, API Gateway REST stages, AppSync, Cognito,
+App Runner, Verified Access, Amplify) and CloudFront distributions via
+`ListDistributionsByWebACLId` (full WAF ARN, up to 100 pages × 100).
+Explicit `associated`/`unused_candidate`/`unknown` with per-type
+completeness; access denied, malformed/foreign, duplicate, capped and looping
+responses cannot be classified as unused. Full associated ARN and CF
+ID/domain/status retained for remediation. Added scoped unused-candidate
+finding and synthetic SDK/security/regression tests; no writes or live cloud
+calls. See `docs/modernization/M10_WAFV2.md`.

@@ -103,10 +103,21 @@ def test_both_scopes_and_normalized_resources_with_stubbed_sdk():
                                           'ResourceArn': arn('cdn', 'CLOUDFRONT')})
                 ctx = RunContext('aws').setup()
                 try:
-                    with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk) as get:
+                    with patch.object(AWSFacadeUtils, 'get_client', return_value=sdk) as get, \
+                         patch('ScoutSuite.providers.aws.facade.wafv2.discover_associations',
+                               new_callable=AsyncMock) as associations:
+                        associations.return_value = {
+                            'association_status': 'unknown',
+                            'association_scope_complete': False,
+                            'associated_resources': [],
+                            'associated_resource_count': 0,
+                            'checked_resource_types': [],
+                            'unknown_resource_types': [],
+                        }
                         facade = WAFv2PublicFacade(object(), ACCOUNT)
                         records = await facade.get_web_acls(REGION)
                         get.assert_called_once_with('wafv2', facade.session, REGION)
+                        assert associations.await_count == 2
                     stub.assert_no_pending_responses()
                     assert any(x['reason_code'] == 'LoggingConfigurationNotFound'
                                for x in ctx.collection_issues)

@@ -353,6 +353,22 @@ def classify_eks_control_plane_audit(cluster):
     return 'unknown'
 
 
+def classify_wafv2_association(web_acl):
+    """Unknown API/resource coverage must never imply an unused Web ACL."""
+    if not isinstance(web_acl, dict):
+        return 'unknown'
+    status = web_acl.get('association_status')
+    resources = web_acl.get('associated_resources')
+    if not isinstance(resources, list):
+        return 'unknown'
+    if status == 'associated' and resources:
+        return 'secure'
+    if (status == 'unused_candidate' and not resources
+            and web_acl.get('association_scope_complete') is True):
+        return 'insecure'
+    return 'unknown'
+
+
 def classify_wafv2_empty_allow(web_acl):
     """A verified empty, non-FMS Web ACL with ALLOW default cannot filter."""
     if not isinstance(web_acl, dict):
@@ -508,6 +524,7 @@ CLASSIFIERS = {
     'ecs-task-privileged-v1': classify_ecs_task_privilege,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,
     'wafv2-empty-allow-v1': classify_wafv2_empty_allow,
+    'wafv2-association-v1': classify_wafv2_association,
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
