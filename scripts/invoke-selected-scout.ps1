@@ -1,5 +1,5 @@
 #requires -Version 7.0
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'),
     [Parameter(ValueFromRemainingArguments)][string[]]$ScoutArgs

@@ -12,6 +12,9 @@
 - The toolkit's own `run-scout.ps1` / `aws_audit.py scan scout` still runs
   the Stable `.venv-scout` and ignores the selection; fork field scans go
   through `scripts/invoke-selected-scout.ps1` (toolkit left unchanged).
+- `invoke-selected-scout.ps1` had positional binding, so `invoke-selected-scout.ps1 aws --help` without
+  `-ToolkitRoot` bound `aws` as the toolkit path and failed closed ("Scanner missing"). It now uses
+  `PositionalBinding = $false`; every scout argument goes to `$ScoutArgs`.
 
 ## Release candidates retired; install from origin/master (2026-11-03)
 

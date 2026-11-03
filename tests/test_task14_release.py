@@ -67,6 +67,8 @@ def test_selection_keeps_stable_and_every_rc_environment_for_rollback():
     assert "schema = 2" in select and "Move-Item" in select
     assert "'5.14.0+romanoff5.m10rc' + $mode.Substring(6)" in wrapper
     assert "mode = 'stable'" in wrapper and "Invalid scanner selection config" in wrapper
+    # "invoke-selected-scout.ps1 aws ..." must never bind "aws" as the toolkit path.
+    assert "[CmdletBinding(PositionalBinding = $false)]" in wrapper
     assert "$record.git_sha -cne $expectedSha" in wrapper
     assert "Get-FileHash" in wrapper and "Fork executable changed after verification" in wrapper
     # Selections written while RC9 was current keep launching RC9.
