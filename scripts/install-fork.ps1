@@ -1,103 +1,109 @@
 #requires -Version 7.0
-[CmdletBinding(DefaultParameterSetName = 'Local')]
+# Installs the fork scanner straight from verified origin/master; there are no release candidates.
+[CmdletBinding(DefaultParameterSetName = 'Main')]
 param(
-    [Parameter(Mandatory, ParameterSetName = 'Local')][string]$WheelPath,
-    [Parameter(Mandatory, ParameterSetName = 'Local')][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$CommitSha,
-    [Parameter(Mandatory, ParameterSetName = 'Release')][switch]$FromRelease,
-    [string]$ReleaseTag = 'fork-v5.14.0-m10-rc9',
+    [Parameter(Mandatory, ParameterSetName = 'Wheel')][string]$WheelPath,
+    [Parameter(Mandatory, ParameterSetName = 'Wheel')][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$CommitSha,
+    [Parameter(Mandatory, ParameterSetName = 'Wheel')][ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedSha256,
+    [string]$RepoPath = (Split-Path -Parent $PSScriptRoot),
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter'),
-    [string]$ExpectedSha256,
-    [string]$ConstraintsPath,
     [string]$WheelhousePath,
-    [string]$PythonCommand = 'py'
+    [string]$PythonCommand = 'py',
+    [switch]$NoSelect
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repo = 'romanoff5/ScoutSuite'
-$version = '5.14.0+romanoff5.m10rc9'
-$venv = Join-Path $ToolkitRoot '.venv-scout-fork-rc9'
-$scout = Join-Path $venv 'Scripts\scout.exe'
-$venvPython = Join-Path $venv 'Scripts\python.exe'
+$version = '5.14.0+romanoff5.main'
 if (-not (Test-Path -LiteralPath $ToolkitRoot -PathType Container)) {
     throw "Toolkit root not found: $ToolkitRoot"
 }
-# Side-by-side RC9 installation cannot change the RC1/hotfix or stable scanner.
-if (Test-Path -LiteralPath $venv) {
-    throw "RC9 environment already exists: $venv. Refusing overwrite; inspect or select the existing install."
+
+function New-Venv([string]$Path) {
+    if ($PythonCommand -eq 'py') { & py -3.11 -m venv $Path } else { & $PythonCommand -m venv $Path }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $Path 'Scripts\python.exe') -PathType Leaf)) {
+        throw "Failed to create isolated environment: $Path"
+    }
 }
-$temp = Join-Path ([IO.Path]::GetTempPath()) ("scout-fork-rc9-" + [guid]::NewGuid().ToString('N'))
+
+function Select-Install([string]$Sha) {
+    if (-not $NoSelect) { & (Join-Path $PSScriptRoot 'select-scanner.ps1') -Mode Fork -GitSha $Sha -ToolkitRoot $ToolkitRoot }
+}
+
+$temp = Join-Path ([IO.Path]::GetTempPath()) ('scout-fork-main-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp | Out-Null
+$venv = $null
 $createdVenv = $false
 $verifiedInstall = $false
 try {
-    $origin = 'local-wheel'
-    if ($FromRelease) {
-        if ($ReleaseTag -cne 'fork-v5.14.0-m10-rc9') { throw 'Only the pinned RC9 release is permitted.' }
-        $base = "https://github.com/$repo/releases/download/$ReleaseTag"
-        $sums = Join-Path $temp 'SHA256SUMS'
-        Invoke-WebRequest -Uri "$base/SHA256SUMS" -OutFile $sums
-        $entries = @{}
-        foreach ($line in (Get-Content -LiteralPath $sums)) {
-            if ($line -notmatch '^([0-9a-fA-F]{64})  ([A-Za-z0-9._+~-]+)$') { throw 'Malformed SHA256SUMS' }
-            if ($entries.ContainsKey($Matches[2])) { throw 'Duplicate checksum entry' }
-            $entries[$Matches[2]] = $Matches[1].ToLowerInvariant()
+    if ($PSCmdlet.ParameterSetName -eq 'Main') {
+        $remote = (git -C $RepoPath remote get-url origin).Trim()
+        if ($LASTEXITCODE -ne 0 -or $remote -notmatch '^(https://github\.com/|git@github\.com:)romanoff5/ScoutSuite(\.git)?/?$') {
+            throw "origin does not resolve to ${repo}: $remote"
         }
-        $wheelName = 'scoutsuite-5.14.0+romanoff5.m10rc9-py3-none-any.whl'
-        $constraintsName = 'runtime-py311.constraints.txt'
-        foreach ($name in @($wheelName, 'manifest.json', $constraintsName)) {
-            if (-not $entries.ContainsKey($name)) { throw "Missing release asset: $name" }
-            Invoke-WebRequest -Uri ("$base/" + [uri]::EscapeDataString($name)) -OutFile (Join-Path $temp $name)
-            $assetSha = (Get-FileHash -LiteralPath (Join-Path $temp $name) -Algorithm SHA256).Hash.ToLowerInvariant()
-            if ($assetSha -ne $entries[$name]) { throw "Release checksum mismatch: $name" }
-        }
-        $manifest = Get-Content -LiteralPath (Join-Path $temp 'manifest.json') -Raw | ConvertFrom-Json
-        if ($manifest.repository -cne $repo -or $manifest.version -cne $version -or
-            $manifest.tag -cne $ReleaseTag -or $manifest.wheel -cne $wheelName -or
-            $manifest.wheel_sha256 -cne $entries[$wheelName] -or
-            $manifest.runtime_constraints -cne $constraintsName -or
-            $manifest.runtime_constraints_sha256 -cne $entries[$constraintsName] -or
-            $manifest.git_sha -notmatch '^[0-9a-f]{40}$') {
-            throw 'Release manifest/provenance mismatch'
-        }
-        $CommitSha = $manifest.git_sha
-        $WheelPath = Join-Path $temp $wheelName
-        $ConstraintsPath = Join-Path $temp $constraintsName
-        $ExpectedSha256 = $entries[$wheelName]
-        $origin = "https://github.com/$repo/releases/tag/$ReleaseTag"
-    } else {
-        if (-not $ExpectedSha256 -or $ExpectedSha256 -notmatch '^[0-9a-fA-F]{64}$') {
-            throw 'Local wheel requires an independently computed -ExpectedSha256.'
-        }
-        $WheelPath = (Resolve-Path -LiteralPath $WheelPath -ErrorAction Stop).Path
-        if (-not $ConstraintsPath) {
-            $ConstraintsPath = Join-Path $PSScriptRoot '..\constraints\combined-py311.txt'
-        }
+        git -C $RepoPath fetch --quiet origin master
+        if ($LASTEXITCODE -ne 0) { throw 'git fetch origin master failed' }
+        $CommitSha = (git -C $RepoPath rev-parse 'refs/remotes/origin/master^{commit}').Trim()
+        $remoteSha = ((git -C $RepoPath ls-remote origin refs/heads/master) -split "`t")[0].Trim()
+        if ($LASTEXITCODE -ne 0 -or $remoteSha -cne $CommitSha) { throw 'origin/master moved during install; retry' }
     }
-    $ConstraintsPath = (Resolve-Path -LiteralPath $ConstraintsPath -ErrorAction Stop).Path
+    $CommitSha = $CommitSha.ToLowerInvariant()
+    $venvName = '.venv-scout-fork-main-' + $CommitSha.Substring(0, 12)
+    $venv = Join-Path $ToolkitRoot $venvName
+    $scout = Join-Path $venv 'Scripts\scout.exe'
+    $venvPython = Join-Path $venv 'Scripts\python.exe'
+    if (Test-Path -LiteralPath $venv) {
+        $existing = Join-Path $venv 'fork-install.json'
+        if ((Test-Path -LiteralPath $existing -PathType Leaf) -and
+            (Get-Content -LiteralPath $existing -Raw | ConvertFrom-Json).git_sha -ceq $CommitSha) {
+            Write-Host "origin/master $CommitSha is already installed at: $venv"
+            $venv = $null
+            Select-Install $CommitSha
+            return
+        }
+        throw "Environment exists without matching provenance: $venv. Refusing overwrite."
+    }
+
+    if ($PSCmdlet.ParameterSetName -eq 'Main') {
+        # Only tracked files of the exact remote commit are built, never the working tree.
+        $source = Join-Path $temp 'source'
+        git -C $RepoPath archive --format=zip --output (Join-Path $temp 'source.zip') $CommitSha
+        if ($LASTEXITCODE -ne 0) { throw 'git archive failed' }
+        Expand-Archive -LiteralPath (Join-Path $temp 'source.zip') -DestinationPath $source
+        $builder = Join-Path $temp 'build-venv'
+        New-Venv $builder
+        $builderPython = Join-Path $builder 'Scripts\python.exe'
+        & $builderPython -m pip install --disable-pip-version-check -r (Join-Path $source 'constraints\build-py311.txt')
+        if ($LASTEXITCODE -ne 0) { throw 'Pinned build frontend installation failed' }
+        & $builderPython -m build --no-isolation --wheel --outdir (Join-Path $temp 'dist') $source
+        if ($LASTEXITCODE -ne 0) { throw 'Wheel build failed' }
+        $wheels = @(Get-ChildItem -LiteralPath (Join-Path $temp 'dist') -Filter '*.whl')
+        if ($wheels.Count -ne 1) { throw 'Expected exactly one built wheel' }
+        $WheelPath = $wheels[0].FullName
+        $ExpectedSha256 = (Get-FileHash -LiteralPath $WheelPath -Algorithm SHA256).Hash
+        $constraintsPath = Join-Path $source 'constraints\combined-py311.txt'
+        $origin = "https://github.com/$repo/commit/$CommitSha"
+    } else {
+        $WheelPath = (Resolve-Path -LiteralPath $WheelPath -ErrorAction Stop).Path
+        $constraintsPath = Join-Path $RepoPath 'constraints\combined-py311.txt'
+        $origin = 'local-wheel'
+    }
     $actualHash = (Get-FileHash -LiteralPath $WheelPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actualHash -cne $ExpectedSha256.ToLowerInvariant()) { throw 'Wheel SHA256 mismatch' }
-    if ((Split-Path -Leaf $WheelPath) -cne 'scoutsuite-5.14.0+romanoff5.m10rc9-py3-none-any.whl') {
-        throw 'Unexpected wheel filename'
-    }
-    $constraintsHash = (Get-FileHash -LiteralPath $ConstraintsPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($PythonCommand -eq 'py') {
-        & py -3.11 -m venv $venv
-    } else {
-        & $PythonCommand -m venv $venv
-    }
-    $createdVenv = Test-Path -LiteralPath $venv -PathType Container
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
-        throw 'Failed to create isolated RC9 environment'
-    }
+    if ((Split-Path -Leaf $WheelPath) -ine "scoutsuite-$version-py3-none-any.whl") { throw 'Unexpected wheel filename' }
+    $constraintsHash = (Get-FileHash -LiteralPath $constraintsPath -Algorithm SHA256).Hash.ToLowerInvariant()
+
+    New-Venv $venv
+    $createdVenv = $true
     if ($WheelhousePath) {
         $WheelhousePath = (Resolve-Path -LiteralPath $WheelhousePath -ErrorAction Stop).Path
-        & $venvPython -m pip install --disable-pip-version-check --no-index --find-links $WheelhousePath -c $ConstraintsPath $WheelPath
+        & $venvPython -m pip install --disable-pip-version-check --no-index --find-links $WheelhousePath -c $constraintsPath $WheelPath
     } else {
-        & $venvPython -m pip install --disable-pip-version-check -c $ConstraintsPath $WheelPath
+        & $venvPython -m pip install --disable-pip-version-check -c $constraintsPath $WheelPath
     }
-    if ($LASTEXITCODE -ne 0) { throw 'Pinned RC9 wheel installation failed' }
+    if ($LASTEXITCODE -ne 0) { throw 'Pinned wheel installation failed' }
     & $venvPython -m pip check
-    if ($LASTEXITCODE -ne 0) { throw 'RC9 dependency consistency check failed' }
+    if ($LASTEXITCODE -ne 0) { throw 'Dependency consistency check failed' }
     $actualVersion = (& $venvPython -I -c 'import importlib.metadata as m; print(m.version("ScoutSuite"))').Trim()
     if ($LASTEXITCODE -ne 0 -or $actualVersion -cne $version) { throw "Unexpected version: $actualVersion" }
     & $scout --help | Out-Null
@@ -106,18 +112,18 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'scout aws --help failed' }
     $exeHash = (Get-FileHash -LiteralPath $scout -Algorithm SHA256).Hash.ToLowerInvariant()
     $record = [ordered]@{
-        repository = $repo; version = $version; git_sha = $CommitSha.ToLowerInvariant()
+        repository = $repo; version = $version; channel = 'origin/master'; git_sha = $CommitSha
         wheel_sha256 = $actualHash; constraints_sha256 = $constraintsHash
         scout_exe_sha256 = $exeHash; origin = $origin
         installed_at_utc = [DateTime]::UtcNow.ToString('o'); executable = $scout
     }
     $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $venv 'fork-install.json') -Encoding utf8
     $verifiedInstall = $true
-    Write-Host "Verified RC9 installed at: $scout"
-    Write-Host 'Scanner selection unchanged; no AWS calls performed.'
+    Write-Host "Verified origin/master $CommitSha installed at: $scout (no AWS calls performed)"
+    Select-Install $CommitSha
 } finally {
     if ($createdVenv -and -not $verifiedInstall) {
-        # This path was nonexistent before this invocation. Never remove RC1 or stable environments.
+        # This path was nonexistent before this invocation. Never remove earlier fork or stable environments.
         Remove-Item -LiteralPath $venv -Recurse -Force -ErrorAction SilentlyContinue
     }
     Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue

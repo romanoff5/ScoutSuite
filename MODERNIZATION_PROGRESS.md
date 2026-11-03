@@ -1,3 +1,52 @@
+## Release candidates retired; install from origin/master (2026-11-03)
+
+- Owner decision: no RC flow. Waiting for master CI and then the release
+  workflow before every install was too slow. Before: a green master Offline
+  CI triggered `fork-rc-release.yml`, which published a pinned
+  `fork-v5.14.0-m10-rcN` prerelease that `install-fork.ps1 -FromRelease`
+  downloaded. After:
+  - `fork-rc-release.yml` and `tools/fork_release.py` (release manifest,
+    endpoint matrix, SBOM, SHA256SUMS) are deleted; no workflow has
+    `contents: write` any more;
+  - the version is `5.14.0+romanoff5.main`; the installed commit SHA in
+    `fork-install.json` identifies a build;
+  - `scripts/install-fork.ps1` (default) checks that `origin` is
+    `romanoff5/ScoutSuite`, fetches `master`, requires the fetched SHA to
+    equal `git ls-remote origin refs/heads/master`, builds the wheel with the
+    pinned build frontend from `git archive` of that commit (never the
+    working tree), installs it with `constraints/combined-py311.txt` into
+    `.venv-scout-fork-main-<sha12>`, runs `pip check`, version and CLI help
+    checks, records provenance and selects it (`-NoSelect` opts out). An
+    unchanged `origin/master` only reselects. The `-WheelPath` mode remains
+    for the CI install check;
+  - `select-scanner.ps1 -Mode Fork [-GitSha <prefix>]` picks the newest (or a
+    pinned) verified main install and writes selection schema 2 (`venv`,
+    `git_sha`); `ForkRc9` is a new rollback mode and `ForkRc8`..`ForkRc1`
+    and `Stable` remain. `invoke-selected-scout.ps1` checks that the selected
+    commit, provenance, installed version and executable hash agree; a
+    schema 1 `fork` selection (written while RC9 was current) still
+    launches RC9.
+  - Offline CI keeps the Windows checks, now for the main channel: newest
+    and pinned selection, tampered executable rejected, Stable rollback, real
+    wheel install with selection and `aws --help`.
+  - The E2E Windows/3.11 exception comment no longer names an RC; its
+    expiry is unchanged (when the cause is fixed).
+  - AGENTS.md, CONTRIBUTING.md and `docs/releases/TASK14_INSTALL.md`
+    describe the new flow. Earlier RC release notes stay as history; the
+    published RC tags and releases are not touched.
+- Checks (Python 3.11.9, Git 2.49.0, PowerShell 7.6.9):
+  - guarded offline suite: 770 passed, with the same four environment-only
+    failures (Windows symlink privilege, three stale Azure/GCP SDK venv
+    cases); `tests/test_task14_release.py` rewritten for the new contracts
+    (7 passed); flake8 clean;
+  - the CI selection step was extracted from `offline.yml` and run locally
+    in pwsh: passed. A further local check covered a schema 1 `fork` file
+    resolving to RC9, `ForkRc9` selection, a schema 2 SHA/venv mismatch
+    refused, `Fork` with no main install refused, and `-GitSha` refused for
+    non-Fork modes: passed.
+- Rollback: `select-scanner.ps1 -Mode ForkRc9` (or any earlier mode) is
+  unchanged; restoring the RC flow means reverting this commit.
+
 ## RC9 publication, field acceptance and expected-error correction (2026-11-03)
 
 - Published [`fork-v5.14.0-m10-rc9`](https://github.com/romanoff5/ScoutSuite/releases/tag/fork-v5.14.0-m10-rc9)

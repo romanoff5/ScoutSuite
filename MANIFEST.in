@@ -10,7 +10,6 @@ recursive-include docker Dockerfile* *.sh *.md
 prune ScoutSuite.egg-info
 global-exclude __pycache__ *.py[cod]
 
-include tools/fork_release.py
 recursive-include scripts *.ps1
 recursive-include docs/releases *.md
 

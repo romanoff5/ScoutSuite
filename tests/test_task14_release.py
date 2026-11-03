@@ -1,118 +1,97 @@
-"""Task 14 fork release safety contracts, no network or real AWS scan."""
-import ast
+"""Fork install safety contracts: install from verified origin/master, no release candidates, no network or AWS scan."""
 from pathlib import Path
 
 from ScoutSuite import __version__
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = "fork-v5.14.0-m10-rc9"
-VERSION = "5.14.0+romanoff5.m10rc9"
+VERSION = "5.14.0+romanoff5.main"
+LEGACY_MODES = ("ForkRc1", "ForkRc2", "ForkRc3", "ForkRc4", "ForkRc5", "ForkRc6", "ForkRc7", "ForkRc8", "ForkRc9")
 
 
-def test_unique_fork_version_and_manifest_generator_syntax():
+def scripts():
+    return [(ROOT / "scripts" / name).read_text(encoding="utf-8")
+            for name in ("install-fork.ps1", "select-scanner.ps1", "invoke-selected-scout.ps1")]
+
+
+def test_fork_version_names_the_main_channel_not_a_release_candidate():
     assert __version__ == VERSION
-    path = ROOT / "tools/fork_release.py"
-    ast.parse(path.read_text(encoding="utf-8"))
-    source = path.read_text(encoding="utf-8")
-    assert "romanoff5/ScoutSuite" in source
-    assert "botocore" in source
-    assert "SHA256SUMS" in source
-    assert "CycloneDX" in source
-    assert "git_sha" in source
-    assert "partitions_validated_live" in source
+    install, select, wrapper = scripts()
+    assert VERSION in install and VERSION in select and VERSION in wrapper
 
 
-def test_release_is_fork_scoped_and_ci_gated_not_automatic_client_scan():
-    flow = (ROOT / ".github/workflows/fork-rc-release.yml").read_text(encoding="utf-8")
-    for phrase in ("workflow_run", "conclusion == 'success'",
-                   "head_branch == 'master'", "github.repository == 'romanoff5/ScoutSuite'",
-                   "gh release create", "--prerelease", "--verify-tag",
-                   "tools/verify_distribution.py", "python -m twine check"):
-        assert phrase in flow
-    for forbidden in ("pypi.org", "twine upload", "docker push",
-                      "aws sts", "aws configure", "scout aws --profile"):
-        assert forbidden not in flow.lower()
-    assert "contents: write" in flow
+def test_release_candidate_publication_is_removed():
+    assert not (ROOT / ".github/workflows/fork-rc-release.yml").exists()
+    assert not (ROOT / "tools/fork_release.py").exists()
+    for flow in (ROOT / ".github/workflows").glob("*.yml"):
+        text = flow.read_text(encoding="utf-8").lower()
+        assert "contents: write" not in text
+        for forbidden in ("gh release", "pypi.org", "twine upload", "docker push",
+                          "aws sts", "aws configure", "scout aws --profile"):
+            assert forbidden not in text, (flow.name, forbidden)
 
 
-def test_stable_venv_and_external_client_toolkit_are_never_mutated_by_install():
-    install = (ROOT / "scripts/install-fork.ps1").read_text(encoding="utf-8")
-    select = (ROOT / "scripts/select-scanner.ps1").read_text(encoding="utf-8")
-    wrapper = (ROOT / "scripts/invoke-selected-scout.ps1").read_text(encoding="utf-8")
-    assert ".venv-scout-fork" in install
-    assert "SHA256SUMS" in install and "ExpectedSha256" in install
-    assert "pip check" in install
-    assert "scout.exe" in install
-    assert "aws --help" in install
-    assert "venv-scout-fork" in select and ".venv-scout" in select
-    assert "Move-Item" in select
-    assert "mode = 'stable'" in wrapper
-    assert "Invalid scanner selection config" in wrapper
-    for script in (install, select, wrapper):
-        assert "C:\\Users\\Dzmitry" not in script
-        assert "111789566859" not in script
+def test_installer_builds_only_the_verified_remote_master_commit():
+    install, _, _ = scripts()
+    assert "romanoff5/ScoutSuite" in install
+    assert "fetch --quiet origin master" in install
+    assert "ls-remote origin refs/heads/master" in install
+    assert "origin/master moved during install" in install
+    assert "archive --format=zip" in install  # Tracked files of that commit, never the working tree.
+    assert "constraints\\build-py311.txt" in install and "build --no-isolation --wheel" in install
+    assert "constraints\\combined-py311.txt" in install
+    assert "Invoke-WebRequest" not in install
+    assert "pip check" in install and "aws --help" in install
+    assert "'.venv-scout-fork-main-' + $CommitSha.Substring(0, 12)" in install
+    assert "Refusing overwrite" in install
     assert "if ($createdVenv -and -not $verifiedInstall)" in install
     assert "Remove-Item -LiteralPath $venv -Recurse -Force" in install
-    assert "runtime-py311.constraints.txt" in install
-    assert ".venv-scout-fork-rc9" in install
-    assert "scout_exe_sha256" in install + wrapper
-    assert "Get-FileHash" in wrapper
-    assert all(mode in select for mode in ("ForkRc1", "ForkRc2", "ForkRc3", "ForkRc4", "ForkRc5", "ForkRc6",
-                                           "ForkRc7", "ForkRc8"))
-    assert ".venv-scout-fork-rc9" in select + wrapper
-    assert ".venv-scout-fork-rc8" in select + wrapper
-    assert ".venv-scout-fork-rc7" in select + wrapper
-    assert ".venv-scout-fork-rc6" in select + wrapper
-    assert ".venv-scout-fork-rc5" in select + wrapper
-    assert ".venv-scout-fork-rc4" in select + wrapper
-    assert ".venv-scout-fork-rc3" in select + wrapper
-    assert ".venv-scout-fork-rc2" in select + wrapper
-    assert "5.14.0+romanoff5.m10rc9" in wrapper
-    assert "5.14.0+romanoff5.m10rc8" in wrapper
-    assert "5.14.0+romanoff5.m10rc7" in wrapper
-    assert "5.14.0+romanoff5.m10rc6" in wrapper
-    assert "5.14.0+romanoff5.m10rc5" in wrapper
-    assert "5.14.0+romanoff5.m10rc4" in wrapper
-    assert "5.14.0+romanoff5.m10rc3" in wrapper
-    assert "5.14.0+romanoff5.m10rc2" in wrapper
+    assert "channel = 'origin/master'" in install and "scout_exe_sha256" in install
 
 
-def test_release_notes_explicitly_disclaim_unverified_controls_and_containers():
-    note = (ROOT / "docs/releases" / (TAG + ".md")).read_text(encoding="utf-8")
-    assert "No real client AWS scanning" in note
-    assert "No container image" in note
-    assert "Azure/GCP SDK modernization remains" in note
-    assert "Stable .venv-scout untouched" in note
+def test_selection_keeps_stable_and_every_rc_environment_for_rollback():
+    install, select, wrapper = scripts()
+    assert "select-scanner.ps1') -Mode Fork -GitSha" in install and "[switch]$NoSelect" in install
+    assert all(mode in select for mode in LEGACY_MODES)
+    for venv in (".venv-scout'", ".venv-scout-fork'", *(".venv-scout-fork-rc%d" % n for n in range(2, 10))):
+        assert venv in select and venv in wrapper
+    assert "'^\\.venv-scout-fork-main-([0-9a-f]{12})$'" in select
+    assert "Sort-Object InstalledAt -Descending" in select
+    assert "schema = 2" in select and "Move-Item" in select
+    assert "'5.14.0+romanoff5.m10rc' + $mode.Substring(6)" in wrapper
+    assert "mode = 'stable'" in wrapper and "Invalid scanner selection config" in wrapper
+    assert "$record.git_sha -cne $expectedSha" in wrapper
+    assert "Get-FileHash" in wrapper and "Fork executable changed after verification" in wrapper
+    # Selections written while RC9 was current keep launching RC9.
+    assert "if ($configuration.mode -eq 'fork') { 'forkrc9' }" in wrapper
+    for script in (install, select, wrapper):
+        assert "C:\\Users\\Dzmitry" not in script
+        assert "111789566859" not in script and "640012953110" not in script
+
+
+def test_ci_exercises_the_installer_and_fail_closed_selection_on_windows():
+    flow = (ROOT / ".github/workflows/offline.yml").read_text(encoding="utf-8")
+    assert "./scripts/install-fork.ps1 -WheelPath" in flow
+    assert "'*romanoff5.main*.whl'" in flow
+    assert "Selector did not pick the newest origin/master install" in flow
+    assert "Modified fork executable was not rejected" in flow
+    assert "Stable rollback selection failed" in flow
+
+
+def test_packaging_ships_scripts_and_install_notes():
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
-    for entry in ("recursive-include scripts *.ps1",
-                  "recursive-include docs/releases *.md",
-                  "include tools/fork_release.py", "include tools/audit_scan_evidence.py"):
+    for entry in ("recursive-include scripts *.ps1", "recursive-include docs/releases *.md",
+                  "include tools/audit_scan_evidence.py"):
         assert entry in manifest
+    assert "fork_release" not in manifest
 
 
-def test_rc9_release_pins_installable_dependency_closure_and_runtime_hotfix():
-    flow = (ROOT / ".github/workflows/fork-rc-release.yml").read_text(encoding="utf-8")
-    generator = (ROOT / "tools/fork_release.py").read_text(encoding="utf-8")
-    assert "runtime-py311.constraints.txt" in flow
-    assert "runtime_constraints_sha256" in generator
-    assert "70cf29d5579864543b6363e7a271a84216bb6837" in flow
-    assert "merge-base --is-ancestor" in flow
-    assert "fork-v5.14.0-m10-rc9" in flow
-    assert "e7f40d528e7ff94e1b9d5ae934a103d20b25e28f" in flow
-    assert "fork-v5.14.0-m10-rc8" not in flow
-    assert "8c9f2d0dab2e11c17820c8dd0d6e9bebae37917c" in flow
-    assert "fork-v5.14.0-m10-rc7" not in flow
-    assert "409b07570b690cce67612e729718a6178a6d020a" in flow
-    assert "fork-v5.14.0-m10-rc6" not in flow
-    assert "fork-v5.14.0-m10-rc1" not in flow
-    assert "No real client AWS scanning" in (ROOT / "docs/releases" / (TAG + ".md")).read_text(encoding="utf-8")
-
-
-def test_ridgepay_has_explicit_non_mutating_preflight_and_rollback_instructions():
+def test_install_notes_cover_preflight_rollback_and_authorization():
     note = (ROOT / "docs/releases/TASK14_INSTALL.md").read_text(encoding="utf-8")
+    assert "origin/master" in note and "install-fork.ps1" in note
     assert "aws sts get-caller-identity" in note
-    assert "ForkRc1" in note and "ForkRc4" in note and "ForkRc5" in note and "ForkRc6" in note and "ForkRc7" in note and "ForkRc8" in note and "Stable" in note
+    assert all(mode in note for mode in LEGACY_MODES) and "Stable" in note and "-GitSha" in note
     assert "PowerShell 7" in note
     assert "no-browser" in note
     assert "authorized" in note
+    assert "Stable .venv-scout untouched" in note
