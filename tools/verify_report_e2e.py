@@ -106,41 +106,39 @@ def context_time():
     return datetime.datetime(2026, 11, 2, tzinfo=datetime.timezone.utc)
 
 
-def _launch(playwright):
-    """Prefer an installed browser channel; never download one.
+def _launch(playwright, profile):
+    """Open a browser context on an installed browser; never download one.
 
-    Browser start-up on shared CI images is occasionally refused (crash before
-    the first page), so start-up alone gets a small bounded retry. The checks
-    themselves are never retried.
+    Current Chrome/Edge refuse DevTools automation unless the profile directory
+    is explicitly non-default, so every attempt gets its own fresh directory
+    under ``profile`` (seen on a Windows CI image). Only start-up is retried.
     """
     import time
-    args = ['--disable-gpu', '--no-first-run', '--no-default-browser-check']
+    options = {'headless': True, 'accept_downloads': True, 'viewport': {'width': 1400, 'height': 900},
+               'args': ['--disable-gpu', '--no-first-run', '--no-default-browser-check']}
+    candidates = [{'channel': 'chrome'}, {'channel': 'msedge'}]
+    for binary in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'):
+        if shutil.which(binary):
+            candidates.append({'executable_path': shutil.which(binary)})
     errors = []
     for attempt in range(3):
-        for channel in ('chrome', 'msedge'):
+        for index, candidate in enumerate(candidates):
+            directory = Path(profile) / ('profile-%d-%d' % (attempt, index))
             try:
-                return playwright.chromium.launch(channel=channel, headless=True, args=args)
+                return playwright.chromium.launch_persistent_context(str(directory), **candidate, **options)
             except Exception as error:  # Not installed, or start-up refused.
-                errors.append('%s attempt %d: %s' % (channel, attempt + 1, str(error)[:1500]))
-        for binary in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'):
-            path = shutil.which(binary)
-            if path:
-                try:
-                    return playwright.chromium.launch(executable_path=path, headless=True, args=args)
-                except Exception as error:
-                    errors.append('%s attempt %d: %s' % (binary, attempt + 1, str(error)[:1500]))
+                errors.append('%s attempt %d: %s' % (candidate, attempt + 1, str(error)[:1500]))
         time.sleep(3)
     raise RuntimeError('No usable installed Chrome/Edge/Chromium for report E2E:\n' + '\n'.join(errors))
 
 
-def run_browser_checks(report):
+def run_browser_checks(report, profile):
     from playwright.sync_api import sync_playwright
 
     problems, external, console = [], [], []
     url = report.resolve().as_uri()
     with sync_playwright() as playwright:
-        browser = _launch(playwright)
-        context = browser.new_context(accept_downloads=True, viewport={'width': 1400, 'height': 900})
+        context = _launch(playwright, profile)
 
         def guard(route):
             if route.request.url.startswith('file:'):
@@ -220,7 +218,7 @@ def run_browser_checks(report):
         check(page.evaluate('window.__scoutXss') is None, 'hostile detector field executed')
         check(page.locator('img[src="x"]').count() == 0, 'hostile detector field injected markup')
 
-        browser.close()
+        context.close()
     check(not external, 'external requests: %s' % external)
     check(not console, 'console/page errors: %s' % console)
     return problems
@@ -229,7 +227,7 @@ def run_browser_checks(report):
 def main():
     with tempfile.TemporaryDirectory(prefix='scoutsuite-report-e2e-') as directory:
         report = build_report(Path(directory))
-        problems = run_browser_checks(report)
+        problems = run_browser_checks(report, Path(directory) / 'browser')
     for problem in problems:
         print('E2E FAILED: ' + problem, flush=True)
     if problems:
