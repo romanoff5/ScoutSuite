@@ -1,7 +1,7 @@
 #requires -Version 7.0
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Stable', 'Fork', 'ForkRc7', 'ForkRc6', 'ForkRc5', 'ForkRc4', 'ForkRc3', 'ForkRc2', 'ForkRc1')][string]$Mode,
+    [Parameter(Mandatory)][ValidateSet('Stable', 'Fork', 'ForkRc8', 'ForkRc7', 'ForkRc6', 'ForkRc5', 'ForkRc4', 'ForkRc3', 'ForkRc2', 'ForkRc1')][string]$Mode,
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter')
 )
 Set-StrictMode -Version Latest
@@ -9,7 +9,8 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $ToolkitRoot -PathType Container)) { throw "Missing toolkit root: $ToolkitRoot" }
 $venvName = switch ($Mode) {
     'Stable' { '.venv-scout' }
-    'Fork' { '.venv-scout-fork-rc8' }
+    'Fork' { '.venv-scout-fork-rc9' }
+    'ForkRc8' { '.venv-scout-fork-rc8' }
     'ForkRc7' { '.venv-scout-fork-rc7' }
     'ForkRc6' { '.venv-scout-fork-rc6' }
     'ForkRc5' { '.venv-scout-fork-rc5' }
@@ -26,7 +27,8 @@ if ($Mode -ne 'Stable') {
     $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
     if ($record.repository -cne 'romanoff5/ScoutSuite' -or
         $record.version -cne $(switch ($Mode) {
-            'Fork' { '5.14.0+romanoff5.m10rc8' }
+            'Fork' { '5.14.0+romanoff5.m10rc9' }
+            'ForkRc8' { '5.14.0+romanoff5.m10rc8' }
             'ForkRc7' { '5.14.0+romanoff5.m10rc7' }
             'ForkRc6' { '5.14.0+romanoff5.m10rc6' }
             'ForkRc5' { '5.14.0+romanoff5.m10rc5' }

@@ -1,3 +1,18 @@
+## RC9 release preparation (2026-11-03)
+
+- Staged `5.14.0+romanoff5.m10rc9` / `fork-v5.14.0-m10-rc9`, mirroring RC8:
+  - an isolated `.venv-scout-fork-rc9`;
+  - `Fork` selects RC9, and `ForkRc8` through `ForkRc1` and `Stable` remain
+    rollback modes;
+  - the release workflow also requires the RC9 fix tip `e7f40d52` as an
+    ancestor;
+  - release notes and the install guide describe the expected RC8 -> RC9
+    field delta and the opt-in DNS flag.
+- The Windows/Python 3.11 E2E CI exception was not resolved in RC9; its expiry
+  was moved to RC10. The same interpreter passes the E2E gate locally.
+- Guarded local suite: 767 passed. The same four environment-only failures as
+  RC8 remain. Release tests passed (6).
+
 ## RC9 evidence gaps: unused services, Secrets Manager, secrets in configuration, ALB WAF (2026-11-03)
 
 The RC8 field run (aggregates only) found four gaps, and the owner agreed on
