@@ -37,29 +37,30 @@
             </ul>
         </div>
         {{/if}}
-        {{#if user_data}}
+        {{#if user_data_status}}
         <div class="list-group-item" style="padding-bottom: 0 !important;">
             <h4>User data</h4>
-            <div>
-                <code>{{#each (split_lines user_data)}}   {{this}}<br>{{/each}}</code>
-            </div>
+            <div class="list-group-item-text item-margin">Status: <samp>{{user_data_status}}</samp>
+                {{#if user_data_size_bytes}} (<samp>{{user_data_format}}</samp>, <samp>{{user_data_size_bytes}}</samp> bytes, <samp>{{user_data_line_count}}</samp> lines){{/if}}</div>
+            <div class="list-group-item-text item-margin">Secret detection: <span id="ec2.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.user_data_secret_status"><samp>{{user_data_secret_status}}</samp></span></div>
+            <div class="list-group-item-text item-margin"><small>The user data content is not stored in this report; only masked detections are shown.</small></div>
             {{#if user_data_secrets}}
-            <br>
             <h5 id="ec2.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.potential_secrets">Potential Secrets</h5>
             <ul>
                 {{#each user_data_secrets}}
-                <li>
-                    {{@key}}
-                    <ul>
-                        {{#each this}}
-                        <li><code>{{this}}</code></li>
-                        {{/each}}
-                    </ul>
-                </li>
+                <li>{{type}} at <samp>{{location}}</samp>: <code>{{preview}}</code></li>
                 {{/each}}
             </ul>
             {{/if}}
         </div>
+        {{else}}
+        {{#if user_data}}
+        <div class="list-group-item" style="padding-bottom: 0 !important;">
+            <h4>User data</h4>
+            <div class="list-group-item-text item-margin"><small>This pre-RC9 report stored raw user data; it is not displayed. Re-scan to obtain masked secret detections.</small></div>
+        </div>
+        {{/if}}
+        {{/if}}
         {{/if}}
     
         <!-- M10-Q: all cross-service evidence is Handlebars-escaped and offline-safe. -->

@@ -2,9 +2,8 @@ from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.utils import get_name, get_keys, format_arn
 
-import re
-
 from ScoutSuite.core.rule_evidence import classify_imds_v2
+from ScoutSuite.providers.aws.resources.secret_detection import DETECTOR_VERSION, detect_in_text
 
 
 class EC2Instances(AWSResources):
@@ -30,8 +29,9 @@ class EC2Instances(AWSResources):
         instance['reservation_id'] = raw_instance['ReservationId']
         instance['availability_zone'] = raw_instance.get('Placement', {}).get('AvailabilityZone')
         instance['monitoring_enabled'] = raw_instance['Monitoring']['State'] == 'enabled'
-        instance['user_data'] = await self.facade.ec2.get_instance_user_data(self.region, id)
-        instance['user_data_secrets'] = self._identify_user_data_secrets(instance['user_data'])
+        # RC9: raw user data is scanned in memory and never stored in the report.
+        status, user_data = await self.facade.ec2.get_instance_user_data_evidence(self.region, id)
+        instance.update(self._user_data_evidence(status, user_data))
 
         get_name(raw_instance, instance, 'InstanceId')
         get_keys(raw_instance, instance,
@@ -62,31 +62,28 @@ class EC2Instances(AWSResources):
 
     @staticmethod
     def _identify_user_data_secrets(user_data):
-        """
-        Parses EC2 user data in order to identify secrets and credentials..
-        """
-        secrets = {}
+        """Masked detections (type, line, preview) for EC2 user data; never the values."""
+        return detect_in_text(user_data)
 
-        if user_data:
-            aws_access_key_regex = re.compile(r'(?:^|[^0-9A-Z])(AKIA[0-9A-Z]{16})(?:[^0-9A-Z]|$)')
-            aws_secret_access_key_regex = re.compile(r'(?:^|[^0-9a-zA-Z/+])([0-9a-zA-Z/+]{40})(?:[^0-9a-zA-Z/+]|$)')
-            rsa_private_key_regex = re.compile('(?s)(-----BEGIN RSA PRIVATE KEY-----.+?-----END .+?-----)')
-            keywords = ['password', 'secret', 'aws_access_key_id', 'aws_secret_access_key', 'aws_session_token']
-
-            aws_access_key_list = aws_access_key_regex.findall(user_data)
-            if aws_access_key_list:
-                secrets['AWS Access Key IDs'] = aws_access_key_list
-            aws_secret_access_key_list = aws_secret_access_key_regex.findall(user_data)
-            if aws_secret_access_key_list:
-                secrets['AWS Secret Access Keys'] = aws_secret_access_key_list
-            rsa_private_key_list = rsa_private_key_regex.findall(user_data)
-            if rsa_private_key_list:
-                secrets['Private Keys'] = rsa_private_key_list
-            word_list = []
-            for word in keywords:
-                if word in user_data.lower():
-                    word_list.append(word)
-            if word_list:
-                secrets['Flagged Words'] = word_list
-
-        return secrets
+    @staticmethod
+    def _user_data_evidence(status, user_data):
+        evidence = {'user_data_status': status, 'user_data_secrets': [],
+                    'user_data_size_bytes': None, 'user_data_line_count': None, 'user_data_format': None,
+                    'secret_detector_version': DETECTOR_VERSION}
+        if status == 'present' and isinstance(user_data, str):
+            evidence['user_data_size_bytes'] = len(user_data.encode('utf-8'))
+            evidence['user_data_line_count'] = len(user_data.splitlines())
+            first = user_data.lstrip()[:64]
+            evidence['user_data_format'] = (
+                'cloud-config' if first.startswith('#cloud-config') else
+                'shell-script' if first.startswith('#!') else
+                'powershell' if first.lower().startswith('<powershell>') else
+                'mime-multipart' if first.lower().startswith('content-type: multipart') else 'other')
+            evidence['user_data_secrets'] = detect_in_text(user_data)
+        elif status == 'present':
+            status = evidence['user_data_status'] = 'undecodable'
+        evidence['user_data_secret_status'] = (
+            'detected' if evidence['user_data_secrets'] else
+            'none' if status == 'present' else
+            'no_user_data' if status == 'absent' else 'unknown')
+        return evidence

@@ -269,6 +269,26 @@ def classify_secret_policy_cross_account(secret):
         'private': 'secure', 'none': 'secure'})
 
 
+def _secret_detection_status(resource, field):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    return {'detected': 'insecure', 'none': 'secure', 'no_user_data': 'not_applicable',
+            'no_variables': 'not_applicable'}.get(resource.get(field), 'unknown')
+
+
+def classify_ec2_user_data_secrets(instance):
+    """Masked detections in readable user data; unreadable/undecodable stays UNKNOWN."""
+    return _secret_detection_status(instance, 'user_data_secret_status')
+
+
+def classify_lambda_environment_secrets(function):
+    return _secret_detection_status(function, 'env_secret_status')
+
+
+def classify_ecs_environment_secrets(task):
+    return _secret_detection_status(task, 'environment_secret_status')
+
+
 def classify_accessanalyzer_region(region):
     """No visible analyzer in a fully enumerated Region; denials stay UNKNOWN."""
     if not isinstance(region, dict) or region.get('analyzer_census_status') != 'complete':
@@ -943,6 +963,9 @@ CLASSIFIERS = {
     'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
     'guardduty-region-enablement-v1': classify_guardduty_region,
     'accessanalyzer-region-configured-v1': classify_accessanalyzer_region,
+    'ec2-user-data-secrets-v1': classify_ec2_user_data_secrets,
+    'lambda-environment-secrets-v1': classify_lambda_environment_secrets,
+    'ecs-environment-secrets-v1': classify_ecs_environment_secrets,
     'secretsmanager-rotation-v1': classify_secret_rotation,
     'secretsmanager-unused-v1': classify_secret_unused,
     'secretsmanager-policy-public-v1': classify_secret_policy_public,

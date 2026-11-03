@@ -119,12 +119,16 @@ class TestAWSProviderClass(unittest.TestCase):
 
     def test_identify_user_data_secrets(self):
         # Construct exact lengths: the historical prose samples were not 40 characters.
+        # RC9: masked detections (type, location, preview); secret values are never returned.
         key = 'AKIA' + '0' * 16
-        cases = [(key, {'AWS Access Key IDs': [key]}),
-                 ('AKIA' + '0' * 15, {}), ('AKIA' + '0' * 17, {}),
-                 ('AKIA' + 'a' * 16, {}), ('F' + key, {}),
-                 ('s' * 39, {}), ('s' * 40, {'AWS Secret Access Keys': ['s' * 40]}),
-                 ('s' * 41, {}), ('', {}), (None, {})]
+        secret = 'aB3/' * 10
+        masked = [{'type': 'Possible AWS secret access key', 'location': 'line 1',
+                   'preview': '[redacted: 40 chars]'}]
+        cases = [(key, [{'type': 'AWS access key ID', 'location': 'line 1', 'preview': key}]),
+                 ('AKIA' + '0' * 15, []), ('AKIA' + '0' * 17, []),
+                 ('AKIA' + 'a' * 16, []), ('F' + key, []),
+                 (secret[:39], []), (secret, masked), (secret + 'a', []),
+                 ('s' * 40, []), ('', []), (None, [])]
         for data, expected in cases:
             with self.subTest(length=len(data) if data is not None else None):
                 self.assertEqual(EC2Instances._identify_user_data_secrets(data), expected)

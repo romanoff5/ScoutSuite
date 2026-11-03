@@ -46,17 +46,3 @@ class LambdaFacade(AWSBaseFacade):
             else:
                 print_exception(f'Failed to get role from managed policies: {e}')
             return None
-
-    async def get_env_variables(self, function_name, region):
-        client = AWSFacadeUtils.get_client('lambda', self.session, region)
-        try:
-            function_configuration = client.get_function_configuration(FunctionName=function_name)
-            if "Environment" in function_configuration and "Variables" in function_configuration["Environment"]:
-                return function_configuration["Environment"]["Variables"]
-        except Exception as e:
-            if 'ResourceNotFoundException' in str(e):
-                print_warning('Failed to get Lambda function configuration: {}'.format(e))
-            else:
-                print_exception('Failed to get Lambda function configuration: {}'.format(e))
-        return []
-

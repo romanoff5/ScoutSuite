@@ -37,6 +37,31 @@ class EC2Facade(AWSBaseFacade):
                 except Exception as e:
                     print_exception(f'Unable to decode EC2 instance user data: {e}')
 
+    async def get_instance_user_data_evidence(self, region: str, instance_id: str):
+        """Return (status, text) where status is absent, present, unknown or undecodable.
+
+        The text is used for in-memory secret detection only and is not stored in
+        the report (RC9).
+        """
+        ec2_client = AWSFacadeUtils.get_client('ec2', self.session, region)
+        if ec2_client is None:
+            return 'unknown', None
+        try:
+            response = await run_concurrently(
+                lambda: ec2_client.describe_instance_attribute(Attribute='userData', InstanceId=instance_id))
+        except Exception as e:
+            AWSFacadeUtils.record_listing_failure('ec2', e, 'DescribeInstanceAttributeUserData')
+            print_exception(f'Failed to describe EC2 instance attributes: {e}')
+            return 'unknown', None
+        value = (response.get('UserData') or {}).get('Value') if isinstance(response, dict) else None
+        if not value:
+            return 'absent', None
+        try:
+            return 'present', await self._decode_user_data(value)
+        except Exception as e:
+            print_exception(f'Unable to decode EC2 instance user data: {e}')
+            return 'undecodable', None
+
     async def _decode_user_data(self, user_data):
         try:
             value = base64.b64decode(user_data)
@@ -45,10 +70,11 @@ class EC2Facade(AWSBaseFacade):
         if value[0:2] == b'\x1f\x8b':  # GZIP magic number
             return zlib.decompress(value, zlib.MAX_WBITS | 32).decode('utf-8')
         else:
-            # Try another run of b64 decoding
+            # Double-encoded user data: decode again only if it is strict base64.
+            # Non-strict decoding silently drops characters of plain scripts.
             try:
-                value = base64.b64decode(value)
-            except Exception as e:
+                value = base64.b64decode(value, validate=True)
+            except Exception:
                 value = value
             # Return a string, not a byte string
             try:

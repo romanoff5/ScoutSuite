@@ -5,10 +5,10 @@
     </div>
     <div class="list-group-item">
         <h4 class="list-group-item-heading">Information</h4>
-        <div class="list-group-item-text item-margin">ARN: <span id="awslambda.regions{{region}}.functions.{{@key}}.arn"><samp>{{value_or_none arn}}</samp></span></div>
+        <div class="list-group-item-text item-margin">ARN: <span id="awslambda.regions.{{region}}.functions.{{@key}}.arn"><samp>{{value_or_none arn}}</samp></span></div>
         <div class="list-group-item-text item-margin">Description: <span id="awslambda.regions.{{region}}.functions.{{@key}}.description"><samp>{{value_or_none description}}</samp></span></div>
         <div class="list-group-item-text item-margin">Last Modified: <span id="awslambda.regions.{{region}}.functions.{{@key}}.last_modified"><samp>{{format_date last_modified}}</samp></span></div>
-        <div class="list-group-item-text item-margin">Runtime: <span id="awslambda.regions.{{region}}.functions.{{@key}}.runtime"><samp>{{value_or_none runtime}}</samp></span></div>
+        <div class="list-group-item-text item-margin">Runtime: <span id="awslambda.regions.{{region}}.functions.{{@key}}.runtime"><samp>{{value_or_none runtime}}</samp></span> (lifecycle: <span id="awslambda.regions.{{region}}.functions.{{@key}}.runtime_lifecycle_status"><samp>{{value_or_none runtime_lifecycle_status}}</samp></span>)</div>
         <div class="list-group-item-text item-margin">Version: <span id="awslambda.regions.{{region}}.functions.{{@key}}.version"><samp>{{value_or_none version}}</samp></span></div>
         <div class="list-group-item-text item-margin">Revision ID: <span id="awslambda.regions.{{region}}.functions.{{@key}}.revision_id"><samp>{{value_or_none revision_id}}</samp></span></div>
         <div class="list-group-item-text item-margin">Execution Role: <a href="javascript:showObject('services.iam.roles.{{value_or_none execution_role.RoleId}}')">{{value_or_none execution_role.RoleName}}</a></div>
@@ -22,10 +22,33 @@
         {{> accordion_policy name = 'Resource-Based Policy' policy_path = (concat 'awslambda.regions' region 'functions' @key 'access_policy') document = access_policy}}
     </div>
     {{/if}}
+    {{#if env_secret_status}}
+    <div class="list-group-item">
+        <h4 class="list-group-item-heading">Environment variables</h4>
+        <div class="list-group-item-text item-margin">Collection: <samp>{{env_variables_status}}</samp>{{#if env_variables_error_code}} (<samp>{{env_variables_error_code}}</samp>){{/if}}</div>
+        <div class="list-group-item-text item-margin">Secret detection: <span id="awslambda.regions.{{region}}.functions.{{@key}}.env_secret_status"><samp>{{env_secret_status}}</samp></span></div>
+        <div class="list-group-item-text item-margin"><small>Literal values are not stored in this report; Secrets Manager, SSM and KMS references are shown as-is.</small></div>
+        <ul>
+            {{#each env_variables}}
+            <li><samp>{{@key}}</samp>: <samp>{{this}}</samp></li>
+            {{/each}}
+        </ul>
+        {{#if env_secret_detections}}
+        <h5>Potential Secrets</h5>
+        <ul>
+            {{#each env_secret_detections}}
+            <li>{{type}} at <samp>{{location}}</samp>: <code>{{preview}}</code></li>
+            {{/each}}
+        </ul>
+        {{/if}}
+    </div>
+    {{else}}
     {{#if env_variables}}
     <div class="list-group-item">
-        {{> accordion_policy name = 'Environment Variables' policy_path = (concat 'awslambda.regions' region 'functions' @key 'env_variables') document = env_variables}}
+        <h4 class="list-group-item-heading">Environment variables</h4>
+        <div class="list-group-item-text item-margin"><small>This pre-RC9 report stored literal values; they are not displayed. Re-scan to obtain masked secret detections.</small></div>
     </div>
+    {{/if}}
     {{/if}}
 </script>
 

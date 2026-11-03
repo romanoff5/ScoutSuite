@@ -2,6 +2,8 @@ from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.utils import get_non_provider_id
 from ScoutSuite.core.rule_evidence import classify_lambda_runtime
+from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.providers.aws.resources.secret_detection import DETECTOR_VERSION, detect_in_variables, summarize_variable
 
 
 class Functions(AWSResources):
@@ -39,7 +41,7 @@ class Functions(AWSResources):
 
         await self._add_role_information(function_dict, raw_function.get('Role'))
         await self._add_access_policy_information(function_dict)
-        await self._add_env_variables(function_dict)
+        self._add_env_variables(function_dict, raw_function.get('Environment'))
 
         return get_non_provider_id(function_dict['name']), function_dict
 
@@ -66,13 +68,31 @@ class Functions(AWSResources):
                                               'Id': 'default',
                                               'Statement': []}
 
-    async def _add_env_variables(self, function_dict):
-        env_variables = await self.facade.awslambda.get_env_variables(function_dict['name'], self.region)
-        function_dict["env_variables"] = env_variables
-        # The following properties are for easier rule creation
-        if env_variables:
-            function_dict["env_variable_names"] = list(env_variables.keys())
-            function_dict["env_variable_values"] = list(env_variables.values())
-        else:
-            function_dict["env_variable_names"] = []
-            function_dict["env_variable_values"] = []
+    @staticmethod
+    def _add_env_variables(function_dict, environment):
+        """RC9: keep variable names, secret references and masked detections, never literal values.
+
+        ListFunctions returns the Environment block; an Error there (e.g. a KMS key
+        the scanner cannot use) leaves the evidence UNKNOWN.
+        """
+        function_dict['secret_detector_version'] = DETECTOR_VERSION
+        variables = environment.get('Variables') if isinstance(environment, dict) else None
+        error = environment.get('Error') if isinstance(environment, dict) else None
+        if error or (environment is not None and not isinstance(environment, dict)) or                 (variables is not None and not isinstance(variables, dict)):
+            context = get_current_run_context()
+            if context is not None:
+                context.record_collection_issue('partial', 'lambda', 'EnvironmentVariablesUnreadable')
+            function_dict['env_variables_status'] = 'unknown'
+            function_dict['env_variables_error_code'] = error.get('ErrorCode') if isinstance(error, dict) else None
+            function_dict['env_variable_names'] = []
+            function_dict['env_variables'] = {}
+            function_dict['env_secret_detections'] = []
+            function_dict['env_secret_status'] = 'unknown'
+            return
+        variables = variables or {}
+        function_dict['env_variables_status'] = 'complete'
+        function_dict['env_variable_names'] = list(variables.keys())
+        function_dict['env_variables'] = {name: summarize_variable(value) for name, value in variables.items()}
+        function_dict['env_secret_detections'] = detect_in_variables(variables.items())
+        function_dict['env_secret_status'] = ('detected' if function_dict['env_secret_detections'] else
+                                              'none' if variables else 'no_variables')

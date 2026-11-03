@@ -49,6 +49,18 @@
                 "level": "warning"
             }
         ],
+        "awslambda-function-env-secrets.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "ecs-task-definition-environment-secrets.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
         "guardduty-not-enabled.json": [
             {
                 "enabled": true,
