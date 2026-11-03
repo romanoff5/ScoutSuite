@@ -31,14 +31,18 @@ from ScoutSuite.providers.aws.provider import AWSProvider  # noqa: E402
 from ScoutSuite.providers.aws.resources.accessanalyzer.base import AccessAnalyzer  # noqa: E402
 from ScoutSuite.providers.aws.resources.guardduty.base import GuardDutyPublic  # noqa: E402
 
-SERVICES = ('guardduty', 'accessanalyzer', 'securityhub', 'eks')
+SERVICES = ('guardduty', 'accessanalyzer', 'securityhub', 'eks', 'secretsmanager', 'awslambda', 'elbv2')
 HOSTILE = '<img src=x onerror="window.__scoutXss=1">synthetic-role'
 EXPECTED_STATUS = {
     'GuardDuty': ('Issues found', 'warning'),
     'Accessanalyzer': ('Incomplete', 'incomplete'),
     'Securityhub': ('Passed', 'good'),
     'EKS': ('Not in use', 'notused'),
+    'Secrets Manager': ('Issues found', 'danger'),
+    'Lambda': ('Issues found', 'danger'),
+    'ELBV2': ('Issues found', 'warning'),
 }
+PLANTED_SECRET = 'Synthetic-Planted-Value-123'
 
 
 def _plain(resource):
@@ -64,7 +68,50 @@ async def _synthetic_services():
             get_analyzers=AsyncMock(return_value=[]),
             analyzer_census={'eu-central-1': {'complete': False, 'count': 0}})))
     await analyzer.fetch_all(regions=['eu-central-1'])
+    from datetime import datetime, timedelta, timezone
+    from ScoutSuite.providers.aws.resources.awslambda.functions import Functions
+    from ScoutSuite.providers.aws.resources.elbv2.dns_front_door import annotate_load_balancers, check_domains
+    from ScoutSuite.providers.aws.resources.elbv2.waf_exposure import classify_load_balancer
+    from ScoutSuite.providers.aws.resources.secretsmanager.secrets import Secrets
+    now = datetime(2026, 11, 2, tzinfo=timezone.utc)
+    secret_arn = 'arn:aws:secretsmanager:eu-central-1:000000000000:secret:synthetic-AbCdEf'
+    _, secret = Secrets(SimpleNamespace(), 'eu-central-1')._parse_secret({
+        'ARN': secret_arn, 'Name': HOSTILE, 'CreatedDate': now - timedelta(days=400),
+        'LastAccessedDate': now - timedelta(days=200), '_details_status': 'complete', '_policy_status': 'present',
+        'policy': {'Statement': [{'Effect': 'Allow', 'Principal': '*', 'Action': 'secretsmanager:GetSecretValue'}]}},
+        now)
+    function = {'name': 'synthetic-fn', 'arn': 'arn:aws:lambda:eu-central-1:000000000000:function:synthetic-fn',
+                'runtime': 'python3.13', 'package_type': 'Zip', 'runtime_lifecycle_status': 'supported',
+                'access_policy': {'Statement': []}, 'execution_role': None}
+    Functions._add_env_variables(function, {'Variables': {'DB_PASSWORD': PLANTED_SECRET, HOSTILE: 'x'}})
+    world = {'id': 'sg-0synthetic', 'name': 'web', 'rules': {'ingress': {'protocols': {'TCP': {'ports': {
+        '443': {'cidrs': [{'CIDR': '0.0.0.0/0'}]}}}}, 'count': 1}, 'egress': {'protocols': {}, 'count': 0}}}
+    lb = classify_load_balancer({
+        'name': 'web', 'arn': 'arn:aws:elasticloadbalancing:eu-central-1:000000000000:loadbalancer/app/web/1',
+        'Type': 'application', 'Scheme': 'internet-facing', 'DNSName': 'web-1.eu-central-1.elb.amazonaws.com',
+        'tags': {'Name': HOSTILE}, 'listeners': {443: {'Protocol': 'HTTPS',
+                                                       'SslPolicy': 'ELBSecurityPolicy-TLS13-1-2-2021-06'}},
+        'listener_protocols': ['HTTPS'], 'security_groups': [world], 'waf_web_acl_status': 'none',
+        'waf_web_acl': None, 'cdn_prefix_lists': {}, 'attributes': [
+            {'Key': 'access_logs.s3.enabled', 'Value': 'true'},
+            {'Key': 'deletion_protection.enabled', 'Value': 'true'},
+            {'Key': 'routing.http.drop_invalid_header_fields.enabled', 'Value': 'true'},
+            {'Key': 'routing.http.desync_mitigation_mode', 'Value': 'defensive'}]})
+    elbv2 = {'regions': {'eu-central-1': {'id': 'eu-central-1', 'name': 'eu-central-1', 'region': 'eu-central-1',
+                                          'vpcs': {'vpc-1': {'lbs': {'web': lb}, 'lbs_count': 1}}}},
+             'regions_count': 1, 'lbs_count': 1}
+    elbv2.update(check_domains({'acm': {'regions': {}}, 'elbv2': elbv2}, ['www.example.com'],
+                               resolver=lambda name: ([lb['DNSName']], ['198.51.100.7'])))
+    annotate_load_balancers({'elbv2': elbv2})  # Done by AWSProvider.preprocessing in a scan.
     return {
+        'secretsmanager': {'regions': {'eu-central-1': {
+            'id': 'eu-central-1', 'name': 'eu-central-1', 'region': 'eu-central-1',
+            'secrets': {secret['id']: secret}, 'secrets_count': 1}}, 'regions_count': 1, 'secrets_count': 1},
+        'awslambda': {'regions': {'eu-central-1': {
+            'id': 'eu-central-1', 'name': 'eu-central-1', 'region': 'eu-central-1',
+            'functions': {'synthetic-fn': function}, 'functions_count': 1}}, 'regions_count': 1,
+            'functions_count': 1},
+        'elbv2': _plain(elbv2),
         'guardduty': _plain(guardduty),
         'accessanalyzer': _plain(analyzer),
         'securityhub': {'regions': {'eu-central-1': {
@@ -168,7 +215,8 @@ def run_browser_checks(report, profile):
             badge: (e.querySelector('.finding-badge') || {className: ''}).className}))''')
         for title, (label, badge) in EXPECTED_STATUS.items():
             row = next((r for r in rows if r['text'].startswith(title + ' ')), None)
-            check(row is not None and label in row['text'], 'status for %s: %r' % (title, row))
+            check(row is not None and label in row['text'], 'status for %s: %r' % (
+                title, row or [r['text'][:24] for r in rows]))
             check(row is not None and 'finding-badge-' + badge in row['badge'], 'badge for %s: %r' % (title, row))
 
         # Settings menu actions survive the sanitizer and work on click.
@@ -218,6 +266,22 @@ def run_browser_checks(report, profile):
         check(page.evaluate('window.__scoutXss') is None, 'hostile detector field executed')
         check(page.locator('img[src="x"]').count() == 0, 'hostile detector field injected markup')
 
+        # RC9 evidence views: masked secrets, Secrets Manager status, ALB WAF and DNS domains.
+        page.goto(url + '#services.awslambda.findings.awslambda-function-env-secrets.items')
+        page.wait_for_selector('text=Sensitive variable name with literal value', timeout=5000)
+        check(PLANTED_SECRET not in page.content(), 'Lambda environment value rendered')
+        page.goto(url + '#services.secretsmanager.findings.secretsmanager-secret-policy-public.items')
+        card = page.wait_for_selector('text=Exposure:', timeout=5000)
+        check('public' in card.evaluate('e => e.closest("div").innerText'), 'secret policy exposure evidence')
+        page.goto(url + '#services.elbv2.findings.elbv2-internet-facing-alb-without-waf.items')
+        card = page.wait_for_selector('text=Origin exposure:', timeout=5000)
+        check('open_to_internet' in card.evaluate('e => e.closest("ul").innerText'), 'ALB origin exposure evidence')
+        check('www.example.com' in card.evaluate('e => e.closest("ul").innerText'), 'ALB DNS domain link')
+        page.goto(url + '#services.elbv2.dns_domains')
+        page.locator('samp:text-is("direct_to_alb") >> visible=true').first.wait_for(timeout=5000)
+        check(page.evaluate('window.__scoutXss') is None, 'hostile RC9 field executed')
+        check(page.locator('img[src="x"]').count() == 0, 'hostile RC9 field injected markup')
+
         context.close()
     check(not external, 'external requests: %s' % external)
     check(not console, 'console/page errors: %s' % console)
@@ -228,6 +292,10 @@ def main():
     with tempfile.TemporaryDirectory(prefix='scoutsuite-report-e2e-') as directory:
         report = build_report(Path(directory))
         problems = run_browser_checks(report, Path(directory) / 'browser')
+        stored = ''.join(path.read_text(encoding='utf-8', errors='replace')
+                         for path in Path(directory).rglob('*') if path.is_file() and path.suffix in ('.js', '.json'))
+        if PLANTED_SECRET in stored:
+            problems.append('planted secret value stored in report data')
     for problem in problems:
         print('E2E FAILED: ' + problem, flush=True)
     if problems:

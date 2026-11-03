@@ -1,3 +1,84 @@
+## RC9 evidence gaps: unused services, Secrets Manager, secrets in configuration, ALB WAF (2026-11-03)
+
+The RC8 field run (aggregates only) found four gaps, and the owner agreed on
+an RC9 scope to close them:
+
+- Lambda, CodeBuild, DynamoDB, ElastiCache, EMR and Direct Connect had zero
+  resources but showed "Not assessed".
+- Secrets Manager had 11 secrets and no rules.
+- EC2 reports stored raw user data and matched secret values, and Lambda
+  reports stored environment values.
+- No check covered WAF protection of internet-facing ALBs.
+
+Work is on branch `rc9-evidence-gaps`:
+
+- `c3b86faa`: the Lambda deprecated-runtime rule addressed `lambda.` instead of
+  the report key `awslambda.`, so it never ran. A new guard asserts that every
+  AWS rule path starts with a report service key. Inventory-listing failures
+  for CodeBuild, Direct Connect, DynamoDB, EMR and Lambda, including
+  non-denial errors swallowed by `get_all_pages` callers, are now recorded.
+  CodeBuild `ListProjects` is paginated; it previously stopped at 100. SDK
+  client scopes (`lambda`, `macie2`, `network-firewall`, ...) are attributed to
+  report keys. A fully collected empty service now shows "Not in use" even
+  without rules. Unsupported collectors stay "Not assessed", and failed ones
+  "Incomplete".
+- `fc1046ff`: Secrets Manager. `ListSecrets` is paginated to completion;
+  `DescribeSecret` and `GetResourcePolicy` failures are recorded; no secret
+  value is ever read. Derived fields: `rotation_status`, `unused_status` (90
+  days) and `policy_exposure`. Four rules flag rotation disabled, unused
+  secrets, public policies and cross-account policies, each with an evidence
+  policy. See [RC9_SECRETSMANAGER.md](docs/modernization/RC9_SECRETSMANAGER.md).
+- `c8d83dc8`: a shared masked secret detector. EC2 no longer stores
+  `user_data`, and `user_data_secrets` holds masked rows; it previously stored
+  raw values, including whole private-key blocks. Lambda keeps variable names
+  and Secrets Manager/SSM/KMS references only, and reads the environment from
+  `ListFunctions`, which drops the per-function `GetFunctionConfiguration`
+  call. ECS task definitions gain detections. New rules
+  `awslambda-function-env-secrets` and
+  `ecs-task-definition-environment-secrets` were added; the EC2 rule gains an
+  evidence policy and keeps its ID and `id_suffix`. See
+  [RC9_CONFIG_SECRETS.md](docs/modernization/RC9_CONFIG_SECRETS.md).
+- `1d46f5ad`: ALB WAF protection. `wafv2:GetWebACLForResource` is called per
+  internet-facing ALB. Security groups now keep `PrefixListIds`. Origin
+  exposure is classified against the CloudFront managed prefix list and a
+  versioned CDN/WAF range catalog (Cloudflare, Fastly, Akamai Origin IP ACL,
+  Imperva, plus Gcore live only). Rule `elbv2-internet-facing-alb-without-waf`
+  flags only ALBs with no AWS WAF whose listener ports are open to `0.0.0.0/0`
+  or `::/0`. At scan start the scanner refreshes the provider lists over HTTPS
+  with strict validation; on failure it warns and falls back to the bundled
+  ranges (owner request), and `--no-cdn-range-update` disables the refresh.
+- `1ad329c4`: opt-in `--external-waf-dns` / `--waf-domains`. ACM and explicit
+  domains are resolved with the system resolver only. Each domain is
+  classified as CDN/WAF-fronted, direct-to-ALB, direct elsewhere, or not
+  resolved, and every checked domain is listed. The check is bounded to 1,000
+  domains and a 60-second budget, with explicit truncation and timeout
+  states. See [RC9_ALB_WAF.md](docs/modernization/RC9_ALB_WAF.md).
+- The report E2E gate now also renders Secrets Manager, Lambda environment,
+  ALB WAF and DNS domain views with hostile strings. It asserts that a planted
+  secret value is absent from both the page and the report data files.
+
+Local checks used the guarded runner (Python 3.11.9, isolated test venv, cloud
+credential variables removed, home redirected):
+
+- Full suite: 766 passed. Four failures are pre-existing environment issues,
+  unchanged from RC8: Windows symlink privilege and three Azure/GCP SDK
+  contracts in the stale local venv.
+- `flake8 .` and `git diff --check` passed.
+- `tools/verify_report_xss.py` passed. The headless DOM part is unavailable on
+  Windows, as before.
+- `tools/verify_report_e2e.py` passed on local Windows/Python 3.11.9 with an
+  installed browser.
+
+Limitations:
+
+- No live scan has been run with these changes yet.
+- No version bump or release yet.
+- Sucuri, Akamai Site Shield and Azure Front Door ranges are not catalogued.
+- The DNS observations are informational and add no rule.
+- The CI exception for E2E on Windows/Python 3.11 remains. The same
+  interpreter passes locally, which points at the runner image; the root
+  cause is still open.
+
 ## RC8 disabled-service evidence corrections and release preparation (2026-11-02)
 
 - Triage of the RC7 field run's 17 residual collection issues against the
