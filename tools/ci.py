@@ -19,7 +19,7 @@ import zipfile
 
 SOURCE = Path(__file__).resolve().parents[1]
 PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests',
-          'sqlite_http', 'xss_browser', 'packaging')
+          'sqlite_http', 'xss_browser', 'report_e2e', 'packaging')
 CLI_CASES = {'test_empty', 'test_aws_provider', 'test_gcp_provider', 'test_azure_provider',
              'test_unauthenticated', 'test_keyboardinterrupted'}
 ACTIONLINT = {
@@ -325,6 +325,15 @@ class Pipeline:
         """
         self.run([python_at(self.root, 'test'), '-I', '-B',
                   SOURCE / 'tools/verify_report_xss.py'], cwd=SOURCE)
+
+    def report_e2e(self):
+        """Drive a synthetic report in a real browser (Playwright) with OS network isolation.
+
+        Uses the runner's installed Chrome/Edge; the gate never downloads a
+        browser and fails on any non-file request, page error or console error.
+        """
+        self.run([python_at(self.root, 'test'), '-I', '-B',
+                  SOURCE / 'tools/verify_report_e2e.py'], cwd=SOURCE)
 
     def packaging(self):
         def smoke(name):

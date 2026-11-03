@@ -3,3 +3,5 @@
 pytest==9.2.0
 pytest-cov==7.1.0
 flake8==7.5.0
+# Report E2E gate (tools/verify_report_e2e.py); never imported by guarded pytest.
+playwright==1.64.1
