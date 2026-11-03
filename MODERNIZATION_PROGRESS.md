@@ -1,3 +1,52 @@
+## Rule status no longer depends on rule order (2026-11-03)
+
+- Field scan with the installed local-master build (`ac75adf6`, package
+  code identical to `928dad9f`), same account, eu-central-1, without
+  `--external-waf-dns`: exit 0 in 60 s; 222 rules, 140 flagged items,
+  11 collection issues, 0 evidence discrepancies, no raw user data,
+  Lambda environment values or key material. These are the same aggregates
+  as the previous local-master scan.
+- Defect (post-RC9 correction to the M04 status contract): after each rule, the engine
+  marked it incomplete if any issue for its service had been recorded so
+  far. That included `RuleEvidenceUnknown` and `RuleEvaluation`, which other
+  rules raise during evaluation. A rule's status therefore depended on
+  whether it ran before or after such a sibling rule. In the field report,
+  Inspector2 being disabled made `m10q-ec2-not-reported-by-inspector2`
+  unknown. That marked the 20 security-group rules (SSH/RDP to all, etc.) and
+  `ec2-instance-imdsv1-enabled` incomplete, while
+  `ec2-default-security-group-with-rules`, which reads the same groups, ran
+  earlier and stayed evaluated. Bedrock's guardrail review was overridden
+  from not_applicable to incomplete in the same way.
+- Fix (`ScoutSuite/core/processingengine.py`): the scopes that mark every
+  rule of a service incomplete are taken once, before any rule runs, from
+  the run context (or the saved `collection_status` when there is no
+  context), excluding the rule-evaluation reason codes. The rule that raises
+  such an issue is still incomplete through its own evidence or failure, and
+  the issue stays in `collection_status`, so collection status and service
+  summaries are unchanged. Real collection gaps (denied, unsupported,
+  failed, partial collection, `assessment` scope) still mark every rule of
+  their service. All providers share this engine path; no permissions or
+  collectors changed.
+- Offline replay of the field report's own data with the default ruleset
+  (no SDK or network): the old engine reproduces the stored findings
+  exactly. With the fix, items, flagged/checked counts and evaluation
+  summaries are identical. Only 22 statuses change, incomplete rules go
+  43 -> 21 (EC2 22 -> 1, Bedrock 2 -> 1), and the 11 collection issues are
+  unchanged.
+- Tests: `tests/test_rule_status_propagation.py` (33 cases) covers AWS, Azure and GCP in
+  both rule orders: a rule-evidence gap and a rule-evaluation failure stay
+  with their rule, collection gaps scoped to the service or `assessment`
+  still mark every rule, an unrelated scope does not, and saved statuses
+  without a run context ignore rule-evaluation codes but keep legacy issues
+  without a reason code. 8 of these cases fail on the previous engine.
+- Checks (Python 3.11.9, reused M02-B test venv, cloud credential
+  variables unset): guarded suite 803 passed with the same four
+  environment-only failures (Windows symlink privilege, three Azure/GCP SDK
+  contracts in the stale venv); flake8 and `git diff --check` clean.
+- Compatibility and rollback: no schema or rule identifier change. Stored
+  reports keep their statuses; re-running rules (`--local`) recomputes them.
+  Revert this commit to restore the previous propagation.
+
 ## Local-first: install from committed local master, batched pushes (2026-11-03)
 
 - Owner decision after the commit below was already pushed (`3d7233b5`,

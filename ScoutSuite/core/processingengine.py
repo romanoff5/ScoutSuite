@@ -6,6 +6,10 @@ from ScoutSuite.utils import manage_dictionary
 from ScoutSuite.core.utils import recurse
 
 
+# Issues raised while evaluating one rule; they mark that rule only, never its sibling rules.
+RULE_EVALUATION_REASON_CODES = frozenset(('RuleEvidenceUnknown', 'RuleEvaluation'))
+
+
 class ProcessingEngine:
     """
 
@@ -29,6 +33,10 @@ class ProcessingEngine:
         # Clean up existing findings
         for service in cloud_provider.services:
             cloud_provider.services[service][self.ruleset.rule_type] = {}
+
+        # Fixed before any rule runs, so a finding's status does not depend on rule order.
+        incomplete_scopes = self._collection_gap_scopes(cloud_provider) \
+            if self.ruleset.rule_type == 'findings' else frozenset()
 
         # Process each rule
         for finding_path in self._filter_rules(self.rules, cloud_provider.service_list):
@@ -109,15 +117,22 @@ class ProcessingEngine:
                     if context is not None:
                         context.record_collection_issue('failed', service, 'RuleEvaluation')
                 else:
-                    context = get_current_run_context()
-                    issues = context.collection_issues if context is not None else (
-                        getattr(cloud_provider, 'collection_status', {}) or {}
-                    ).get('issues', [])
-                    if self.ruleset.rule_type == 'findings' and any(
-                        issue['scope'] in (service, 'assessment') for issue in issues
+                    if self.ruleset.rule_type == 'findings' and (
+                        service in incomplete_scopes or 'assessment' in incomplete_scopes
                     ):
                         cloud_provider.services[service][self.ruleset.rule_type][rule.key][
                             'assessment_status'] = 'incomplete'
+
+    @staticmethod
+    def _collection_gap_scopes(cloud_provider):
+        """Scopes with a collection gap; rule evaluation issues stay with the rule that raised them."""
+        context = get_current_run_context()
+        issues = context.collection_issues if context is not None else (
+            getattr(cloud_provider, 'collection_status', {}) or {}
+        ).get('issues', [])
+        return frozenset(
+            issue['scope'] for issue in issues if issue.get('reason_code') not in RULE_EVALUATION_REASON_CODES
+        )
 
     @staticmethod
     def _filter_rules(rules, services):
