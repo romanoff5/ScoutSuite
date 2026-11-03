@@ -107,18 +107,30 @@ def context_time():
 
 
 def _launch(playwright):
-    """Prefer an installed browser channel; never download one."""
+    """Prefer an installed browser channel; never download one.
+
+    Browser start-up on shared CI images is occasionally refused (crash before
+    the first page), so start-up alone gets a small bounded retry. The checks
+    themselves are never retried.
+    """
+    import time
+    args = ['--disable-gpu', '--no-first-run', '--no-default-browser-check']
     errors = []
-    for channel in ('chrome', 'msedge'):
-        try:
-            return playwright.chromium.launch(channel=channel, headless=True)
-        except Exception as error:  # Channel not installed on this host.
-            errors.append('%s: %s' % (channel, str(error).splitlines()[0]))
-    for binary in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'):
-        path = shutil.which(binary)
-        if path:
-            return playwright.chromium.launch(executable_path=path, headless=True)
-    raise RuntimeError('No installed Chrome/Edge/Chromium for report E2E: ' + '; '.join(errors))
+    for attempt in range(3):
+        for channel in ('chrome', 'msedge'):
+            try:
+                return playwright.chromium.launch(channel=channel, headless=True, args=args)
+            except Exception as error:  # Not installed, or start-up refused.
+                errors.append('%s attempt %d: %s' % (channel, attempt + 1, str(error)[:1500]))
+        for binary in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'):
+            path = shutil.which(binary)
+            if path:
+                try:
+                    return playwright.chromium.launch(executable_path=path, headless=True, args=args)
+                except Exception as error:
+                    errors.append('%s attempt %d: %s' % (binary, attempt + 1, str(error)[:1500]))
+        time.sleep(3)
+    raise RuntimeError('No usable installed Chrome/Edge/Chromium for report E2E:\n' + '\n'.join(errors))
 
 
 def run_browser_checks(report):
