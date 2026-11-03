@@ -16,6 +16,24 @@
   `-ToolkitRoot` bound `aws` as the toolkit path and failed closed ("Scanner missing"). It now uses
   `PositionalBinding = $false`; every scout argument goes to `$ScoutArgs`.
 
+- Installed the committed local `master` `ac75adf6` into the toolkit as
+  `.venv-scout-fork-main-ac75adf6a6c4` (channel `local-master`; build,
+  `pip check`, version and CLI help passed) and selected it as `Fork`; a rerun
+  only reselected. `e5fb282d` changes only the launcher script, not the
+  installed package.
+- Authorized read-only field scan with that build: the same account,
+  eu-central-1, `--external-waf-dns`, exit 0 in 54 s. Aggregates only,
+  RC9 -> local master:
+  - rules 222 -> 222, flagged findings 140 -> 140;
+  - collection issues 13 -> 11: the Redshift and ElastiCache
+    `InvalidParameterValue` issues are gone (the `f62cdbb0` fix), and both
+    services went from incomplete to not_in_use; the six Redshift rules are
+    no longer incomplete;
+  - all other findings and statuses are unchanged; no raw user data or
+    Lambda environment values; all five CDN lists refreshed live;
+  - `tools/audit_scan_evidence.py --fail-on-discrepancy`: 0 discrepancies.
+- Nothing pushed after `3d7233b5`; local `master` is ahead of `origin`.
+
 ## Release candidates retired; install from origin/master (2026-11-03)
 
 - Owner decision: no RC flow. Waiting for master CI and then the release
