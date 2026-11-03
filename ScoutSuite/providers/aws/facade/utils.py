@@ -16,14 +16,13 @@ class AWSFacadeUtils:
     # No process-global client cache: credentials are isolated by RunContext.
 
     @staticmethod
-    def record_listing_failure(scope: str, error: Exception, operation: str, paginated: bool = False) -> None:
+    def record_listing_failure(scope: str, error: Exception, operation: str) -> None:
         """Record a swallowed inventory-listing error as incomplete collection.
 
-        Only the sanitized error code is stored, never the SDK message. With
-        paginated=True, ClientErrors were already recorded by get_all_pages.
+        Only the sanitized error code is stored, never the SDK message.
         """
         context = get_current_run_context()
-        if context is None or (paginated and isinstance(error, ClientError)):
+        if context is None:
             return
         code = error.response.get('Error', {}).get('Code', '') if isinstance(error, ClientError) else ''
         kind = 'denied' if code in DENIED_CODES else 'unsupported' if code in UNSUPPORTED_CODES else 'failed'
@@ -90,10 +89,10 @@ class AWSFacadeUtils:
                     context.record_collection_issue('unsupported', service, 'UnsupportedOperation')
                 print_exception('Paginator operation unsupported for ' + service)
                 return empty
-            # Callers swallow re-raised errors; record first so an empty
-            # inventory is never presented as complete.
-            if context is not None:
-                context.record_collection_issue('failed', service, safe_collection_issue_code(code))
+            # Re-raised: the caller decides. Some codes are expected answers
+            # (e.g. Redshift/ElastiCache InvalidParameterValue for VPC-only
+            # accounts); callers that treat the error as a failure record it
+            # with record_listing_failure.
             raise
         except (ReadTimeoutError, ConnectTimeoutError, EndpointConnectionError):
             if context is not None:

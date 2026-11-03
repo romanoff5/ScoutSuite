@@ -1,3 +1,45 @@
+## RC9 publication, field acceptance and expected-error correction (2026-11-03)
+
+- Published [`fork-v5.14.0-m10-rc9`](https://github.com/romanoff5/ScoutSuite/releases/tag/fork-v5.14.0-m10-rc9)
+  from `master` `af3238831d588d3f80736147ac45a4627914f485`, after the
+  master Offline CI run and the release run both passed. The tag SHA matches,
+  and all six assets match SHA256SUMS. RC9 is installed side by side in
+  `.venv-scout-fork-rc9`; its provenance points at the tag commit, and `Fork`
+  selects it. The selector checks passed: tampered executable rejected, RC9
+  slot holding RC8 provenance refused, `ForkRc8` and `Stable` rollback work.
+- Authorized read-only field scan: the same account, eu-central-1, and the
+  `--external-waf-dns` flag. Exit 0 in 68 s. Aggregates only, RC8 -> RC9:
+  - rules 214 -> 222, flagged findings 128 -> 140;
+  - Lambda, CodeBuild, Direct Connect, DynamoDB and EMR went from
+    not_assessed to not_in_use;
+  - Secrets Manager went to issues: 11 of 11 secrets have rotation disabled,
+    all have details complete, none has a resource policy, and none is
+    unused (10 in use, 1 recently created);
+  - one internet-facing ALB is `open_without_waf` (no web ACL, listener open
+    to 0.0.0.0/0);
+  - no raw `user_data` or `env_variable_values` keys remain; 8 instances have
+    user data with no detection and 1 has no user data;
+  - all five CDN range lists were refreshed live;
+  - the DNS check found 1 domain, classified `direct_other`.
+- The browser check of the field report showed the dark theme, the new ALB
+  WAF, Secrets Manager and DNS domain views, only local requests, and no
+  console errors.
+- Field regression found and fixed on `master` after the release. The RC9
+  pager change recorded every re-raised `ClientError`, so the
+  `InvalidParameterValue` answers that Redshift and ElastiCache give
+  VPC-only accounts (which those facades deliberately ignore) became
+  collection issues. As a result, collection issues rose 11 -> 13 and
+  Redshift went from not_in_use to incomplete in the RC9 field report.
+  - Fix: the pager no longer records re-raised errors. CodeBuild, DynamoDB,
+    EMR and Lambda record their swallowed listing failures themselves.
+  - A regression test fails against the RC9 `utils.py` and passes with the
+    fix.
+  - Guarded suite: 769 passed, with the same four environment-only
+    failures; flake8 and diff check are clean.
+  - The published RC9 tag and wheel keep the defect, which is conservative
+    (it shows incomplete, never a pass). A future RC is needed to ship the
+    fix.
+
 ## RC9 release preparation (2026-11-03)
 
 - Staged `5.14.0+romanoff5.m10rc9` / `fork-v5.14.0-m10-rc9`, mirroring RC8:

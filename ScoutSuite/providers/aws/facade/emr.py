@@ -11,7 +11,7 @@ class EMRFacade(AWSBaseFacade):
             cluster_list = await AWSFacadeUtils.get_all_pages('emr', region, self.session, 'list_clusters', 'Clusters')
             cluster_ids = [cluster['Id'] for cluster in cluster_list]
         except Exception as e:
-            AWSFacadeUtils.record_listing_failure('emr', e, 'ListClusters', paginated=True)
+            AWSFacadeUtils.record_listing_failure('emr', e, 'ListClusters')
             print_exception(f'Failed to get EMR clusterss: {e}')
             return []
         else:

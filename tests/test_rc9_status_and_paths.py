@@ -142,7 +142,47 @@ def test_codebuild_listing_paginates_and_records_failures():
 
     result, issues = run(lambda s: s.add_client_error('list_projects', service_error_code='ThrottlingException',
                                                       http_status_code=400))
-    assert result == [] and issues == [{'status': 'failed', 'scope': 'codebuild', 'reason_code': 'ThrottlingException'}]
+    assert result == [] and issues == [{'status': 'failed', 'scope': 'codebuild', 'reason_code': 'ListProjectsThrottlingException'}]
+
+
+def stubbed(service, facade_call, add):
+    async def scenario():
+        client = sdk(service)
+        try:
+            with Stubber(client) as stub:
+                add(stub)
+                with patch.object(AWSFacadeUtils, 'get_client', return_value=client):
+                    result = await facade_call()
+                stub.assert_no_pending_responses()
+        finally:
+            client.close()
+        return result
+    return in_context(scenario)
+
+
+def test_expected_vpc_only_answers_are_not_collection_failures():
+    """RC9 field regression: VPC-only accounts answer InvalidParameterValue by design."""
+    from ScoutSuite.providers.aws.facade.elasticache import ElastiCacheFacade
+    from ScoutSuite.providers.aws.facade.redshift import RedshiftFacade
+    result, issues = stubbed('elasticache', lambda: ElastiCacheFacade(object()).get_security_groups(REGION),
+                             lambda s: s.add_client_error('describe_cache_security_groups',
+                                                          service_error_code='InvalidParameterValue',
+                                                          http_status_code=400))
+    assert result == [] and issues == []
+    result, issues = stubbed('redshift', lambda: RedshiftFacade(object()).get_cluster_security_groups(REGION),
+                             lambda s: s.add_client_error('describe_cluster_security_groups',
+                                                          service_error_code='InvalidParameterValue',
+                                                          http_status_code=400))
+    assert result == [] and issues == []
+
+
+def test_unexpected_paginated_error_is_recorded_once_by_the_caller():
+    from ScoutSuite.providers.aws.facade.dynamodb import DynamoDBFacade
+    result, issues = stubbed('dynamodb', lambda: DynamoDBFacade(object()).get_tables(REGION),
+                             lambda s: s.add_client_error('list_tables', service_error_code='ThrottlingException',
+                                                          http_status_code=400))
+    assert result == [] and issues == [
+        {'status': 'failed', 'scope': 'dynamodb', 'reason_code': 'ListTablesThrottlingException'}]
 
 
 def test_direct_connect_listing_failure_is_recorded_without_message():
