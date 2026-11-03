@@ -21,6 +21,8 @@ class BaseProvider:
     # Collection issues are scoped by SDK client name; map names that differ
     # from the report service key so the dashboard counts them.
     COLLECTION_SCOPE_ALIASES = {}
+    # *_count keys that are not cloud resource inventory (excluded from resources_count).
+    NON_INVENTORY_COUNT_KEYS = ('regions_count',)
 
     def __init__(self, report_dir=None, timestamp=None,
                  services=None, skipped_services=None,
@@ -150,8 +152,9 @@ class BaseProvider:
                     if last_run['summary'][service]['max_level'] != 'danger' and len(items) > 0:
                         last_run['summary'][service]['max_level'] = finding['level']
             # Total number of resources
+            excluded = getattr(self, 'NON_INVENTORY_COUNT_KEYS', ('regions_count',))
             for key in self.services[service]:
-                if key != 'regions_count' and key.endswith('_count'):
+                if key not in excluded and key.endswith('_count'):
                     last_run['summary'][service]['resources_count'] += self.services[service][key]
 
         issues = (getattr(self, 'collection_status', None) or {}).get('issues') or []

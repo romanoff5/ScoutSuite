@@ -124,7 +124,9 @@ async def run_async(provider: str,
                     no_browser: bool = False,
                     programmatic_execution: bool = False,
                     strict_completeness: bool = False,
-                    cdn_ranges_update: bool = True) -> int:
+                    cdn_ranges_update: bool = True,
+                    external_waf_dns: bool = False,
+                    waf_domains: Optional[List[str]] = None) -> int:
     """Run ScoutSuite as an async coroutine.
     
     This is the explicit awaitable programmatic entry point.
@@ -204,7 +206,9 @@ async def run_async(provider: str,
             no_browser=no_browser,
             programmatic_execution=programmatic_execution,
             strict_completeness=strict_completeness,
-            cdn_ranges_update=cdn_ranges_update
+            cdn_ranges_update=cdn_ranges_update,
+            external_waf_dns=external_waf_dns,
+            waf_domains=waf_domains
         )
     finally:
         await context.aclose()
@@ -270,7 +274,9 @@ async def _run_sync(provider: str,
                     no_browser: bool = False,
                     programmatic_execution: bool = False,
                     strict_completeness: bool = False,
-                    cdn_ranges_update: bool = True) -> int:
+                    cdn_ranges_update: bool = True,
+                    external_waf_dns: bool = False,
+                    waf_domains: Optional[List[str]] = None) -> int:
     """Internal synchronous entry point that creates and manages its own loop.
     
     This is called by run_from_cli() after parsing arguments.
@@ -341,7 +347,9 @@ async def _run_sync(provider: str,
                 no_browser=no_browser,
                 programmatic_execution=programmatic_execution,
                 strict_completeness=strict_completeness,
-            cdn_ranges_update=cdn_ranges_update
+            cdn_ranges_update=cdn_ranges_update,
+            external_waf_dns=external_waf_dns,
+            waf_domains=waf_domains
             )
         except (KeyboardInterrupt, SystemExit):
             print_info('Exiting')
@@ -409,7 +417,9 @@ async def _run_impl(context: RunContext,
                     no_browser: bool = False,
                     programmatic_execution: bool = False,
                     strict_completeness: bool = False,
-                    cdn_ranges_update: bool = True) -> int:
+                    cdn_ranges_update: bool = True,
+                    external_waf_dns: bool = False,
+                    waf_domains: Optional[List[str]] = None) -> int:
     """Core implementation of the ScoutSuite run.
     
     M03: --local from synthetic fixtures triggers zero auth or SDK calls.
@@ -567,6 +577,25 @@ async def _run_impl(context: RunContext,
         except Exception as e:
             print_exception('Failure while loading local data: {}'.format(e))
             return 104
+
+    # RC9: opt-in public DNS check of the account's domains (system resolver only).
+    if provider == 'aws' and not fetch_local and isinstance((cloud_provider.services or {}).get('elbv2'), dict):
+        from ScoutSuite.providers.aws.resources.elbv2.dns_front_door import check_domains, disabled_result
+        from ScoutSuite.providers.utils import run_concurrently
+        if external_waf_dns or waf_domains:
+            print_info('Checking public DNS of the account domains for an external WAF/CDN')
+            try:
+                result = await run_concurrently(lambda: check_domains(cloud_provider.services, waf_domains))
+                if result['external_waf_dns']['truncated']:
+                    context.record_collection_issue('partial', 'elbv2', 'DnsDomainLimit')
+            except Exception as e:
+                print_exception('External WAF DNS check failed: {}'.format(e))
+                result = disabled_result()
+                result['external_waf_dns'] = {'enabled': True, 'reason': 'failed:' + type(e).__name__}
+                context.record_collection_issue('partial', 'elbv2', 'DnsCheckFailed')
+        else:
+            result = disabled_result()
+        cloud_provider.services['elbv2'].update(result)
 
     # Pre processing
     try:
@@ -756,7 +785,9 @@ def run(provider,
         no_browser=False,
         programmatic_execution=True,
         strict_completeness=False,
-        cdn_ranges_update=True):
+        cdn_ranges_update=True,
+        external_waf_dns=False,
+        waf_domains=None):
     """
     Run a scout job - backward compatible wrapper.
     
@@ -839,4 +870,6 @@ def _extract_run_args(args: dict) -> dict:
         'programmatic_execution': False,
         'strict_completeness': args.get('strict_completeness', False),
         'cdn_ranges_update': args.get('cdn_ranges_update', True),
+        'external_waf_dns': args.get('external_waf_dns', False),
+        'waf_domains': args.get('waf_domains'),
     }

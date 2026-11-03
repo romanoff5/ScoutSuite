@@ -112,3 +112,40 @@ ingress is evaluated first. At worst it changes a `restricted_origin` into
 All fields are additive, and the rule ID is new. Old reports render without
 the WAF section. To roll back, revert the RC9 ALB WAF commit. Without it the
 scan stops making the start-of-run requests and the two AWS read calls.
+
+## Opt-in: external WAF via public DNS (`--external-waf-dns`)
+
+This check is off by default. It sends the account's domain names to the
+system DNS resolver, which is an external disclosure, so it runs only when
+`--external-waf-dns` or `--waf-domains d1 d2 ...` is given.
+`--waf-domains` implies the check.
+
+- **Domains.** The check uses ACM certificate `DomainName` and
+  `SubjectAlternativeNames`, with wildcards reduced to their base name, plus
+  `--waf-domains`. Invalid names are dropped. The limit is 1,000 domains; any
+  excess is reported as `truncated` and recorded as
+  `partial/DnsDomainLimit`.
+- **Lookups.** Each domain gets A and AAAA lookups through the operating-system
+  resolver. Zone transfers, HTTP probes and AWS calls are not used. Lookups
+  have a 60-second overall budget; unfinished lookups are reported as
+  `timeout`. Internet-facing ALB DNS names are resolved too, so a Route 53
+  alias (an A record without a CNAME) is matched to its ALB by address.
+- **Classification of each domain:**
+  - `cdn_waf_fronted`: the CNAME chain ends in a catalogued suffix, such as
+    `cloudfront.net`, `edgekey.net`, `incapdns.net`, `fastly.net`,
+    `cdn.cloudflare.net`, `gcdn.co` or `azurefd.net`, or an address is in the
+    run's CDN ranges. Also records the provider and the match method.
+  - `direct_to_alb`: the domain resolves straight to an ALB (CNAME or
+    address), with the ALB name when it is in the inventory.
+  - `direct_other`: the domain resolves elsewhere.
+  - `not_resolved`: the lookup failed, with the resolution status or error
+    type.
+- **Report.** ELBv2 gets a "Dns Domains" view that lists every checked domain:
+  sources, CNAME chain, addresses, classification and front door. Each ALB
+  lists the domains that resolve to it. `elbv2.external_waf_dns` holds the
+  summary: enabled, counts per classification, truncation, catalog version.
+  `dns_domains_count` is excluded from the service's resource inventory.
+
+The DNS observations are informational and add no rule. A domain fronted by a
+CDN whose ALB is still `open_without_waf` shows the bypass: the CDN protects
+the name, but the origin accepts anyone.

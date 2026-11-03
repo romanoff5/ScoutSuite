@@ -364,6 +364,7 @@
       "partials/aws/services.elb.regions.id.vpcs.id.elbs.linked_resources.html",
       "partials/aws/services.elb.regions.id.vpcs.id.elbs.listener.html",
       "partials/aws/services.elb.regions.id.vpcsid.elbs.linked_policy.html",
+      "partials/aws/services.elbv2.dns_domains.html",
       "partials/aws/services.elbv2.regions.id.vpcs.id.elbs.html",
       "partials/aws/services.emr.regions.id.vpcs.id.clusters.html",
       "partials/aws/services.guardduty.regions.html",

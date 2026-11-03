@@ -101,6 +101,18 @@ class ScoutSuiteArgumentParser:
                                            action='store_false',
                                            help='Do not download current CDN/WAF origin IP ranges at start-up; '
                                                 'use the bundled catalog')
+        aws_additional_parser.add_argument('--external-waf-dns',
+                                           dest='external_waf_dns',
+                                           default=False,
+                                           action='store_true',
+                                           help='Resolve the public DNS of the account domains (ACM certificates and '
+                                                '--waf-domains) to detect an external WAF/CDN in front of ALBs. '
+                                                'Sends the domain names to the system DNS resolver.')
+        aws_additional_parser.add_argument('--waf-domains',
+                                           dest='waf_domains',
+                                           default=None,
+                                           nargs='+',
+                                           help='Additional domain names for --external-waf-dns (implies it)')
         aws_additional_parser.add_argument('--ip-ranges-name-key',
                                            dest='ip_ranges_name_key',
                                            default='name',

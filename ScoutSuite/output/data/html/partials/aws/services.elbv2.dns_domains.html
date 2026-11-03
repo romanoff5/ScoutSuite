@@ -1,0 +1,20 @@
+<!-- RC9 opt-in external WAF DNS check: one entry per checked domain, HTML escaped. -->
+<script id="services.elbv2.dns_domains.partial" type="text/x-handlebars-template">
+<div class="list-group-item active"><h4>{{name}}</h4></div>
+<div class="list-group-item"><ul>
+<li>Classification: <samp>{{classification}}</samp></li>
+<li>Front door: <samp>{{value_or_none front_door_provider}}</samp>{{#if match_method}} (matched by <samp>{{match_method}}</samp>){{/if}}</li>
+<li>Resolution: <samp>{{resolution_status}}</samp>{{#if error_type}} (<samp>{{error_type}}</samp>){{/if}}</li>
+{{#if alb_dns_name}}<li>Load balancer: <samp>{{value_or_none alb_name}}</samp> (<samp>{{alb_dns_name}}</samp>)</li>{{/if}}
+<li>Sources: {{#each sources}}<samp>{{this}}</samp> {{/each}}</li>
+{{#if cname_chain}}<li>CNAME chain: {{#each cname_chain}}<samp>{{this}}</samp> {{/each}}</li>{{/if}}
+{{#if addresses}}<li>Addresses: {{#each addresses}}<samp>{{this}}</samp> {{/each}}</li>{{/if}}
+</ul></div>
+</script>
+<script>Handlebars.registerPartial("services.elbv2.dns_domains",
+ $("#services\\.elbv2\\.dns_domains\\.partial").html());</script>
+<script id="single_elbv2_dns_domains-template" type="text/x-handlebars-template">
+ {{> modal-template template='services.elbv2.dns_domains' }}
+</script>
+<script>var single_elbv2_dns_domains_template =
+ Handlebars.compile($("#single_elbv2_dns_domains-template").html());</script>

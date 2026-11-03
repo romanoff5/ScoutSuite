@@ -7,6 +7,15 @@
     "scope": "Source ranges of CDN/WAF reverse proxies used to recognise an ALB origin that only accepts traffic from such a proxy. A match means 'external WAF/CDN likely', not a verified WAF policy.",
     "notes": "At scanner start each provider's official source is fetched (HTTPS GET, bounded size/time, every entry validated) unless --no-cdn-range-update is given; on any failure the bundled ranges below are used and a warning is printed. 'live_only' providers publish lists too large or volatile to bundle and are recognised only when the live fetch succeeds. Not included: providers without a public account-independent list (Akamai Site Shield maps, Azure Front Door per-week service-tag files) and Sucuri (no verifiable official list on the review date). CloudFront is matched through the AWS managed prefix list, resolved from the AWS API at run time.",
     "limits": {"max_bytes": 1048576, "max_entries": 20000, "timeout_seconds": 5, "min_ipv4_prefix": 8, "min_ipv6_prefix": 20},
+    "cname_suffixes": {
+        "CloudFront": ["cloudfront.net"],
+        "Cloudflare": ["cdn.cloudflare.net"],
+        "Fastly": ["fastly.net", "fastlylb.net"],
+        "Akamai": ["edgekey.net", "edgesuite.net", "akamaiedge.net", "akamaized.net", "akamai.net"],
+        "Imperva": ["incapdns.net", "impervadns.net"],
+        "Gcore": ["gcdn.co"],
+        "Azure Front Door": ["azurefd.net", "azureedge.net"]
+    },
     "managed_prefix_lists": {
         "CloudFront": ["com.amazonaws.global.cloudfront.origin-facing"]
     },

@@ -386,6 +386,10 @@
               {}
             ]
           ]
+        },
+        "dns_domains": {
+          "cols": 2,
+          "path": "services.elbv2.dns_domains"
         }
       },
       "summaries": {

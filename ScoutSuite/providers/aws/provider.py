@@ -27,6 +27,8 @@ class AWSProvider(BaseProvider):
         'route53domains': 'route53',
         's3control': 's3',
     }
+    # RC9: DNS observations of the account's domains are not AWS resources.
+    NON_INVENTORY_COUNT_KEYS = ('regions_count', 'dns_domains_count')
 
     def __init__(self, profile='default', report_dir=None, timestamp=None, services=None, skipped_services=None,
                  result_format='json', **kwargs):
@@ -201,12 +203,14 @@ class AWSProvider(BaseProvider):
 
     def _classify_elbv2_waf_protection(self):
         from ScoutSuite.providers.aws.resources.elbv2.cdn_ranges import active_catalog
+        from ScoutSuite.providers.aws.resources.elbv2.dns_front_door import annotate_load_balancers
         from ScoutSuite.providers.aws.resources.elbv2.waf_exposure import classify_load_balancer
         self.services['elbv2']['cdn_catalog'] = active_catalog()['summary']
         for region in self.services['elbv2'].get('regions', {}).values():
             for vpc in region.get('vpcs', {}).values():
                 for lb in vpc.get('lbs', {}).values():
                     classify_load_balancer(lb)
+        annotate_load_balancers(self.services)
 
     def _check_ec2_zone_distribution(self):
         regions = self.services['ec2']['regions'].values()
