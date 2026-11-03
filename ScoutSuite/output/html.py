@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import shutil
 import zipfile
 import stat
@@ -19,6 +20,9 @@ from ScoutSuite.output.utils import get_filename, prompt_for_overwrite
 
 MAX_REPORT_ARCHIVE_FILES = 2000
 MAX_REPORT_ARCHIVE_BYTES = 128 * 1024 * 1024
+# @import of an absolute (http, https or protocol-relative) URL in packaged CSS.
+REMOTE_CSS_IMPORT = re.compile(
+    rb'@import\s+(?:url\(\s*)?["\']?\s*(?:https?:)?//[^;]*;', re.IGNORECASE)
 
 
 def safe_extract_report_assets(archive, destination):
@@ -59,6 +63,12 @@ def safe_extract_report_assets(archive, destination):
         target = root.joinpath(*PurePosixPath(info.filename).parts)
         if info.is_dir():
             target.mkdir(parents=True, exist_ok=True)
+        elif info.filename.lower().endswith('.css'):
+            # Vendored Bootstrap themes @import Google Fonts. Reports must open
+            # offline and never contact third parties, so drop remote imports
+            # reproducibly here instead of hand-editing includes.zip.
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(REMOTE_CSS_IMPORT.sub(b'', archive.read(info)))
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             with archive.open(info) as source, open(target, 'wb') as output:

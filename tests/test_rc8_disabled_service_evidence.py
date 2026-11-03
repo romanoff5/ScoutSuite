@@ -321,3 +321,34 @@ def test_dark_report_default_and_menu_actions_survive_sanitizer():
     metadata = (data / 'html/partials/metadata.html').read_text(encoding='utf-8')
     for action in re.findall(r'href="javascript:([A-Za-z_]+)\(', metadata):
         assert "'" + action + "'" in sanitizer, action
+
+
+def test_extracted_report_css_never_imports_remote_resources(tmp_path):
+    import io
+    import zipfile
+    from pathlib import Path
+    from ScoutSuite.output.html import REMOTE_CSS_IMPORT, safe_extract_report_assets
+
+    archive_path = Path(__file__).resolve().parents[1] / 'ScoutSuite/output/data/includes.zip'
+    with zipfile.ZipFile(archive_path) as archive:
+        originals = {n: archive.read(n) for n in archive.namelist() if n.endswith('.css')}
+        safe_extract_report_assets(archive, tmp_path)
+    stripped = 0
+    for name, original in originals.items():
+        extracted = (tmp_path / name).read_bytes()
+        assert b'googleapis' not in extracted.lower(), name
+        assert REMOTE_CSS_IMPORT.search(extracted) is None, name
+        # Only the remote @import statements are removed; everything else is byte-identical.
+        assert extracted == REMOTE_CSS_IMPORT.sub(b'', original), name
+        stripped += original != extracted
+    assert stripped >= 2  # Both vendored Bootstrap themes imported Google Fonts.
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as synthetic:
+        synthetic.writestr('inc-scoutsuite/css/x.css',
+                           '@import "local.css";\n@import url(//cdn.invalid/a.css);\n'
+                           '@IMPORT url( "HTTPS://cdn.invalid/b.css" ) screen;\nbody{color:red}')
+    with zipfile.ZipFile(buffer) as synthetic:
+        safe_extract_report_assets(synthetic, tmp_path / 'synthetic')
+    css = (tmp_path / 'synthetic/inc-scoutsuite/css/x.css').read_text()
+    assert css == '@import "local.css";\n\n\nbody{color:red}'
