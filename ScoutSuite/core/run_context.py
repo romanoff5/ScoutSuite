@@ -64,6 +64,8 @@ class RunContext:
     _api_semaphore: Optional[asyncio.Semaphore] = field(default=None, init=False, repr=False)
     errors: list = field(default_factory=list, init=False, repr=False)
     collection_issues: list = field(default_factory=list, init=False, repr=False)
+    # RC9: per-run CDN/WAF origin range catalog (None means the bundled catalog).
+    cdn_catalog: Optional[dict] = field(default=None, init=False, repr=False)
     _clients: dict = field(default_factory=dict, init=False, repr=False)
     _client_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     

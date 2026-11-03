@@ -38,6 +38,44 @@ class ELBv2Facade(AWSBaseFacade):
             await get_and_set_concurrently(
                 [self._get_and_set_load_balancer_tags], self.load_balancers_cache[region], region=region)
 
+    async def get_web_acl_for_load_balancer(self, region: str, arn: str):
+        """Read-only wafv2:GetWebACLForResource; returns (associated|none|unknown, acl summary)."""
+        client = AWSFacadeUtils.get_client('wafv2', self.session, region)
+        if client is None:
+            return 'unknown', None
+        try:
+            response = await run_concurrently(lambda: client.get_web_acl_for_resource(ResourceArn=arn))
+        except Exception as e:
+            AWSFacadeUtils.record_listing_failure('elbv2', e, 'GetWebACLForResource')
+            print_exception(f'Failed to get the WAF web ACL of an ELBv2 load balancer: {e}')
+            return 'unknown', None
+        acl = response.get('WebACL') if isinstance(response, dict) else None
+        if acl is None:
+            return 'none', None
+        if not isinstance(acl, dict) or not isinstance(acl.get('ARN'), str):
+            AWSFacadeUtils.record_listing_failure('elbv2', ValueError(), 'MalformedWebACLForResource')
+            return 'unknown', None
+        return 'associated', {'arn': acl['ARN'], 'name': acl.get('Name'), 'id': acl.get('Id')}
+
+    async def get_prefix_list_names(self, region: str, names: list):
+        """Map managed prefix list IDs to names for the given names; None when unreadable."""
+        cache = self.__dict__.setdefault('_prefix_list_names', {})
+        if region in cache:
+            return cache[region]
+        client = AWSFacadeUtils.get_client('ec2', self.session, region)
+        result = None
+        if client is not None:
+            try:
+                response = await run_concurrently(lambda: client.describe_managed_prefix_lists(
+                    Filters=[{'Name': 'prefix-list-name', 'Values': list(names)}]))
+                result = {row['PrefixListId']: row['PrefixListName'] for row in response.get('PrefixLists', [])
+                          if isinstance(row, dict) and 'PrefixListId' in row and 'PrefixListName' in row}
+            except Exception as e:
+                AWSFacadeUtils.record_listing_failure('elbv2', e, 'DescribeManagedPrefixLists')
+                print_exception(f'Failed to describe managed prefix lists: {e}')
+        cache[region] = result
+        return result
+
     async def _get_and_set_load_balancer_attributes(self, load_balancer: dict, region: str):
         elbv2_client = AWSFacadeUtils.get_client('elbv2', self.session, region)
         try:

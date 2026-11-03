@@ -95,6 +95,12 @@ class ScoutSuiteArgumentParser:
                                            default=[],
                                            nargs='+',
                                            help='Config file(s) that contain your known IP ranges')
+        aws_additional_parser.add_argument('--no-cdn-range-update',
+                                           dest='cdn_ranges_update',
+                                           default=True,
+                                           action='store_false',
+                                           help='Do not download current CDN/WAF origin IP ranges at start-up; '
+                                                'use the bundled catalog')
         aws_additional_parser.add_argument('--ip-ranges-name-key',
                                            dest='ip_ranges_name_key',
                                            default='name',

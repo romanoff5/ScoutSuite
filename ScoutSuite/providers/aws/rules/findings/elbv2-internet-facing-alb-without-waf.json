@@ -1,0 +1,21 @@
+{
+    "description": "Internet-Facing ALB Without AWS WAF Is Open to the Whole Internet",
+    "rationale": "No AWS WAF web ACL is associated with this internet-facing Application Load Balancer (wafv2:GetWebACLForResource) and its security groups allow a listener port from 0.0.0.0/0 or ::/0. Requests therefore reach the application without AWS WAF inspection, and any external WAF/CDN in front of it can be bypassed by connecting to the ALB address directly. ALBs whose listener ports only accept CloudFront's origin-facing prefix list or catalogued CDN/WAF proxy ranges are reported as external_waf_likely and are not flagged; denied lookups or unresolved security groups are UNKNOWN.",
+    "remediation": "Associate an AWS WAF web ACL with the ALB, or put it behind CloudFront/an external WAF and restrict the security group to that proxy (CloudFront managed prefix list or the provider's published ranges), optionally with a secret origin header checked by a listener rule.",
+    "references": [
+        "https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-associating-aws-resource.html",
+        "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers.html#managed-prefix-list"
+    ],
+    "dashboard_name": "Load Balancers",
+    "path": "elbv2.regions.id.vpcs.id.lbs.id",
+    "conditions": [
+        "and",
+        [
+            "waf_protection_status",
+            "equal",
+            "open_without_waf"
+        ]
+    ],
+    "id_suffix": "waf_protection_status",
+    "evidence_policy": "alb-waf-protection-v1"
+}

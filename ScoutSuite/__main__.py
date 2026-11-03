@@ -123,7 +123,8 @@ async def run_async(provider: str,
                     log_file: Optional[str] = None,
                     no_browser: bool = False,
                     programmatic_execution: bool = False,
-                    strict_completeness: bool = False) -> int:
+                    strict_completeness: bool = False,
+                    cdn_ranges_update: bool = True) -> int:
     """Run ScoutSuite as an async coroutine.
     
     This is the explicit awaitable programmatic entry point.
@@ -202,7 +203,8 @@ async def run_async(provider: str,
             log_file=log_file,
             no_browser=no_browser,
             programmatic_execution=programmatic_execution,
-            strict_completeness=strict_completeness
+            strict_completeness=strict_completeness,
+            cdn_ranges_update=cdn_ranges_update
         )
     finally:
         await context.aclose()
@@ -267,7 +269,8 @@ async def _run_sync(provider: str,
                     log_file: Optional[str] = None,
                     no_browser: bool = False,
                     programmatic_execution: bool = False,
-                    strict_completeness: bool = False) -> int:
+                    strict_completeness: bool = False,
+                    cdn_ranges_update: bool = True) -> int:
     """Internal synchronous entry point that creates and manages its own loop.
     
     This is called by run_from_cli() after parsing arguments.
@@ -337,7 +340,8 @@ async def _run_sync(provider: str,
                 log_file=log_file,
                 no_browser=no_browser,
                 programmatic_execution=programmatic_execution,
-                strict_completeness=strict_completeness
+                strict_completeness=strict_completeness,
+            cdn_ranges_update=cdn_ranges_update
             )
         except (KeyboardInterrupt, SystemExit):
             print_info('Exiting')
@@ -404,7 +408,8 @@ async def _run_impl(context: RunContext,
                     log_file: Optional[str] = None,
                     no_browser: bool = False,
                     programmatic_execution: bool = False,
-                    strict_completeness: bool = False) -> int:
+                    strict_completeness: bool = False,
+                    cdn_ranges_update: bool = True) -> int:
     """Core implementation of the ScoutSuite run.
     
     M03: --local from synthetic fixtures triggers zero auth or SDK calls.
@@ -517,6 +522,17 @@ async def _run_impl(context: RunContext,
                              if not (x.startswith('_') or x in ['credentials', 'fetch'])]
         print_info('The available services are: "{}"'.format('", "'.join(available_services)))
         return 0
+
+    # RC9: best-effort refresh of CDN/WAF origin ranges for the ALB WAF check;
+    # failures only warn and fall back to the bundled catalog.
+    if provider == 'aws' and not fetch_local and 'elbv2' in (cloud_provider.service_list or []):
+        from ScoutSuite.providers.aws.resources.elbv2.cdn_ranges import disabled_catalog, refresh_cdn_catalog
+        from ScoutSuite.providers.utils import run_concurrently
+        if cdn_ranges_update:
+            print_info('Updating CDN/WAF origin ranges')
+            context.cdn_catalog = await run_concurrently(refresh_cdn_catalog)
+        else:
+            context.cdn_catalog = disabled_catalog()
 
     # Complete run, including pulling data from provider
     if not fetch_local:
@@ -739,7 +755,8 @@ def run(provider,
         log_file=None,
         no_browser=False,
         programmatic_execution=True,
-        strict_completeness=False):
+        strict_completeness=False,
+        cdn_ranges_update=True):
     """
     Run a scout job - backward compatible wrapper.
     
@@ -821,4 +838,5 @@ def _extract_run_args(args: dict) -> dict:
         'no_browser': args.get('no_browser'),
         'programmatic_execution': False,
         'strict_completeness': args.get('strict_completeness', False),
+        'cdn_ranges_update': args.get('cdn_ranges_update', True),
     }

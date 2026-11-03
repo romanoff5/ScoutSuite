@@ -117,6 +117,10 @@ class AWSProvider(BaseProvider):
         if 'elbv2' in self.service_list and 'ec2' in self.service_list:
             self._add_security_group_data_to_elbv2()
 
+        if 'elbv2' in self.service_list:
+            # Without EC2 security groups the origin exposure stays unknown.
+            self._classify_elbv2_waf_protection()
+
         if 's3' in self.service_list and 'iam' in self.service_list:
             self._match_iam_policies_and_buckets()
 
@@ -194,6 +198,15 @@ class AWSProvider(BaseProvider):
                             elbv2_config['regions'][region]['vpcs'][vpc]['lbs'][lb], i, 'ingress')
                         check_security_group_rules(
                             elbv2_config['regions'][region]['vpcs'][vpc]['lbs'][lb], i, 'egress')
+
+    def _classify_elbv2_waf_protection(self):
+        from ScoutSuite.providers.aws.resources.elbv2.cdn_ranges import active_catalog
+        from ScoutSuite.providers.aws.resources.elbv2.waf_exposure import classify_load_balancer
+        self.services['elbv2']['cdn_catalog'] = active_catalog()['summary']
+        for region in self.services['elbv2'].get('regions', {}).values():
+            for vpc in region.get('vpcs', {}).values():
+                for lb in vpc.get('lbs', {}).values():
+                    classify_load_balancer(lb)
 
     def _check_ec2_zone_distribution(self):
         regions = self.services['ec2']['regions'].values()

@@ -20,6 +20,26 @@
                 </ul>
             </ul>
         </div>
+        {{#if waf_protection_status}}
+        <div class="list-group-item">
+            <h4>WAF protection</h4>
+            <ul>
+                <li class="list-group-item-text">Status: <span id="elbv2.regions.{{region}}.vpcs.{{vpc}}.lbs.{{@key}}.waf_protection_status"><samp>{{waf_protection_status}}</samp></span></li>
+                {{#if waf_web_acl_status}}<li class="list-group-item-text">AWS WAF web ACL: <samp>{{waf_web_acl_status}}</samp>{{#if waf_web_acl}} &mdash; <samp>{{waf_web_acl.name}}</samp> (<samp>{{waf_web_acl.arn}}</samp>){{/if}}</li>{{/if}}
+                <li class="list-group-item-text">Origin exposure: <samp>{{origin_exposure}}</samp>{{#if origin_cdn_providers}} (proxies: {{#each origin_cdn_providers}}<samp>{{this}}</samp> {{/each}}){{/if}}</li>
+                <li class="list-group-item-text">CDN range catalog: <samp>{{cdn_catalog_version}}</samp></li>
+                {{#if origin_sources}}
+                <li class="list-group-item-text">Listener-port ingress sources:
+                    <ul>
+                        {{#each origin_sources}}
+                        <li class="list-group-item-text"><samp>{{source}}</samp> &rarr; ports <samp>{{ports}}</samp> via <samp>{{group_id}}</samp>{{#if cdn_provider}} (<samp>{{cdn_provider}}</samp>){{/if}}</li>
+                        {{/each}}
+                    </ul>
+                </li>
+                {{/if}}
+            </ul>
+        </div>
+        {{/if}}
         <div class="list-group-item">
             <h4>Listeners</h4>
             <ul>

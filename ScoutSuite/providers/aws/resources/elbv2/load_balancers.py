@@ -2,6 +2,7 @@ from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.base import AWSCompositeResources
 from ScoutSuite.providers.utils import get_non_provider_id
 from .listeners import Listeners
+from .waf_exposure import cdn_catalog
 
 
 class LoadBalancers(AWSCompositeResources):
@@ -25,6 +26,20 @@ class LoadBalancers(AWSCompositeResources):
             scopes={load_balancer_id: {'region': self.region, 'load_balancer_arn': load_balancer['arn']}
                     for (load_balancer_id, load_balancer) in self.items()}
         )
+
+        # RC9: AWS WAF association per internet-facing ALB; origin exposure is classified
+        # in preprocessing once security groups are resolved from the EC2 inventory.
+        prefix_lists = None
+        for load_balancer in self.values():
+            if load_balancer.get('Type') == 'application' and load_balancer.get('Scheme') == 'internet-facing':
+                if prefix_lists is None:
+                    prefix_lists = await self.facade.elbv2.get_prefix_list_names(
+                        self.region, sorted(cdn_catalog()[2])) or {}
+                    unreadable = self.facade.elbv2.__dict__.get('_prefix_list_names', {}).get(self.region) is None
+                status, acl = await self.facade.elbv2.get_web_acl_for_load_balancer(self.region, load_balancer['arn'])
+                load_balancer['waf_web_acl_status'] = status
+                load_balancer['waf_web_acl'] = acl
+                load_balancer['cdn_prefix_lists'] = None if unreadable else prefix_lists
 
         # After loading the listener information, map the protocols used in a new field for easier usage in rules
         for lb_id in self.keys():

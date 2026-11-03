@@ -61,6 +61,12 @@
                 "level": "danger"
             }
         ],
+        "elbv2-internet-facing-alb-without-waf.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "guardduty-not-enabled.json": [
             {
                 "enabled": true,

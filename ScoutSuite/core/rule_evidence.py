@@ -289,6 +289,15 @@ def classify_ecs_environment_secrets(task):
     return _secret_detection_status(task, 'environment_secret_status')
 
 
+def classify_alb_waf_protection(lb):
+    """Internet-facing ALB reachable from 0.0.0.0/0 or ::/0 with no AWS WAF web ACL."""
+    if not isinstance(lb, dict):
+        return 'unknown'
+    return {'open_without_waf': 'insecure', 'aws_waf': 'secure', 'external_waf_likely': 'secure',
+            'restricted_origin': 'secure', 'not_internet_facing': 'not_applicable',
+            'not_applicable': 'not_applicable'}.get(lb.get('waf_protection_status'), 'unknown')
+
+
 def classify_accessanalyzer_region(region):
     """No visible analyzer in a fully enumerated Region; denials stay UNKNOWN."""
     if not isinstance(region, dict) or region.get('analyzer_census_status') != 'complete':
@@ -966,6 +975,7 @@ CLASSIFIERS = {
     'ec2-user-data-secrets-v1': classify_ec2_user_data_secrets,
     'lambda-environment-secrets-v1': classify_lambda_environment_secrets,
     'ecs-environment-secrets-v1': classify_ecs_environment_secrets,
+    'alb-waf-protection-v1': classify_alb_waf_protection,
     'secretsmanager-rotation-v1': classify_secret_rotation,
     'secretsmanager-unused-v1': classify_secret_unused,
     'secretsmanager-policy-public-v1': classify_secret_policy_public,

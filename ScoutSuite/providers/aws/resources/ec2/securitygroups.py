@@ -104,6 +104,14 @@ class SecurityGroups(AWSResources):
                     {'CIDR': grant['CidrIp']})
                 rules_count = rules_count + 1
 
+            # Managed prefix lists (e.g. CloudFront origin-facing); not added to the
+            # legacy rules_count so existing counts and rules are unchanged.
+            for grant in rule.get('PrefixListIds', []):
+                manage_dictionary(
+                    protocols[ip_protocol]['ports'][port_value], 'prefix_lists', [])
+                protocols[ip_protocol]['ports'][port_value]['prefix_lists'].append(
+                    {'PrefixListId': grant.get('PrefixListId'), 'Description': grant.get('Description')})
+
             # IPv6
             for grant in rule['Ipv6Ranges']:
                 manage_dictionary(
