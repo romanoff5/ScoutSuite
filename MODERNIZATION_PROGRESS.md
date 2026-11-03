@@ -46,6 +46,29 @@
 - Compatibility and rollback: no schema or rule identifier change. Stored
   reports keep their statuses; re-running rules (`--local`) recomputes them.
   Revert this commit to restore the previous propagation.
+- Installed `d3055964` (`.venv-scout-fork-main-d30559648294`, channel
+  `local-master`, `pip check` clean) and selected it as `Fork`.
+- Field rescan with that build (same account and region, no
+  `--external-waf-dns`): exit 0 in about 55 s. Compared with the previous
+  local-master scan: 222 rules, 140 flagged items, the same 11 collection
+  issues and the same service statuses; items, checked counts and evidence
+  summaries identical for every rule; incomplete rules 43 -> 21; the 22
+  status changes are the 21 EC2 rules and the Bedrock guardrail rule
+  described above, matching the offline replay. `audit_scan_evidence.py
+  --fail-on-discrepancy`: 0 discrepancies; no key material or raw user data.
+- Operational note: a rescan into a toolkit folder that already holds a
+  report needs `--force`; without a terminal the overwrite prompt gets EOF
+  and the run exits 109 after collection. No data was lost (the earlier
+  report was kept).
+- Toolkit cleanup (owner request): everything was moved to the Recycle Bin,
+  not erased. Moved: `.venv-scout-fork-rc7`, `-rc8`, `-rc9`,
+  `.venv-scout-fork-main-ac75adf6a6c4`, `.scout-fork-downloads` (RC1 wheels,
+  constraints, manifest, hotfix logs) and the three RC1 installers
+  `ridgepay-scout-fork-install-run*.ps1`/`.bak`. Kept: the original Stable
+  `.venv-scout`, the latest `.venv-scout-fork-main-d30559648294`, and
+  `.venv-prowler` (not a Scout build). Rollback is now only
+  `select-scanner.ps1 -Mode Stable`; the `ForkRc*` modes fail closed because
+  their environments are gone (restore from the Recycle Bin or reinstall).
 
 ## Local-first: install from committed local master, batched pushes (2026-11-03)
 
