@@ -25,6 +25,30 @@
                 "level": "warning"
             }
         ],
+        "secretsmanager-secret-rotation-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "secretsmanager-secret-unused.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "secretsmanager-secret-policy-public.json": [
+            {
+                "enabled": true,
+                "level": "danger"
+            }
+        ],
+        "secretsmanager-secret-policy-cross-account.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "guardduty-not-enabled.json": [
             {
                 "enabled": true,

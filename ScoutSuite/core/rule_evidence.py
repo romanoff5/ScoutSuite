@@ -236,6 +236,39 @@ def classify_guardduty_region(region):
     return 'unknown'
 
 
+def _secret_field(secret, field, verdicts):
+    if not isinstance(secret, dict):
+        return 'unknown'
+    return verdicts.get(secret.get(field), 'unknown')
+
+
+def classify_secret_rotation(secret):
+    """Rotation of a live secret; undescribed secrets stay UNKNOWN."""
+    return _secret_field(secret, 'rotation_status', {
+        'enabled': 'secure', 'disabled': 'insecure', 'scheduled_for_deletion': 'not_applicable'})
+
+
+def classify_secret_unused(secret):
+    """No retrieval within the threshold, or never retrieved since creation beyond it."""
+    return _secret_field(secret, 'unused_status', {
+        'unused': 'insecure', 'in_use': 'secure', 'recently_created': 'secure',
+        'scheduled_for_deletion': 'not_applicable'})
+
+
+def classify_secret_policy_public(secret):
+    """Allow to '*' (or NotPrincipal) without a caller-binding condition; unreadable policy is UNKNOWN."""
+    return _secret_field(secret, 'policy_exposure', {
+        'public': 'insecure', 'cross_account': 'secure', 'conditional': 'secure',
+        'private': 'secure', 'none': 'secure'})
+
+
+def classify_secret_policy_cross_account(secret):
+    """Named principals outside the owning account; public policies have their own rule."""
+    return _secret_field(secret, 'policy_exposure', {
+        'cross_account': 'insecure', 'public': 'not_applicable', 'conditional': 'secure',
+        'private': 'secure', 'none': 'secure'})
+
+
 def classify_accessanalyzer_region(region):
     """No visible analyzer in a fully enumerated Region; denials stay UNKNOWN."""
     if not isinstance(region, dict) or region.get('analyzer_census_status') != 'complete':
@@ -910,6 +943,10 @@ CLASSIFIERS = {
     'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
     'guardduty-region-enablement-v1': classify_guardduty_region,
     'accessanalyzer-region-configured-v1': classify_accessanalyzer_region,
+    'secretsmanager-rotation-v1': classify_secret_rotation,
+    'secretsmanager-unused-v1': classify_secret_unused,
+    'secretsmanager-policy-public-v1': classify_secret_policy_public,
+    'secretsmanager-policy-cross-account-v1': classify_secret_policy_cross_account,
     'cis71-rds-deletion-protection-v1': classify_rds_deletion_protection,
     'cis71-rds-cluster-deletion-protection-v1': classify_rds_cluster_deletion_protection,
     'cis71-efs-encryption-v1': classify_efs_encryption,
