@@ -101,7 +101,7 @@ jobs:
       - name: Guarded installed package and minimal dependency smoke
         if: "!cancelled() && steps.build.outcome == 'success'"
         run: python -B tools/ci.py packaging
-      - name: Validate origin/master install PowerShell scripts and fail-closed selection
+      - name: Validate master install PowerShell scripts and fail-closed selection
         if: "!cancelled() && steps.build.outcome == 'success' && runner.os == 'Windows'"
         shell: pwsh
         run: |
@@ -131,7 +131,7 @@ jobs:
             }
             & ./scripts/select-scanner.ps1 -Mode Fork -ToolkitRoot $root
             $config = Get-Content -LiteralPath (Join-Path $root '.scout-scanner-selection.json') -Raw | ConvertFrom-Json
-            if ($config.mode -ne 'fork' -or $config.venv -ne $newer) { throw 'Selector did not pick the newest origin/master install' }
+            if ($config.mode -ne 'fork' -or $config.venv -ne $newer) { throw 'Selector did not pick the newest master install' }
             & ./scripts/select-scanner.ps1 -Mode Fork -GitSha ('b' * 7) -ToolkitRoot $root
             $config = Get-Content -LiteralPath (Join-Path $root '.scout-scanner-selection.json') -Raw | ConvertFrom-Json
             if ($config.venv -ne $older -or $config.git_sha -ne ('b' * 40)) { throw 'Selector did not pin the requested commit' }

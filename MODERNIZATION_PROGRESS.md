@@ -1,3 +1,18 @@
+## Local-first: install from committed local master, batched pushes (2026-11-03)
+
+- Owner decision after the commit below was already pushed (`3d7233b5`,
+  remote SHA verified; not reverted, since that would need a force-push):
+  check everything locally and push only in owner-requested batches.
+- `install-fork.ps1` now defaults to the committed local `master`
+  (`git rev-parse refs/heads/master`, `git archive` of that commit; a warning
+  when uncommitted tracked changes exist, which are never built) and records
+  `channel = local-master`. `-FromOrigin` keeps the verified `origin/master`
+  path. AGENTS.md, CONTRIBUTING.md and the install notes say: commit to
+  local `master`, push only when the owner asks.
+- The toolkit's own `run-scout.ps1` / `aws_audit.py scan scout` still runs
+  the Stable `.venv-scout` and ignores the selection; fork field scans go
+  through `scripts/invoke-selected-scout.ps1` (toolkit left unchanged).
+
 ## Release candidates retired; install from origin/master (2026-11-03)
 
 - Owner decision: no RC flow. Waiting for master CI and then the release

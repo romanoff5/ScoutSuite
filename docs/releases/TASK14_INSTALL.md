@@ -1,8 +1,8 @@
-# ScoutSuite fork — install from origin/master and read-only acceptance
+# ScoutSuite fork — install from master and read-only acceptance
 
-Requires Windows 11, PowerShell 7, Git and Python 3.11. There are no release candidates or GitHub releases any more (removed 2026-11-03 at the owner's request): every install is built from the commit that `origin/master` of `romanoff5/ScoutSuite` points to at install time. Each commit installs side by side into `.venv-scout-fork-main-<first 12 SHA characters>`; Stable .venv-scout untouched, and RC environments stay selectable for rollback.
+Requires Windows 11, PowerShell 7, Git and Python 3.11. There are no release candidates or GitHub releases any more (removed 2026-11-03 at the owner's request): every install is built from the committed local `master` of this checkout (no push needed; pushes are batched), or with `-FromOrigin` from the commit that `origin/master` of `romanoff5/ScoutSuite` points to at install time. Each commit installs side by side into `.venv-scout-fork-main-<first 12 SHA characters>`; Stable .venv-scout untouched, and RC environments stay selectable for rollback.
 
-## Install the current origin/master
+## Install the current master
 
 ```powershell
 $toolkit = Join-Path $HOME 'Documents\\Security Tools\\aws-audit-newclient-starter'
@@ -10,14 +10,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\install-fork.ps1 -Tool
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\invoke-selected-scout.ps1 -ToolkitRoot $toolkit aws --help
 ```
 
-The installer confirms that `origin` is `romanoff5/ScoutSuite`, fetches `master`, checks that the fetched SHA equals `git ls-remote origin refs/heads/master`, and builds a wheel with the pinned build frontend from `git archive` of that exact commit (tracked files only; local uncommitted edits never enter the build). It then installs the wheel with `constraints/combined-py311.txt`, runs `pip check`, checks the installed version and `scout --help` / `scout aws --help`, writes `fork-install.json` (commit, wheel, constraints and `scout.exe` SHA256) and selects the new install as `Fork`. Pass `-NoSelect` to keep the current selection. Rerunning on an unchanged `origin/master` only reselects the existing install. A failed install removes only its own new directory.
+The installer confirms that `origin` is `romanoff5/ScoutSuite` and builds a wheel with the pinned build frontend from `git archive` of the local `master` commit (tracked files only; uncommitted edits never enter the build, and it warns when any exist). With `-FromOrigin` it instead fetches `master` and requires the fetched SHA to equal `git ls-remote origin refs/heads/master`. It then installs the wheel with `constraints/combined-py311.txt`, runs `pip check`, checks the installed version and `scout --help` / `scout aws --help`, writes `fork-install.json` (channel `local-master` or `origin/master`, commit, wheel, constraints and `scout.exe` SHA256) and selects the new install as `Fork`. Pass `-NoSelect` to keep the current selection. Rerunning on an unchanged commit only reselects the existing install. A failed install removes only its own new directory.
 
-The installer does not wait for GitHub CI. Run the local offline gates before pushing (see `MODERNIZATION_PROGRESS.md`); CI on `master` remains a post-push check.
+The installer does not wait for GitHub CI. Run the local offline gates before committing to `master` (see `MODERNIZATION_PROGRESS.md`); GitHub CI runs only after a batched push.
 
 ## Rollback
 
 ```powershell
-# Newest origin/master install, or a specific earlier commit (7–40 hex characters):
+# Newest master install, or a specific earlier commit (7–40 hex characters):
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\select-scanner.ps1 -Mode Fork -ToolkitRoot $toolkit
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\select-scanner.ps1 -Mode Fork -GitSha 1a2b3c4 -ToolkitRoot $toolkit
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\select-scanner.ps1 -Mode ForkRc9 -ToolkitRoot $toolkit
@@ -25,7 +25,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\select-scanner.ps1 -Mo
 
 | Mode | Environment | Note |
 | --- | --- | --- |
-| `Fork` | `.venv-scout-fork-main-<sha12>` | origin/master build; newest by default, `-GitSha` pins one |
+| `Fork` | `.venv-scout-fork-main-<sha12>` | master build; newest by default, `-GitSha` pins one |
 | `ForkRc9` | `.venv-scout-fork-rc9` | Last published RC; records Redshift/ElastiCache VPC-only answers as incomplete (fixed on master in `f62cdbb0`) |
 | `ForkRc8` | `.venv-scout-fork-rc8` | Stores raw EC2 user data and Lambda environment values, no Secrets Manager or ALB WAF rules |
 | `ForkRc7` | `.venv-scout-fork-rc7` | Security Hub not-subscribed and IAM-limited Macie disabled states stay UNKNOWN |

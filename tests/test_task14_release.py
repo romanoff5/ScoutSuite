@@ -1,4 +1,5 @@
-"""Fork install safety contracts: install from verified origin/master, no release candidates, no network or AWS scan."""
+"""Fork install safety contracts: install from committed local master (or verified origin/master), no release
+candidates, no network or AWS scan."""
 from pathlib import Path
 
 from ScoutSuite import __version__
@@ -31,8 +32,14 @@ def test_release_candidate_publication_is_removed():
             assert forbidden not in text, (flow.name, forbidden)
 
 
-def test_installer_builds_only_the_verified_remote_master_commit():
+def test_installer_builds_only_a_committed_master_commit():
     install, _, _ = scripts()
+    # Default: local master, no push needed; uncommitted edits are excluded and announced.
+    assert "[CmdletBinding(DefaultParameterSetName = 'Main')]" in install
+    assert "rev-parse 'refs/heads/master^{commit}'" in install and "$channel = 'local-master'" in install
+    assert "status --porcelain --untracked-files=no" in install and "NOT included" in install
+    # -FromOrigin: the remote commit, verified against ls-remote.
+    assert "[switch]$FromOrigin" in install
     assert "romanoff5/ScoutSuite" in install
     assert "fetch --quiet origin master" in install
     assert "ls-remote origin refs/heads/master" in install
@@ -46,7 +53,7 @@ def test_installer_builds_only_the_verified_remote_master_commit():
     assert "Refusing overwrite" in install
     assert "if ($createdVenv -and -not $verifiedInstall)" in install
     assert "Remove-Item -LiteralPath $venv -Recurse -Force" in install
-    assert "channel = 'origin/master'" in install and "scout_exe_sha256" in install
+    assert "channel = $channel" in install and "scout_exe_sha256" in install
 
 
 def test_selection_keeps_stable_and_every_rc_environment_for_rollback():
@@ -73,7 +80,7 @@ def test_ci_exercises_the_installer_and_fail_closed_selection_on_windows():
     flow = (ROOT / ".github/workflows/offline.yml").read_text(encoding="utf-8")
     assert "./scripts/install-fork.ps1 -WheelPath" in flow
     assert "'*romanoff5.main*.whl'" in flow
-    assert "Selector did not pick the newest origin/master install" in flow
+    assert "Selector did not pick the newest master install" in flow
     assert "Modified fork executable was not rejected" in flow
     assert "Stable rollback selection failed" in flow
 
@@ -88,7 +95,7 @@ def test_packaging_ships_scripts_and_install_notes():
 
 def test_install_notes_cover_preflight_rollback_and_authorization():
     note = (ROOT / "docs/releases/TASK14_INSTALL.md").read_text(encoding="utf-8")
-    assert "origin/master" in note and "install-fork.ps1" in note
+    assert "local `master`" in note and "-FromOrigin" in note and "install-fork.ps1" in note
     assert "aws sts get-caller-identity" in note
     assert all(mode in note for mode in LEGACY_MODES) and "Stable" in note and "-GitSha" in note
     assert "PowerShell 7" in note

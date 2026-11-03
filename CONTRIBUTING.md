@@ -13,7 +13,7 @@ These guidelines apply to independent development of this fork. The owner's task
 
 ## Getting started
 
-This fork is developed independently in `romanoff5/ScoutSuite`. Implement changes locally, validate them, then commit and push to the fork. Pull requests within the fork are optional unless requested. Do not create pull requests or push changes to `nccgroup/ScoutSuite`; upstream is a read-only reference.
+This fork is developed independently in `romanoff5/ScoutSuite`. Implement changes locally, validate them and commit to local `master`; push to the fork when the owner asks (pushes are batched). Pull requests within the fork are optional unless requested. Do not create pull requests or push changes to `nccgroup/ScoutSuite`; upstream is a read-only reference.
 
 1. Read `AGENTS.md` and the task's relevant modernization documents.
 2. Inspect the existing code/tests and define the intended change before editing.
@@ -22,9 +22,9 @@ This fork is developed independently in `romanoff5/ScoutSuite`. Implement change
 4. Implement your solution and the associated tests
 5. Make sure your code follows the [PEP8 guidelines](https://www.python.org/dev/peps/pep-0008/)
 6. Record test results, limitations and rollback instructions. Preserve unrelated workspace changes.
-7. Commit and push the intended changes to `romanoff5/ScoutSuite`.
+7. Commit the intended changes to local `master`; push to `romanoff5/ScoutSuite` when the owner asks.
 8. If a pull request is requested, create it only within the fork against the appropriate fork branch.
-9. Integrate validated work into the fork's actual default branch, push and verify its remote SHA. Continue assigned batch tasks in dependency order without per-task sign-offs. Record genuine technical failures and keep defective features on a separate pushed branch.
+9. Integrate validated work into local `master`; on a requested push, verify its remote SHA. Continue assigned batch tasks in dependency order without per-task sign-offs. Record genuine technical failures and keep defective features on a separate pushed branch.
 
 ## How to report a bug
 
@@ -42,4 +42,4 @@ If you find yourself wishing for a feature that doesn't exist in Scout Suite, yo
 
 ## Code review process
 
-Human review is optional for this solo-maintainer fork. No reviewer or upstream-approval gate applies. The owner authorizes local implementation, commit/push and integration of validated tasks into the fork's default branch; respect actual GitHub protection/rulesets without bypass. Offline tests, compatibility, limitations and rollback remain required. Release candidates are retired (2026-11-03): validated `master` is installed directly from `origin/master` with `scripts/install-fork.ps1`; no upstream/PyPI release, live cloud assessment or stable-scanner replacement is authorized.
+Human review is optional for this solo-maintainer fork. No reviewer or upstream-approval gate applies. The owner authorizes local implementation, commit/push and integration of validated tasks into the fork's default branch; respect actual GitHub protection/rulesets without bypass. Offline tests, compatibility, limitations and rollback remain required. Release candidates are retired (2026-11-03): validated work is committed to local `master` and installed from it with `scripts/install-fork.ps1` (pushes are batched by the owner); no upstream/PyPI release, live cloud assessment or stable-scanner replacement is authorized.

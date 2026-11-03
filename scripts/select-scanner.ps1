@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateSet('Stable', 'Fork', 'ForkRc9', 'ForkRc8', 'ForkRc7', 'ForkRc6', 'ForkRc5', 'ForkRc4', 'ForkRc3', 'ForkRc2', 'ForkRc1')][string]$Mode,
-    # Fork only: a commit (prefix) of an installed origin/master build; the newest install when omitted.
+    # Fork only: a commit (prefix) of an installed master build; the newest install when omitted.
     [ValidatePattern('^[0-9a-fA-F]{7,40}$')][string]$GitSha,
     [string]$ToolkitRoot = (Join-Path $HOME 'Documents\Security Tools\aws-audit-newclient-starter')
 )
@@ -25,7 +25,7 @@ if ($Mode -eq 'Fork') {
         [pscustomobject]@{ Venv = $dir.Name; GitSha = $record.git_sha; InstalledAt = [string]$record.installed_at_utc }
     }
     $chosen = @($candidates | Sort-Object InstalledAt -Descending)
-    if (-not $chosen) { throw 'No verified origin/master install found; run install-fork.ps1' }
+    if (-not $chosen) { throw 'No verified master install found; run install-fork.ps1' }
     $selection = [ordered]@{ schema = 2; mode = 'fork'; venv = $chosen[0].Venv; git_sha = $chosen[0].GitSha }
 } else {
     $venvName = switch ($Mode) {

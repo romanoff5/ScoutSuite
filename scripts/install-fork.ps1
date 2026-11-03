@@ -1,7 +1,9 @@
 #requires -Version 7.0
-# Installs the fork scanner straight from verified origin/master; there are no release candidates.
+# Installs the fork scanner from the committed local master (default) or, with -FromOrigin, from verified
+# origin/master. There are no release candidates.
 [CmdletBinding(DefaultParameterSetName = 'Main')]
 param(
+    [Parameter(ParameterSetName = 'Main')][switch]$FromOrigin,
     [Parameter(Mandatory, ParameterSetName = 'Wheel')][string]$WheelPath,
     [Parameter(Mandatory, ParameterSetName = 'Wheel')][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$CommitSha,
     [Parameter(Mandatory, ParameterSetName = 'Wheel')][ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedSha256,
@@ -41,11 +43,22 @@ try {
         if ($LASTEXITCODE -ne 0 -or $remote -notmatch '^(https://github\.com/|git@github\.com:)romanoff5/ScoutSuite(\.git)?/?$') {
             throw "origin does not resolve to ${repo}: $remote"
         }
-        git -C $RepoPath fetch --quiet origin master
-        if ($LASTEXITCODE -ne 0) { throw 'git fetch origin master failed' }
-        $CommitSha = (git -C $RepoPath rev-parse 'refs/remotes/origin/master^{commit}').Trim()
-        $remoteSha = ((git -C $RepoPath ls-remote origin refs/heads/master) -split "`t")[0].Trim()
-        if ($LASTEXITCODE -ne 0 -or $remoteSha -cne $CommitSha) { throw 'origin/master moved during install; retry' }
+        if ($FromOrigin) {
+            git -C $RepoPath fetch --quiet origin master
+            if ($LASTEXITCODE -ne 0) { throw 'git fetch origin master failed' }
+            $CommitSha = (git -C $RepoPath rev-parse 'refs/remotes/origin/master^{commit}').Trim()
+            $remoteSha = ((git -C $RepoPath ls-remote origin refs/heads/master) -split "`t")[0].Trim()
+            if ($LASTEXITCODE -ne 0 -or $remoteSha -cne $CommitSha) { throw 'origin/master moved during install; retry' }
+            $channel = 'origin/master'
+        } else {
+            # Local-first: committed local master, pushed or not. Uncommitted edits never enter the build.
+            $CommitSha = (git -C $RepoPath rev-parse 'refs/heads/master^{commit}').Trim()
+            if ($LASTEXITCODE -ne 0) { throw 'Local master branch not found' }
+            if (git -C $RepoPath status --porcelain --untracked-files=no) {
+                Write-Warning 'Uncommitted changes in the checkout are NOT included; commit them to master first.'
+            }
+            $channel = 'local-master'
+        }
     }
     $CommitSha = $CommitSha.ToLowerInvariant()
     $venvName = '.venv-scout-fork-main-' + $CommitSha.Substring(0, 12)
@@ -56,7 +69,7 @@ try {
         $existing = Join-Path $venv 'fork-install.json'
         if ((Test-Path -LiteralPath $existing -PathType Leaf) -and
             (Get-Content -LiteralPath $existing -Raw | ConvertFrom-Json).git_sha -ceq $CommitSha) {
-            Write-Host "origin/master $CommitSha is already installed at: $venv"
+            Write-Host "$CommitSha is already installed at: $venv"
             $venv = $null
             Select-Install $CommitSha
             return
@@ -82,11 +95,12 @@ try {
         $WheelPath = $wheels[0].FullName
         $ExpectedSha256 = (Get-FileHash -LiteralPath $WheelPath -Algorithm SHA256).Hash
         $constraintsPath = Join-Path $source 'constraints\combined-py311.txt'
-        $origin = "https://github.com/$repo/commit/$CommitSha"
+        $origin = if ($FromOrigin) { "https://github.com/$repo/commit/$CommitSha" } else { "local:refs/heads/master@$CommitSha" }
     } else {
         $WheelPath = (Resolve-Path -LiteralPath $WheelPath -ErrorAction Stop).Path
         $constraintsPath = Join-Path $RepoPath 'constraints\combined-py311.txt'
         $origin = 'local-wheel'
+        $channel = 'wheel'
     }
     $actualHash = (Get-FileHash -LiteralPath $WheelPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actualHash -cne $ExpectedSha256.ToLowerInvariant()) { throw 'Wheel SHA256 mismatch' }
@@ -112,14 +126,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'scout aws --help failed' }
     $exeHash = (Get-FileHash -LiteralPath $scout -Algorithm SHA256).Hash.ToLowerInvariant()
     $record = [ordered]@{
-        repository = $repo; version = $version; channel = 'origin/master'; git_sha = $CommitSha
+        repository = $repo; version = $version; channel = $channel; git_sha = $CommitSha
         wheel_sha256 = $actualHash; constraints_sha256 = $constraintsHash
         scout_exe_sha256 = $exeHash; origin = $origin
         installed_at_utc = [DateTime]::UtcNow.ToString('o'); executable = $scout
     }
     $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $venv 'fork-install.json') -Encoding utf8
     $verifiedInstall = $true
-    Write-Host "Verified origin/master $CommitSha installed at: $scout (no AWS calls performed)"
+    Write-Host "Verified $channel $CommitSha installed at: $scout (no AWS calls performed)"
     Select-Install $CommitSha
 } finally {
     if ($createdVenv -and -not $verifiedInstall) {
