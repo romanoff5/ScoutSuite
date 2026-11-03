@@ -239,4 +239,7 @@ def main():
 
 if __name__ == '__main__':
     os.environ.setdefault('PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD', '1')
+    # Browser start-up diagnostics (stderr only; no page content or report data).
+    os.environ.setdefault('DEBUG', 'pw:browser')
+    print('Report E2E interpreter: ' + sys.version.split()[0], flush=True)
     main()
