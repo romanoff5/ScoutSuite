@@ -270,7 +270,10 @@ def test_service_status_model_distinguishes_unused_incomplete_and_unassessed():
     assert status(checked_items=3, resources_count=3) == 'passed'
     assert status() == 'not_in_use'
     assert status(resources_count=11) == 'not_assessed'  # Resources without any rule check.
-    assert status(rules_count=0) == 'not_assessed'
+    # RC9: an empty, fully collected inventory is unused even without rules.
+    assert status(rules_count=0) == 'not_in_use'
+    assert status(rules_count=0, resources_count=11) == 'not_assessed'
+    assert status(rules_count=0, collection_issues=1) == 'incomplete'
 
 
 def test_service_summary_uses_collection_issue_scope():

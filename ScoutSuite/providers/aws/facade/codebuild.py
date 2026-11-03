@@ -6,10 +6,11 @@ from ScoutSuite.providers.utils import run_concurrently, map_concurrently
 
 class CodeBuild(AWSBaseFacade):
     async def get_projects(self, region: str):
-        codebuild_client = AWSFacadeUtils.get_client('codebuild', self.session, region)
         try:
-            projects = await run_concurrently(lambda: codebuild_client.list_projects()['projects'])
+            # Paginated: a single ListProjects call returns at most 100 names.
+            projects = await AWSFacadeUtils.get_all_pages('codebuild', region, self.session, 'list_projects', 'projects')
         except Exception as e:
+            AWSFacadeUtils.record_listing_failure('codebuild', e, 'ListProjects', paginated=True)
             print_exception(f'Failed to get CodeBuild projects: {e}')
             return []
         else:

@@ -13,6 +13,7 @@ class DynamoDBFacade(AWSBaseFacade):
                                                               'TableNames')
             return await map_concurrently(self._get_table, tables_names, region=region)
         except Exception as e:
+            AWSFacadeUtils.record_listing_failure('dynamodb', e, 'ListTables', paginated=True)
             print_exception('Failed to get DynamoDB tables: {}'.format(e))
             return []
 

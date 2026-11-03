@@ -4,11 +4,30 @@ from botocore.config import Config
 
 from ScoutSuite.core.conditions import print_exception
 from ScoutSuite.providers.utils import run_concurrently
-from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.core.run_context import get_current_run_context, safe_collection_issue_code
+
+
+DENIED_CODES = ('AccessDenied', 'AccessDeniedException', 'UnauthorizedOperation',
+                'AuthorizationError', 'AccessDeniedFault')
+UNSUPPORTED_CODES = ('UnsupportedOperation', 'UnknownOperationException', 'InvalidAction')
 
 
 class AWSFacadeUtils:
     # No process-global client cache: credentials are isolated by RunContext.
+
+    @staticmethod
+    def record_listing_failure(scope: str, error: Exception, operation: str, paginated: bool = False) -> None:
+        """Record a swallowed inventory-listing error as incomplete collection.
+
+        Only the sanitized error code is stored, never the SDK message. With
+        paginated=True, ClientErrors were already recorded by get_all_pages.
+        """
+        context = get_current_run_context()
+        if context is None or (paginated and isinstance(error, ClientError)):
+            return
+        code = error.response.get('Error', {}).get('Code', '') if isinstance(error, ClientError) else ''
+        kind = 'denied' if code in DENIED_CODES else 'unsupported' if code in UNSUPPORTED_CODES else 'failed'
+        context.record_collection_issue(kind, scope, safe_collection_issue_code(operation + (code or 'Error')))
 
     @staticmethod
     async def get_all_pages(service: str, region: str, session: boto3.session.Session, paginator_name: str,
@@ -61,17 +80,20 @@ class AWSFacadeUtils:
             return await run_concurrently(lambda: AWSFacadeUtils._get_all_pages_from_paginator(paginator, entities))
         except ClientError as error:
             code = error.response.get('Error', {}).get('Code', 'ClientError')
-            if code in ('AccessDenied', 'AccessDeniedException', 'UnauthorizedOperation',
-                        'AuthorizationError', 'AccessDeniedFault'):
+            if code in DENIED_CODES:
                 if context is not None:
                     context.record_collection_issue('denied', service, 'AccessDenied')
                 print_exception('Paginator access denied for ' + service)
                 return empty
-            if code in ('UnsupportedOperation', 'UnknownOperationException', 'InvalidAction'):
+            if code in UNSUPPORTED_CODES:
                 if context is not None:
                     context.record_collection_issue('unsupported', service, 'UnsupportedOperation')
                 print_exception('Paginator operation unsupported for ' + service)
                 return empty
+            # Callers swallow re-raised errors; record first so an empty
+            # inventory is never presented as complete.
+            if context is not None:
+                context.record_collection_issue('failed', service, safe_collection_issue_code(code))
             raise
         except (ReadTimeoutError, ConnectTimeoutError, EndpointConnectionError):
             if context is not None:

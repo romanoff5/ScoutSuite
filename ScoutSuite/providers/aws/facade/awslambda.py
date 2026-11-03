@@ -10,6 +10,7 @@ class LambdaFacade(AWSBaseFacade):
         try:
             return await AWSFacadeUtils.get_all_pages('lambda', region, self.session, 'list_functions', 'Functions')
         except Exception as e:
+            AWSFacadeUtils.record_listing_failure('lambda', e, 'ListFunctions', paginated=True)
             print_exception(f'Failed to get Lambda functions: {e}')
             return []
 

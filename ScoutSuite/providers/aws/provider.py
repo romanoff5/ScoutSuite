@@ -19,6 +19,15 @@ class AWSProvider(BaseProvider):
     Implements provider for AWS
     """
 
+    COLLECTION_SCOPE_ALIASES = {
+        'lambda': 'awslambda',
+        'macie2': 'macie',
+        'network-firewall': 'networkfirewall',
+        'bedrock-agent': 'bedrock',
+        'route53domains': 'route53',
+        's3control': 's3',
+    }
+
     def __init__(self, profile='default', report_dir=None, timestamp=None, services=None, skipped_services=None,
                  result_format='json', **kwargs):
         services = [] if services is None else services

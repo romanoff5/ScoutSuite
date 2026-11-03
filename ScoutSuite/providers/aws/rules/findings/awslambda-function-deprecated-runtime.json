@@ -5,8 +5,8 @@
         "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html"
     ],
     "dashboard_name": "Lambda Functions",
-    "display_path": "lambda.regions.id.functions.id",
-    "path": "lambda.regions.id.functions.id.runtime_lifecycle_status",
+    "display_path": "awslambda.regions.id.functions.id",
+    "path": "awslambda.regions.id.functions.id.runtime_lifecycle_status",
     "conditions": [
         "and",
         [

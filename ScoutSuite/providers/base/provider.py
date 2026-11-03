@@ -18,6 +18,10 @@ class BaseProvider:
     all cloud providers
     """
 
+    # Collection issues are scoped by SDK client name; map names that differ
+    # from the report service key so the dashboard counts them.
+    COLLECTION_SCOPE_ALIASES = {}
+
     def __init__(self, report_dir=None, timestamp=None,
                  services=None, skipped_services=None,
                  result_format='json', **kwargs):
@@ -132,7 +136,8 @@ class BaseProvider:
                                             'incomplete_rules': 0,
                                             'resources_count': 0}
             if self.services[service] is None:
-                # Not supported yet
+                # Not supported yet: nothing was collected, so it is not "not in use".
+                last_run['summary'][service]['collected'] = False
                 continue
             elif 'findings' in self.services[service]:
                 for finding in self.services[service]['findings'].values():
@@ -150,9 +155,11 @@ class BaseProvider:
                     last_run['summary'][service]['resources_count'] += self.services[service][key]
 
         issues = (getattr(self, 'collection_status', None) or {}).get('issues') or []
+        aliases = getattr(self, 'COLLECTION_SCOPE_ALIASES', {})
         for service, summary in last_run['summary'].items():
             summary['collection_issues'] = sum(
-                1 for issue in issues if isinstance(issue, dict) and issue.get('scope') == service)
+                1 for issue in issues
+                if isinstance(issue, dict) and aliases.get(issue.get('scope'), issue.get('scope')) == service)
             summary['status'] = BaseProvider._service_status(summary)
         self.last_run = last_run
 
@@ -170,7 +177,10 @@ class BaseProvider:
             return 'incomplete'
         if summary['checked_items'] > 0:
             return 'passed'
-        if summary['rules_count'] > 0 and summary['resources_count'] == 0:
+        # A fully collected empty inventory is "not in use" whether or not the
+        # service has rules; "not assessed" means resources exist but no rule
+        # evaluated them.
+        if summary['resources_count'] == 0 and summary.get('collected', True):
             return 'not_in_use'
         return 'not_assessed'
 

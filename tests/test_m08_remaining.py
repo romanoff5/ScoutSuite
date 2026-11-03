@@ -78,14 +78,14 @@ def test_rule_engine_reports_insecure_only_and_marks_unknown(tmp_path):
              'disabled': {'imds_v2_status': 'disabled', 'metadata_options': {'HttpEndpoint': 'disabled'}},
          }}}}}},
          'ec2.regions.us-east-1.vpcs.vpc-1.instances.bad.imds_v2_status'),
-        ('awslambda-function-deprecated-runtime.json', 'lambda',
+        ('awslambda-function-deprecated-runtime.json', 'awslambda',
          {'regions': {'us-east-1': {'functions': {
              'safe': {'runtime_lifecycle_status': 'supported', 'runtime': 'python3.14', 'package_type': 'Zip'},
              'bad': {'runtime_lifecycle_status': 'deprecated', 'runtime': 'python3.9', 'package_type': 'Zip'},
              'denied': {'runtime_lifecycle_status': 'unknown', 'package_type': 'Zip'},
              'disabled': {'runtime_lifecycle_status': 'image', 'package_type': 'Image'},
          }}}},
-         'lambda.regions.us-east-1.functions.bad.runtime_lifecycle_status'),
+         'awslambda.regions.us-east-1.functions.bad.runtime_lifecycle_status'),
         ('elb-older-ssl-policy.json', 'elb',
          {'regions': {'us-east-1': {'elb_policies': {
              'safe': {'reference_security_policy': 'modern', 'name': 'ELBSecurityPolicy-TLS-1-2-2017-01', 'PolicyTypeName': 'SSLNegotiationPolicyType', 'PolicyAttributeDescriptions': []},
