@@ -1,0 +1,17 @@
+{
+    "description": "RDS Cluster Absent From AWS Backup Protected Resource Inventory — Review",
+    "rationale": "An observed RDS/Aurora cluster ARN was not present in a complete regional AWS Backup protected-resource inventory. Native Aurora/RDS automated backup retention is not evaluated or negated by this finding.",
+    "remediation": "Verify native DB cluster retention plus independent backup/copy requirements. Where AWS Backup is required, verify resource plan, recovery points and restoration tests.",
+    "dashboard_name": "RDS clusters",
+    "path": "rds.regions.id.clusters.id",
+    "conditions": [
+        "and",
+        [
+            "p1_backup_evidence_status",
+            "equal",
+            "not_reported"
+        ]
+    ],
+    "evidence_policy": "backup-workload-arn-evidence-v1",
+    "id_suffix": "MissingAwsBackupRecord"
+}

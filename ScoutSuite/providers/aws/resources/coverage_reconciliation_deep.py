@@ -430,12 +430,100 @@ def enrich_inspector_and_waf(services, selected, account_id):
     return changes
 
 
+def enrich_backup_workload_coverage(services, selected):
+    """Exact ARN evidence cross-check; no new AWS API calls or unsupported PASS."""
+    backup = _regions(services, 'backup', selected)
+    ec2 = _regions(services, 'ec2', selected)
+    rds = _regions(services, 'rds', selected)
+    summary = {'observed_resources': 0, 'not_reported': 0,
+               'protected_record_observed': 0, 'unknown': 0, 'not_applicable': 0}
+    # ListProtectedResources is evidence of ANY historic recovery point; its
+    # absence is not proof that AWS-native snapshots or DLM are missing.
+    def inspect(region, resource, arn, *, applicable=True):
+        if not isinstance(resource, dict):
+            return
+        state = 'unknown'
+        detail = {'source': 'backup.ListProtectedResources', 'scope': 'aws_backup_only',
+                  'last_recovery_point_arn': None,
+                  'actual_restore_success_verified': False,
+                  'native_snapshot_coverage_evaluated': False}
+        if not applicable:
+            state = 'not_applicable'
+        elif not isinstance(arn, str) or not arn.startswith('arn:'):
+            detail['reason'] = 'missing_canonical_resource_arn'
+        elif backup is None or not isinstance(backup.get(region), dict):
+            detail['reason'] = 'backup_region_not_selected_or_collected'
+        else:
+            home = backup[region]
+            statuses = home.get('backup_inventory_status') or {}
+            protected = home.get('protected_resources')
+            if statuses.get('protected_resources') != 'complete' or not isinstance(protected, dict):
+                detail['reason'] = 'backup_protected_inventory_incomplete'
+            else:
+                match = next((row for row in protected.values()
+                              if isinstance(row, dict) and row.get('ResourceArn') == arn), None)
+                if match is not None:
+                    state = 'protected_record_observed'
+                    detail['last_recovery_point_arn'] = match.get('LastRecoveryPointArn')
+                    detail['last_backup_time'] = match.get('LastBackupTime')
+                elif any(
+                    other != region and isinstance(inv, dict)
+                    and (inv.get('backup_inventory_status') or {}).get('protected_resources') == 'complete'
+                    and any(isinstance(row, dict) and row.get('ResourceArn') == arn
+                            for row in _values(inv.get('protected_resources')))
+                    for other, inv in backup.items()):
+                    state = 'cross_region_record_observed'
+                    detail['reason'] = 'recovery_point_record_in_other_region_only'
+                else:
+                    state = 'not_reported'
+                    detail['reason'] = 'no_exact_arn_in_completed_backup_protected_inventory'
+        resource['p1_backup_evidence_status'] = state
+        resource['p1_backup_evidence'] = detail
+        summary['observed_resources'] += 1
+        if state == 'not_reported':
+            summary['not_reported'] += 1
+        elif state == 'protected_record_observed':
+            summary['protected_record_observed'] += 1
+        elif state == 'not_applicable':
+            summary['not_applicable'] += 1
+        else:
+            summary['unknown'] += 1
+
+    for region, data in (ec2 or {}).items():
+        if not isinstance(data, dict):
+            continue
+        for vpc in _values(data.get('vpcs')):
+            for instance in _values(vpc.get('instances') if isinstance(vpc, dict) else None):
+                state = instance.get('State') if isinstance(instance, dict) else None
+                name = state.get('Name') if isinstance(state, dict) else state
+                inspect(region, instance, instance.get('arn') if isinstance(instance, dict) else None,
+                        applicable=name not in ('stopped', 'stopping', 'terminated', 'shutting-down'))
+
+    for region, data in (rds or {}).items():
+        if not isinstance(data, dict):
+            continue
+        for cluster in _values(data.get('clusters')):
+            inspect(region, cluster, cluster.get('DBClusterArn')
+                    if isinstance(cluster, dict) else None)
+        for vpc in _values(data.get('vpcs')):
+            for instance in _values(vpc.get('instances') if isinstance(vpc, dict) else None):
+                # Aurora / MultiAZ cluster backup belongs to the cluster ARN.
+                # Never duplicate a missing-instance finding for its members.
+                cluster_member = isinstance(instance, dict) and bool(
+                    instance.get('DBClusterIdentifier'))
+                inspect(region, instance, instance.get('arn')
+                        if isinstance(instance, dict) else None,
+                        applicable=not cluster_member)
+    return summary
+
+
 def reconcile_m10q_deep(services, selected, account_id):
     """One enrichment pass after the existing four primary correlations."""
     return {
         'version': 2,
         's3_advanced': reconcile_s3_advanced(services, selected, account_id),
         's3_backup_plans': enrich_backup_relationships(services, selected),
+        'p1_ec2_rds_backup': enrich_backup_workload_coverage(services, selected),
         'inspector_waf': enrich_inspector_and_waf(services, selected, account_id),
         'no_additional_api_calls': True,
     }

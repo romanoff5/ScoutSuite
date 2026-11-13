@@ -1797,6 +1797,60 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ecs-task-definition-writable-root.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "wafv2-web-acl-no-explicit-rate-based-rule.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "iam-role-service-trust-missing-source-scope.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "iam-user-active-persistent-access-key-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-proxy-require-tls-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "cloudtrail-root-management-write-recent.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-instance-without-aws-backup-resource-record.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-cluster-without-aws-backup-resource-record.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-instance-without-aws-backup-resource-record.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

@@ -1,0 +1,17 @@
+{
+    "description": "AWS Service Role Trust Missing Source Context Restriction",
+    "rationale": "A role allows a supported AWS service principal to call sts:AssumeRole without aws:SourceArn or aws:SourceAccount conditions. This is a confused-deputy hardening candidate: only ECS tasks, CodeDeploy, AWS Config and CodeBuild service roles are evaluated.",
+    "remediation": "Review service-specific AWS guidance; where supported restrict trust with aws:SourceAccount and/or aws:SourceArn scoped to your account and resource. Confirm proper permissions before rollout.",
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "service_trust_scope_status",
+            "equal",
+            "missing"
+        ]
+    ],
+    "id_suffix": "MissingSourceScope",
+    "evidence_policy": "iam-service-trust-scope-v1"
+}

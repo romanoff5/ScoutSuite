@@ -27,6 +27,28 @@ class WebACLs(AWSResources):
                 continue
             self[key] = item
 
+    @staticmethod
+    def _explicit_rate_statement(statement, depth=0):
+        """Inspect only directly retrieved ACL statements, not opaque rule groups."""
+        if not isinstance(statement, dict) or depth > 16:
+            return None
+        if 'RateBasedStatement' in statement:
+            rate = statement['RateBasedStatement']
+            return True if isinstance(rate, dict) and isinstance(rate.get('Limit'), int) else None
+        for op in ('AndStatement', 'OrStatement'):
+            if op in statement:
+                body = statement[op]
+                children = body.get('Statements') if isinstance(body, dict) else None
+                if not isinstance(children, list) or not children:
+                    return None
+                results = [WebACLs._explicit_rate_statement(s, depth + 1) for s in children]
+                return True if True in results else None if None in results else False
+        if 'NotStatement' in statement:
+            body = statement['NotStatement']
+            return WebACLs._explicit_rate_statement(
+                body.get('Statement') if isinstance(body, dict) else None, depth + 1)
+        return False if statement else None
+
     def _normalize(self, raw):
         if not isinstance(raw, dict):
             return None
@@ -69,6 +91,10 @@ class WebACLs(AWSResources):
                     if isinstance(group, dict):
                         info['rule_group_arn'] = group.get('ARN')
                 rule_summary.append(info)
+        rate_results = ([self._explicit_rate_statement(x.get('Statement'))
+                         for x in rules] if rules is not None else None)
+        rate_status = ('unknown' if rate_results is None or None in rate_results else
+                       'present' if True in rate_results else 'not_present')
         fms = raw.get('managed_by_firewall_manager')
         before = raw.get('pre_process_rule_groups')
         after = raw.get('post_process_rule_groups')
@@ -102,6 +128,7 @@ class WebACLs(AWSResources):
             'web_acl_arn': arn, 'region': self.region, 'scope': scope,
             'default_action': default,
             'rule_count': len(rules) if rules is not None else None,
+            'explicit_rate_based_rule_status': rate_status,
             'rules': rule_summary,
             'managed_by_firewall_manager': fms,
             'firewall_manager_pre_rules_count':

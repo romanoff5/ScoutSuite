@@ -1,0 +1,17 @@
+{
+    "description": "RDS Proxy Does Not Require TLS for Client Connections",
+    "rationale": "An RDS Proxy explicitly reports RequireTLS=false. Client-to-proxy connections may negotiate without TLS where supported; backend encryption and database account configuration are separate controls.",
+    "remediation": "Set RequireTLS=true after validating client TLS compatibility and monitoring rollout. Confirm certificates and connections.",
+    "dashboard_name": "RDS Proxies",
+    "path": "rds.regions.id.proxies.id",
+    "conditions": [
+        "and",
+        [
+            "tls_status",
+            "equal",
+            "disabled"
+        ]
+    ],
+    "id_suffix": "RequireTLS",
+    "evidence_policy": "rds-proxy-require-tls-v1"
+}

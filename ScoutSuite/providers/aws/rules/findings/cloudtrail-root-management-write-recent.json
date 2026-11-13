@@ -1,0 +1,22 @@
+{
+    "description": "Root Account Performed Management Write Operation in Recent CloudTrail History",
+    "rationale": "A management write event with userIdentity.type=Root was observed in regional CloudTrail Event History during the last 89 days. This is observed history, not proof of incident or unauthorized access. The lookup is account/region scoped, limited to 90 days, and uses Username=root with event identity confirmation.",
+    "remediation": "Review the event's approved change record and necessity; use delegated roles for non-root-only operations. Escalate unexpected root activity. Preserve event evidence in centralized immutable logs.",
+    "dashboard_name": "Root write events",
+    "path": "cloudtrail.regions.id.root_write_events.id",
+    "conditions": [
+        "and",
+        [
+            "management_write_verified",
+            "true",
+            ""
+        ],
+        [
+            "root_identity_verified",
+            "true",
+            ""
+        ]
+    ],
+    "id_suffix": "RootWriteOperation",
+    "evidence_policy": "cloudtrail-root-write-history-v1"
+}

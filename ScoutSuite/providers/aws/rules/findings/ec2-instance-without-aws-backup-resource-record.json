@@ -1,0 +1,17 @@
+{
+    "description": "EC2 Instance Absent From AWS Backup Protected Resource Inventory — Review",
+    "rationale": "In the selected Region, AWS Backup ListProtectedResources completed and did not return an exact ARN for this non-stopped EC2 instance. This is only an AWS Backup evidence gap: DLM, native EBS snapshots, AMIs, other backup services, restore success and cross-account copies are not established.",
+    "remediation": "Verify documented EC2 recovery-point and restore strategy; consider AWS Backup resource protection, DLM or tested native EBS/AMI recovery with target RPO/RTO.",
+    "dashboard_name": "Instances",
+    "path": "ec2.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "p1_backup_evidence_status",
+            "equal",
+            "not_reported"
+        ]
+    ],
+    "evidence_policy": "backup-workload-arn-evidence-v1",
+    "id_suffix": "MissingAwsBackupRecord"
+}

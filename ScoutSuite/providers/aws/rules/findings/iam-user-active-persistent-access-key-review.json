@@ -1,0 +1,17 @@
+{
+    "description": "IAM User Has Active Persistent Access Key — Review",
+    "rationale": "An IAM user has an active long-lived access key regardless of age. This is an inventory and rotation/federation review recommendation, not proof that the credential has been exposed or violates policy. SES SMTP may require an exception.",
+    "remediation": "Use OIDC/STS and service roles where possible; for unavoidable static keys document exception, least privilege, rotation, monitoring and owner.",
+    "dashboard_name": "Users",
+    "path": "iam.users.id",
+    "conditions": [
+        "and",
+        [
+            "persistent_key_review_status",
+            "equal",
+            "active"
+        ]
+    ],
+    "id_suffix": "PersistentKey",
+    "evidence_policy": "iam-persistent-key-review-v1"
+}

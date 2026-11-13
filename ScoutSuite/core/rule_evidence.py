@@ -527,6 +527,69 @@ def classify_ecr_registry_scanning(registry):
     return 'unknown'
 
 
+def classify_backup_protected_resource(resource):
+    """AWS Backup protected-resource *record*, not overall backup compliance."""
+    if not isinstance(resource,dict):
+        return 'unknown'
+    status=resource.get('p1_backup_evidence_status')
+    if status=='not_reported':
+        return 'insecure'
+    if status=='protected_record_observed':
+        return 'secure'  # Exact AWS Backup inventory record only.
+    if status=='not_applicable':
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_cloudtrail_root_write_event(event):
+    if not isinstance(event,dict):
+        return 'unknown'
+    if event.get('root_identity_verified') is True and event.get('management_write_verified') is True:
+        return 'insecure'  # Historical event observed, not proof of ongoing misuse.
+    return 'unknown'
+
+
+def classify_rds_proxy_tls(proxy):
+    if not isinstance(proxy,dict):
+        return 'unknown'
+    return {'disabled':'insecure','enforced':'secure'}.get(
+        proxy.get('tls_status'),'unknown')
+
+
+def classify_service_role_trust(role):
+    if not isinstance(role, dict):
+        return 'unknown'
+    return {'missing': 'insecure', 'scoped': 'secure',
+            'not_applicable': 'not_applicable'}.get(
+                role.get('service_trust_scope_status'), 'unknown')
+
+
+def classify_persistent_iam_key(user):
+    if not isinstance(user, dict):
+        return 'unknown'
+    return {'active': 'insecure', 'none': 'secure'}.get(
+        user.get('persistent_key_review_status'), 'unknown')
+
+
+def classify_ecs_writable_root(task):
+    if not isinstance(task, dict):
+        return 'unknown'
+    status = task.get('writable_root_filesystem_status')
+    if status == 'not_applicable':
+        return 'not_applicable'
+    if task.get('writable_root_filesystem_observation_complete') is not True:
+        return 'unknown'
+    return {'writable': 'insecure', 'read_only': 'secure'}.get(status, 'unknown')
+
+
+def classify_waf_explicit_rate(web_acl):
+    """Only explicitly configured ACL rules; other mitigations are not assessed."""
+    if not isinstance(web_acl, dict):
+        return 'unknown'
+    return {'present': 'secure', 'not_present': 'insecure'}.get(
+        web_acl.get('explicit_rate_based_rule_status'), 'unknown')
+
+
 def classify_ecs_task_privilege(task):
     if not isinstance(task, dict):
         return 'unknown'
@@ -1062,6 +1125,13 @@ CLASSIFIERS = {
     'eks-api-endpoint-v1': classify_eks_api_endpoint,
     'ecr-registry-scanning-v1': classify_ecr_registry_scanning,
     'ecs-task-privileged-v1': classify_ecs_task_privilege,
+    'ecs-readonly-root-v1': classify_ecs_writable_root,
+    'iam-service-trust-scope-v1': classify_service_role_trust,
+    'rds-proxy-require-tls-v1': classify_rds_proxy_tls,
+    'cloudtrail-root-write-history-v1': classify_cloudtrail_root_write_event,
+    'backup-workload-arn-evidence-v1': classify_backup_protected_resource,
+    'iam-persistent-key-review-v1': classify_persistent_iam_key,
+    'wafv2-explicit-rate-v1': classify_waf_explicit_rate,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,
     'wafv2-empty-allow-v1': classify_wafv2_empty_allow,
     'wafv2-association-v1': classify_wafv2_association,
