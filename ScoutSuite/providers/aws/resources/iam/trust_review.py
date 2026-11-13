@@ -26,13 +26,18 @@ def _role_account(role_arn):
         return None
     return parts[4]
 
-def _source_binding(key, value, role_account):
+def _source_binding(key, value, role_account, operator):
     """Return bounded, unbounded or ambiguous; every OR value must be bounded."""
     values = _values(value)
     if not values:
         return 'ambiguous'
     accounts = []
+    literal_string = operator.lower() in ('stringequals', 'foranyvalue:stringequals')
     for raw in values:
+        # StringEquals treats * and ? literally, unlike StringLike and
+        # ArnEquals/ArnLike. A literal wildcard does not match an AWS account.
+        if literal_string and ('*' in raw or '?' in raw):
+            continue
         if not raw or '*' == raw.strip() or '?' in raw or '${' in raw:
             return 'unbounded' if raw.strip() == '*' else 'ambiguous'
         if key == 'aws:sourceaccount':
@@ -50,6 +55,8 @@ def _source_binding(key, value, role_account):
             accounts.append(parts[4])
         else:
             return 'ambiguous'
+    if not accounts:
+        return 'ambiguous'
     if role_account and any(account != role_account for account in accounts):
         return 'ambiguous'
     return 'bounded'
@@ -97,7 +104,7 @@ def review_trust(policy, role_arn=None):
                 continue
             for key, value in keys.items():
                 if isinstance(key, str) and key.lower() in ('aws:sourceaccount', 'aws:sourcearn'):
-                    results.append(_source_binding(key.lower(), value, account))
+                    results.append(_source_binding(key.lower(), value, account, op))
         if 'bounded' not in results:
             if 'ambiguous' in results:
                 ambiguous = True

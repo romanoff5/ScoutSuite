@@ -28,7 +28,7 @@ def test_service_trust_scope_presence_and_unsupported_principal():
     assert trust(stmt('ecs-tasks.amazonaws.com',{'StringEquals':{'aws:SourceAccount':'123456789012'}}))=='scoped'
     assert trust(stmt('codedeploy.amazonaws.com',{'ArnLike':{'aws:SourceArn':'arn:aws:codedeploy:*:123456789012:*'}}))=='scoped'
     assert trust(stmt('lambda.amazonaws.com'))=='not_applicable'
-    assert trust(stmt('ecs-tasks.amazonaws.com',{'StringEquals':{'aws:SourceAccount':'*'}}))=='missing'
+    assert trust(stmt('ecs-tasks.amazonaws.com',{'StringEquals':{'aws:SourceAccount':'*'}}))=='unknown'
     assert trust([stmt('ecs-tasks.amazonaws.com',
                       {'StringEquals':{'aws:SourceAccount':'123456789012'}}),
                   stmt('ecs-tasks.amazonaws.com')])=='missing'
@@ -57,7 +57,9 @@ def test_source_scope_wildcard_or_wrong_account_cannot_prove_bound_trust():
         return review_trust({'PolicyDocument':{'Statement':
                             stmt('ecs-tasks.amazonaws.com',condition)}}, arn)
     assert scoped({'ArnLike':{'aws:SourceArn':'arn:aws:ecs:*:*:task/*'}})=='missing'
-    assert scoped({'StringEquals':{'aws:SourceAccount':['123456789012','*']}})=='missing'
+    # In StringEquals, '*' is a literal nonmatching value, not a wildcard.
+    assert scoped({'StringEquals':{'aws:SourceAccount':['123456789012','*']}})=='scoped'
+    assert scoped({'StringLike':{'aws:SourceAccount':['123456789012','*']}})=='missing'
     assert scoped({'StringEquals':{'aws:SourceAccount':'999999999999'}})=='unknown'
     assert scoped({'StringEquals':{'aws:SourceAccount':'123456789012'}})=='scoped'
     assert scoped({'ArnLike':{'aws:SourceArn':
