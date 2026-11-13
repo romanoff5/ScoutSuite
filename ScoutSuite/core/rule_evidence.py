@@ -345,6 +345,49 @@ def classify_s3_bucket_exposure(bucket):
 
 
 
+def classify_cloudwatch_security_metric_alerting(region):
+    """No false PASS for incomplete inventories or unverified filter-alarm links."""
+    if not isinstance(region, dict):
+        return 'unknown'
+    if (region.get('metric_filters_collection_status') != 'complete'
+            or region.get('metric_alarms_collection_status') != 'complete'):
+        return 'unknown'
+    state = region.get('security_metric_alerting_status')
+    if state in ('missing', 'missing_recognized_filters'):
+        return 'insecure'
+    return 'unknown'  # Existing configuration does not establish alert delivery.
+
+
+def classify_acm_expiring_cert(cert):
+    """In-use certificate expiry evidence: missing NotAfter is UNKNOWN."""
+    if not isinstance(cert, dict):
+        return 'unknown'
+    usage = cert.get('InUseBy')
+    if not isinstance(usage, list):
+        return 'unknown'
+    if not usage:
+        return 'not_applicable'
+    return {'expiring_soon': 'insecure', 'expired': 'insecure',
+            'valid': 'secure'}.get(cert.get('expiry_status'), 'unknown')
+
+
+def classify_acm_imported_renewal(cert):
+    """Imported ACM certificates are not automatically renewed by ACM."""
+    if not isinstance(cert, dict):
+        return 'unknown'
+    return {'review_due': 'insecure', 'not_due': 'secure',
+            'not_applicable': 'not_applicable'}.get(
+                cert.get('renewal_review_status'), 'unknown')
+
+
+def classify_ec2_direct_public_https(instance):
+    """Direct inbound HTTPS is an exposure candidate, not verified reachability."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    return {'exposed': 'insecure', 'not_exposed': 'secure'}.get(
+        instance.get('public_https_status'), 'unknown')
+
+
 def classify_imds_v2(instance):
     """Classify effective per-instance metadata settings from DescribeInstances."""
     if not isinstance(instance, dict):
@@ -1022,6 +1065,10 @@ CLASSIFIERS = {
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
+    'ec2-direct-public-https-v1': classify_ec2_direct_public_https,
+    'acm-expiry-45d-v1': classify_acm_expiring_cert,
+    'acm-imported-renewal-90d-v1': classify_acm_imported_renewal,
+    'cloudwatch-security-metric-alerting-v1': classify_cloudwatch_security_metric_alerting,
     'lambda-managed-runtime-v1': classify_lambda_runtime,
     'classic-elb-tls-v1': classify_classic_elb_policy,
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,

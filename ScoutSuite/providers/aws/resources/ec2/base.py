@@ -4,6 +4,7 @@ from ScoutSuite.providers.aws.resources.ec2.volumes import Volumes
 from ScoutSuite.providers.aws.resources.ec2.vpcs import Ec2Vpcs
 from ScoutSuite.providers.aws.resources.regions import Regions
 from ScoutSuite.providers.aws.resources.ec2.regional_settings import RegionalSettings
+from ScoutSuite.providers.aws.resources.ec2.direct_https import classify_direct_public_https
 
 
 class EC2(Regions):
@@ -22,6 +23,11 @@ class EC2(Regions):
         await super().fetch_all(regions, excluded_regions, partition_name)
 
         for region in self['regions']:
+            for vpc in self['regions'][region]['vpcs'].values():
+                groups = vpc.get('security_groups')
+                for instance in vpc.get('instances', {}).values():
+                    instance['public_https_status'] = classify_direct_public_https(instance, groups)
+
             self['regions'][region]['instances_count'] =\
                 sum([len(vpc['instances']) for vpc in self['regions'][region]['vpcs'].values()])
             self['regions'][region]['security_groups_count'] =\

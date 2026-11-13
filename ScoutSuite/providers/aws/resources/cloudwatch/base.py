@@ -64,4 +64,27 @@ class CloudWatch(Regions):
                     self['regions'][region]['metric_filters_pattern_checks']['route_table_changes'] = True
                 if metric_filter['pattern'] == "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }":
                     self['regions'][region]['metric_filters_pattern_checks']['vpc_changes'] = True
-                   
+
+            # Scoped negative signal only. An AWS CloudWatch metric alarm is not
+            # evidence of an external SIEM, EventBridge monitoring or incident response.
+            current = self['regions'][region]
+            metrics_state = getattr(self.facade.cloudwatch,
+                                    'metric_filter_collection_status', {}).get(region)
+            alarms_state = getattr(self.facade.cloudwatch,
+                                   'alarm_collection_status', {}).get(region)
+            current['metric_filters_collection_status'] = metrics_state or 'unknown'
+            current['metric_alarms_collection_status'] = alarms_state or 'unknown'
+            if metrics_state != 'complete' or alarms_state != 'complete':
+                current['security_metric_alerting_status'] = 'unknown'
+            elif (not current.get('metric_filters')
+                  or not current.get('alarms')
+                  or not any(a.get('AlarmActions') for a in current['alarms'].values()
+                             if isinstance(a, dict))):
+                current['security_metric_alerting_status'] = 'missing'
+            elif not any(current['metric_filters_pattern_checks'].values()):
+                # Only the canonical patterns tested above are recognized.
+                current['security_metric_alerting_status'] = 'missing_recognized_filters'
+            else:
+                # This does not prove that an alarm is connected to a matching
+                # security metric filter and has a working notification target.
+                current['security_metric_alerting_status'] = 'review_required'

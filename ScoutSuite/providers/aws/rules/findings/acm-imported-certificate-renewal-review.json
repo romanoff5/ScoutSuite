@@ -1,0 +1,17 @@
+{
+    "description": "In-Use Imported ACM Certificate Requires Renewal Review Within 90 Days",
+    "rationale": "An imported certificate attached to an AWS resource expires within 90 days (or is already expired). AWS Certificate Manager does not automatically renew imported certificates. This is a manual renewal review signal, not proof that a renewal process is missing.",
+    "remediation": "Confirm ownership and the external renewal calendar, obtain and import the replacement certificate, associate it with listeners before expiry, and verify production hostname/SAN coverage. Record the renewal evidence.",
+    "dashboard_name": "Certificates",
+    "path": "acm.regions.id.certificates.id",
+    "conditions": [
+        "and",
+        [
+            "renewal_review_status",
+            "equal",
+            "review_due"
+        ]
+    ],
+    "id_suffix": "ImportedRenewalReview",
+    "evidence_policy": "acm-imported-renewal-90d-v1"
+}

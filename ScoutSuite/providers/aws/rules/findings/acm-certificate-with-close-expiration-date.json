@@ -1,23 +1,22 @@
 {
-    "description": "ACM Certificate Expiring in Less Than _ARG_0_ Days",
-    "rationale": "Ensure that certificates which are in use are not about to expire.",
+    "description": "In-Use ACM Certificate Expires Within 45 Days or Is Expired",
+    "rationale": "An ACM certificate attached to an AWS resource is expired or will expire in the next 45 days. The expiry window is computed from NotAfter using UTC timestamps; missing or unreadable timestamps remain UNKNOWN rather than safe.",
+    "remediation": "Renew or replace the certificate ahead of expiry, validate SAN coverage for every production hostname, and verify successful attachment and client TLS. Imported certificates require an external/manual renewal process.",
     "dashboard_name": "Certificates",
     "path": "acm.regions.id.certificates.id",
     "conditions": [
-        "and",
+        "or",
         [
-            "acm.regions.id.certificates.id",
-            "withKey",
-            "NotAfter"
+            "expiry_status",
+            "equal",
+            "expiring_soon"
         ],
         [
-            "acm.regions.id.certificates.id.NotAfter",
-            "newerThan",
-            [
-                "_ARG_0_",
-                "days"
-            ]
+            "expiry_status",
+            "equal",
+            "expired"
         ]
     ],
-    "id_suffix": "NotAfter"
+    "id_suffix": "NotAfter",
+    "evidence_policy": "acm-expiry-45d-v1"
 }
