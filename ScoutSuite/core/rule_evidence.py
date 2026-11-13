@@ -353,9 +353,11 @@ def classify_cloudwatch_security_metric_alerting(region):
             or region.get('metric_alarms_collection_status') != 'complete'):
         return 'unknown'
     state = region.get('security_metric_alerting_status')
-    if state in ('missing', 'missing_recognized_filters'):
+    if state in ('missing', 'unlinked_security_filters'):
         return 'insecure'
-    return 'unknown'  # Existing configuration does not establish alert delivery.
+    # Alternative filter syntax, metric math, and apparent linked alarms all
+    # require manual end-to-end verification; none is a verified PASS.
+    return 'unknown'
 
 
 def classify_acm_expiring_cert(cert):
