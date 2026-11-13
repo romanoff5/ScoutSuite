@@ -77,7 +77,10 @@ def test_cloudwatch_empty_complete_alarms_and_filters_are_reported():
         alarm_collection_status={REGION: 'complete'}))
     service['regions'] = {REGION: {'metric_filters': {}, 'alarms': {}}}
     asyncio.run(service.finalize())
-    services = {'cloudwatch': service}
+    # The report processing engine receives plain dict service snapshots.
+    # CloudWatch itself is a Resources(dict) subclass; recurse() requires
+    # type(current_info) == dict, not merely isinstance(..., dict).
+    services = {'cloudwatch': {'regions': service['regions']}}
     matches, evidence = _run('cloudwatch-security-metric-alerting-missing.json', services)
     assert len(matches) == 1
     assert evidence['counts']['insecure'] == 1
