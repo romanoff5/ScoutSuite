@@ -36,6 +36,7 @@ def test_ecs_writable_root_including_missing_default():
 
 def test_waf_managed_group_without_explicit_rate_is_review():
     obj=WebACLs.__new__(WebACLs)
+    obj.region='eu-central-1'
     raw={'arn':'arn:aws:wafv2:eu-central-1:123:regional/webacl/test/uuid',
          'name':'test','scope':'REGIONAL','default_action':{'Allow':{}},
          'rules':[{'Name':'managed','Statement':{'ManagedRuleGroupStatement':
