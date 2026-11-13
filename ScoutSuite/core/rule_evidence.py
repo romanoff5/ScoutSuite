@@ -527,6 +527,20 @@ def classify_ecr_registry_scanning(registry):
     return 'unknown'
 
 
+def classify_backup_protected_resource(resource):
+    """AWS Backup protected-resource *record*, not overall backup compliance."""
+    if not isinstance(resource,dict):
+        return 'unknown'
+    status=resource.get('p1_backup_evidence_status')
+    if status=='not_reported':
+        return 'insecure'
+    if status=='protected_record_observed':
+        return 'secure'  # Exact AWS Backup inventory record only.
+    if status=='not_applicable':
+        return 'not_applicable'
+    return 'unknown'
+
+
 def classify_cloudtrail_root_write_event(event):
     if not isinstance(event,dict):
         return 'unknown'
@@ -1115,6 +1129,7 @@ CLASSIFIERS = {
     'iam-service-trust-scope-v1': classify_service_role_trust,
     'rds-proxy-require-tls-v1': classify_rds_proxy_tls,
     'cloudtrail-root-write-history-v1': classify_cloudtrail_root_write_event,
+    'backup-workload-arn-evidence-v1': classify_backup_protected_resource,
     'iam-persistent-key-review-v1': classify_persistent_iam_key,
     'wafv2-explicit-rate-v1': classify_waf_explicit_rate,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,

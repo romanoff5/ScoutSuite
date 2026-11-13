@@ -1840,6 +1840,24 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ec2-instance-without-aws-backup-resource-record.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-cluster-without-aws-backup-resource-record.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-instance-without-aws-backup-resource-record.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

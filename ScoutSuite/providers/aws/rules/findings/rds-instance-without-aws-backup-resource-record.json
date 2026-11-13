@@ -1,0 +1,17 @@
+{
+    "description": "Standalone RDS Instance Absent From AWS Backup Protected Resource Inventory — Review",
+    "rationale": "A standalone (not cluster member) RDS DB instance ARN was absent from a complete regional ListProtectedResources inventory. Native automated backups may still exist independently of AWS Backup.",
+    "remediation": "Verify native automated backup retention, AWS Backup assignment if required, copy independence and actual restore testing.",
+    "dashboard_name": "RDS instances",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "p1_backup_evidence_status",
+            "equal",
+            "not_reported"
+        ]
+    ],
+    "evidence_policy": "backup-workload-arn-evidence-v1",
+    "id_suffix": "MissingAwsBackupRecord"
+}
