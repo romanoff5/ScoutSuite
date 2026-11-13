@@ -1791,6 +1791,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "cloudwatch-security-metric-alerting-missing.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

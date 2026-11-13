@@ -345,6 +345,19 @@ def classify_s3_bucket_exposure(bucket):
 
 
 
+def classify_cloudwatch_security_metric_alerting(region):
+    """No false PASS for incomplete inventories or unverified filter-alarm links."""
+    if not isinstance(region, dict):
+        return 'unknown'
+    if (region.get('metric_filters_collection_status') != 'complete'
+            or region.get('metric_alarms_collection_status') != 'complete'):
+        return 'unknown'
+    state = region.get('security_metric_alerting_status')
+    if state in ('missing', 'missing_recognized_filters'):
+        return 'insecure'
+    return 'unknown'  # Existing configuration does not establish alert delivery.
+
+
 def classify_acm_expiring_cert(cert):
     """In-use certificate expiry evidence: missing NotAfter is UNKNOWN."""
     if not isinstance(cert, dict):
@@ -1055,6 +1068,7 @@ CLASSIFIERS = {
     'ec2-direct-public-https-v1': classify_ec2_direct_public_https,
     'acm-expiry-45d-v1': classify_acm_expiring_cert,
     'acm-imported-renewal-90d-v1': classify_acm_imported_renewal,
+    'cloudwatch-security-metric-alerting-v1': classify_cloudwatch_security_metric_alerting,
     'lambda-managed-runtime-v1': classify_lambda_runtime,
     'classic-elb-tls-v1': classify_classic_elb_policy,
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
