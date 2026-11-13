@@ -1,0 +1,20 @@
+{
+    "description": "Running EC2 Security Group Allows Unrestricted Internet Egress",
+    "rationale": "A security group attached to at least one running EC2 instance allows all protocols and ports to 0.0.0.0/0 or ::/0. This is a least-privilege review, not evidence of internet routing, attack, or exfiltration.",
+    "remediation": "If policy requires restricted egress, scope outbound protocols and destinations; consider VPC endpoints, proxies and approved egress gateways.",
+    "references": [
+        "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"
+    ],
+    "dashboard_name": "Security Groups",
+    "path": "ec2.regions.id.vpcs.id.security_groups.id",
+    "conditions": [
+        "and",
+        [
+            "egress_world_all_protocols_status",
+            "equal",
+            "unrestricted"
+        ]
+    ],
+    "id_suffix": "P2WorldEgress",
+    "evidence_policy": "p2-ec2-sg-egress-v1"
+}

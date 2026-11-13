@@ -1,0 +1,20 @@
+{
+    "description": "Running EC2 Instances Share an SSH Key Pair Name (Review)",
+    "rationale": "More than one running instance in a Region references the same EC2 KeyName. Common key names can be deliberate for autoscaling fleets and do not prove shared private key files, open SSH access, or compromise.",
+    "remediation": "Confirm the intended key lifecycle and administrative access; consider SSM Session Manager or scoped individual identities instead of distributing reusable private keys.",
+    "references": [
+        "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html"
+    ],
+    "dashboard_name": "EC2 Instances",
+    "path": "ec2.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "ssh_key_reuse_status",
+            "equal",
+            "reused"
+        ]
+    ],
+    "id_suffix": "P2SharedKeyName",
+    "evidence_policy": "p2-ec2-ssh-key-reuse-v1"
+}
