@@ -5,6 +5,7 @@ from ScoutSuite.providers.aws.resources.ec2.vpcs import Ec2Vpcs
 from ScoutSuite.providers.aws.resources.regions import Regions
 from ScoutSuite.providers.aws.resources.ec2.regional_settings import RegionalSettings
 from ScoutSuite.providers.aws.resources.ec2.direct_https import classify_direct_public_https
+from ScoutSuite.providers.aws.resources.ec2.p2_checks import annotate_egress, annotate_ssh_key_reuse
 
 
 class EC2(Regions):
@@ -23,6 +24,8 @@ class EC2(Regions):
         await super().fetch_all(regions, excluded_regions, partition_name)
 
         for region in self['regions']:
+            annotate_egress(self['regions'][region]['vpcs'])
+            annotate_ssh_key_reuse(self['regions'][region]['vpcs'])
             for vpc in self['regions'][region]['vpcs'].values():
                 groups = vpc.get('security_groups')
                 for instance in vpc.get('instances', {}).values():
