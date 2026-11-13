@@ -1828,6 +1828,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "rds-proxy-require-tls-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

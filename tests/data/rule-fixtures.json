@@ -426,6 +426,7 @@
       "rds-instance-single-az.json",
       "rds-instance-storage-not-encrypted.json",
       "rds-postgres-instance-with-invalid-certificate.json",
+      "rds-proxy-require-tls-disabled.json",
       "rds-security-group-allows-all.json",
       "rds-snapshot-public.json",
       "redshift-cluster-database-not-encrypted.json",

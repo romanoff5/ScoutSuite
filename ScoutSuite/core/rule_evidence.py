@@ -527,6 +527,13 @@ def classify_ecr_registry_scanning(registry):
     return 'unknown'
 
 
+def classify_rds_proxy_tls(proxy):
+    if not isinstance(proxy,dict):
+        return 'unknown'
+    return {'disabled':'insecure','enforced':'secure'}.get(
+        proxy.get('tls_status'),'unknown')
+
+
 def classify_service_role_trust(role):
     if not isinstance(role, dict):
         return 'unknown'
@@ -1098,6 +1105,7 @@ CLASSIFIERS = {
     'ecs-task-privileged-v1': classify_ecs_task_privilege,
     'ecs-readonly-root-v1': classify_ecs_writable_root,
     'iam-service-trust-scope-v1': classify_service_role_trust,
+    'rds-proxy-require-tls-v1': classify_rds_proxy_tls,
     'iam-persistent-key-review-v1': classify_persistent_iam_key,
     'wafv2-explicit-rate-v1': classify_waf_explicit_rate,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,

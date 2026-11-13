@@ -15,6 +15,7 @@ class RDSFacade(AWSBaseFacade):
         super().__init__(session)
         # Never reuse a regional inventory between different AWS credentials
         # or across event loops, even when the region names match.
+        self.proxy_inventory_status = {}
         self._regional_instances_cache_locks = {}
         self._instances_cache = {}
         self._regional_snapshots_cache_locks = {}
@@ -27,6 +28,41 @@ class RDSFacade(AWSBaseFacade):
         ctx = get_current_run_context()
         if ctx is not None:
             ctx.record_collection_issue('partial', 'rds', reason)
+
+    async def get_db_proxies(self, region):
+        """Bounded read-only DescribeDBProxies with explicit inventory status."""
+        client = AWSFacadeUtils.get_client('rds', self.session, region)
+        self.proxy_inventory_status[region] = 'unknown'
+        if client is None:
+            self._record_incomplete('DescribeDBProxiesClientUnavailable')
+            return []
+        result, tokens, token = [], set(), None
+        for _ in range(100):
+            kwargs = {'MaxRecords': 100}
+            if token:
+                kwargs['Marker'] = token
+            try:
+                response = await run_concurrently(
+                    lambda kwargs=kwargs: client.describe_db_proxies(**kwargs))
+            except Exception:
+                self._record_incomplete('DescribeDBProxiesIncomplete')
+                return result
+            rows = response.get('DBProxies') if isinstance(response, dict) else None
+            if not isinstance(rows, list) or len(rows) > 100:
+                self._record_incomplete('DescribeDBProxiesMalformedPage')
+                return result
+            result.extend(rows)
+            following = response.get('Marker')
+            if not following:
+                self.proxy_inventory_status[region] = 'complete'
+                return result
+            if not isinstance(following, str) or following in tokens or len(following) > 4096:
+                self._record_incomplete('DescribeDBProxiesInvalidMarker')
+                return result
+            tokens.add(following)
+            token = following
+        self._record_incomplete('DescribeDBProxiesPageCap')
+        return result
 
     async def get_instances(self, region: str, vpc: str):
         try:
