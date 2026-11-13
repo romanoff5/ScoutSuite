@@ -122,3 +122,15 @@ def test_ec2_unattached_group_and_missing_eni_never_false_positive():
     annotate_egress(vpcs)
     assert vpcs['vpc1']['security_groups']['sg1'][
         'egress_world_all_protocols_status'] == 'unknown'
+
+def test_imds_account_api_normalizes_actual_boto_accountlevel_payload():
+    cli = SimpleNamespace(get_instance_metadata_defaults=lambda: {
+        'AccountLevel': {'HttpTokens': 'optional',
+                         'HttpTokensEnforced': 'disabled',
+                         'ManagedBy': 'account'}})
+    facade = EC2Facade(object(), '123456789012')
+    with patch.object(AWSFacadeUtils, 'get_client', return_value=cli):
+        result = asyncio.run(facade.get_instance_metadata_defaults(REGION))
+    assert result['HttpTokens'] == 'optional'
+    assert result['HttpTokensEnforced'] == 'disabled'
+    assert assess_account_imds_defaults(result) == 'not_required'

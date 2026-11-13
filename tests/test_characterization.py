@@ -52,9 +52,13 @@ async def collect_aws(response):
             stub.add_response('get_ebs_encryption_by_default',
                               {'EbsEncryptionByDefault': response[0]['EbsEncryptionByDefault']}, {})
             stub.add_response('get_ebs_default_kms_key_id', {'KmsKeyId': response[0]['KmsKeyId']}, {})
+            # P2 adds read-only EC2 account-level IMDSv2 default collection.
+            stub.add_response('get_instance_metadata_defaults', {
+                'AccountLevel': {'HttpTokens': 'required',
+                                 'HttpTokensEnforced': 'enabled'}}, {})
             await resources.fetch_all()
             stub.assert_no_pending_responses()
-            assert get_client.call_count == 2
+            assert get_client.call_count == 3
             get_client.assert_called_with('ec2', session, 'us-east-1')
         normalized = ScoutResultEncoder.to_dict(resources)
         return normalized, {'ec2': {'regions': {'us-east-1': {'regional_settings': normalized}}}}
