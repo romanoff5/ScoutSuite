@@ -70,6 +70,16 @@ def classify_direct_public_https(instance, security_groups):
     """Return exposed / not_exposed / unknown; do not infer PASS on missing SG data."""
     if not isinstance(instance, dict) or not isinstance(security_groups, dict):
         return 'unknown'
+    # Stopped/terminated instances cannot currently serve traffic. Retain
+    # UNKNOWN for pending/transitional states rather than asserting exposure.
+    state = instance.get('State')
+    if not isinstance(state, dict) or not isinstance(state.get('Name'), str):
+        return 'unknown'
+    lifecycle = state['Name'].lower()
+    if lifecycle in ('stopped', 'stopping', 'shutting-down', 'terminated'):
+        return 'not_applicable'
+    if lifecycle != 'running':
+        return 'unknown'
     interfaces = instance.get('network_interfaces')
     if not isinstance(interfaces, dict) or not interfaces:
         return 'unknown'

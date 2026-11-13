@@ -17,7 +17,7 @@ def _instance(public_ip=True, ipv6=None, sg='sg-test'):
         'PublicIp': '198.51.100.10'} if public_ip else {}}
     if ipv6 is not None:
         eni['Ipv6Addresses'] = [{'Ipv6Address': ipv6}]
-    return {'network_interfaces': {'eni-test': eni}}
+    return {'State': {'Name': 'running'}, 'network_interfaces': {'eni-test': eni}}
 
 
 def test_world_open_https_including_ranges_and_all():
@@ -56,3 +56,14 @@ def test_p0_rule_is_in_default_profile():
     profile = json.loads((root / 'rulesets/default.json').read_text())
     assert rule['evidence_policy'] == 'ec2-direct-public-https-v1'
     assert profile['rules']['ec2-public-instance-https-open-to-world.json'][0]['enabled'] is True
+
+def test_stopped_instance_not_reported_as_live_exposure():
+    instance = _instance()
+    instance['State'] = {'Name': 'stopped'}
+    status = classify_direct_public_https(instance, {'sg-test': _group()})
+    assert status == 'not_applicable'
+    assert classify_ec2_direct_public_https({'public_https_status': status}) == 'not_applicable'
+    instance['State'] = {'Name': 'pending'}
+    assert classify_direct_public_https(instance, {'sg-test': _group()}) == 'unknown'
+    del instance['State']
+    assert classify_direct_public_https(instance, {'sg-test': _group()}) == 'unknown'

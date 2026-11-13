@@ -386,8 +386,9 @@ def classify_ec2_direct_public_https(instance):
     """Direct inbound HTTPS is an exposure candidate, not verified reachability."""
     if not isinstance(instance, dict):
         return 'unknown'
-    return {'exposed': 'insecure', 'not_exposed': 'secure'}.get(
-        instance.get('public_https_status'), 'unknown')
+    return {'exposed': 'insecure', 'not_exposed': 'secure',
+            'not_applicable': 'not_applicable'}.get(
+                instance.get('public_https_status'), 'unknown')
 
 
 def classify_imds_v2(instance):

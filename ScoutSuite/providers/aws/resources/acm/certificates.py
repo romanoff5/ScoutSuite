@@ -46,8 +46,14 @@ class Certificates(AWSResources):
         # Do not mutate the SDK response used by other collectors.
         certificate = dict(raw_certificate)
         certificate['name'] = certificate.get('DomainName')
-        certificate['id'] = get_non_provider_id(certificate['name'])
-        certificate['arn'] = certificate.get('CertificateArn', certificate.get('DomainName'))
+        # Several certificates can cover the same primary domain; DomainName
+        # is NOT a unique ACM identifier and silently overwrote siblings.
+        arn = certificate.get('CertificateArn')
+        name = arn if isinstance(arn, str) and arn else certificate.get('DomainName')
+        if not isinstance(name, str) or not name:
+            raise ValueError('Malformed ACM certificate identifier')
+        certificate['id'] = get_non_provider_id(name)
+        certificate['arn'] = arn if isinstance(arn, str) and arn else name
         status, days = self._expiry_evidence(certificate)
         certificate['expiry_status'] = status
         certificate['days_until_expiry'] = days
