@@ -1,0 +1,20 @@
+{
+    "description": "Glue Data Catalog KMS Encryption Not Configured for an In-Use Catalog",
+    "rationale": "At least one Glue database exists and observed CatalogEncryptionMode is DISABLED. This is opt-in KMS governance, not proof that AWS provides no at-rest encryption.",
+    "remediation": "Where required, enable Glue Data Catalog SSE-KMS or SSE-KMS-WITH-SERVICE-ROLE with approved KMS grants.",
+    "references": [
+        "https://docs.aws.amazon.com/glue/latest/dg/encrypt-glue-data-catalog.html"
+    ],
+    "dashboard_name": "Glue Data Catalog",
+    "path": "glue.regions.id",
+    "conditions": [
+        "and",
+        [
+            "catalog_encryption_status",
+            "equal",
+            "kms_not_configured"
+        ]
+    ],
+    "id_suffix": "P2CatalogKMS",
+    "evidence_policy": "p2-glue-catalog-kms-v1"
+}

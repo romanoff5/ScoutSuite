@@ -1,0 +1,20 @@
+{
+    "description": "Account-Owned SSM Document Shared Publicly",
+    "rationale": "DescribeDocumentPermission explicitly lists all as an account ID for an owned SSM document. This may disclose operational document content; execution permissions are a separate control.",
+    "remediation": "Remove unintended public sharing, inspect document contents and shared versions, and use named accounts for legitimate cross-account sharing.",
+    "references": [
+        "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeDocumentPermission.html"
+    ],
+    "dashboard_name": "SSM Documents",
+    "path": "ssm.regions.id.documents.id",
+    "conditions": [
+        "and",
+        [
+            "public_sharing_status",
+            "equal",
+            "public"
+        ]
+    ],
+    "id_suffix": "P2PublicDocument",
+    "evidence_policy": "p2-ssm-public-sharing-v1"
+}
