@@ -1,0 +1,17 @@
+{
+    "description": "EC2 Instance With Public IP and Unrestricted Inbound HTTPS (Potential ALB/WAF Bypass)",
+    "rationale": "An instance network interface has a public IPv4 or globally routable IPv6 address and an attached security group permits TCP/443 from 0.0.0.0/0 or ::/0. This is a direct-exposure candidate: security group rules alone cannot prove effective Internet reachability, as routes, NACLs, host firewall and listeners were not tested. A public application instance may bypass controls on a separate ALB or CDN.",
+    "remediation": "Remove unnecessary public addresses and restrict inbound access to the load balancer security group or approved private network. Verify routing, NACLs, host firewall, and actual listener reachability independently.",
+    "dashboard_name": "Instances",
+    "path": "ec2.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "public_https_status",
+            "equal",
+            "exposed"
+        ]
+    ],
+    "evidence_policy": "ec2-direct-public-https-v1",
+    "id_suffix": "DirectPublicHttps"
+}

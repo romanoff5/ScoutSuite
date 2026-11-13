@@ -1789,6 +1789,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ec2-public-instance-https-open-to-world.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

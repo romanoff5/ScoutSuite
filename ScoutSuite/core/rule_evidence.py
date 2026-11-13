@@ -345,6 +345,14 @@ def classify_s3_bucket_exposure(bucket):
 
 
 
+def classify_ec2_direct_public_https(instance):
+    """Direct inbound HTTPS is an exposure candidate, not verified reachability."""
+    if not isinstance(instance, dict):
+        return 'unknown'
+    return {'exposed': 'insecure', 'not_exposed': 'secure'}.get(
+        instance.get('public_https_status'), 'unknown')
+
+
 def classify_imds_v2(instance):
     """Classify effective per-instance metadata settings from DescribeInstances."""
     if not isinstance(instance, dict):
@@ -1022,6 +1030,7 @@ CLASSIFIERS = {
     'securityhub-standard-state-v1': classify_securityhub_standard,
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
+    'ec2-direct-public-https-v1': classify_ec2_direct_public_https,
     'lambda-managed-runtime-v1': classify_lambda_runtime,
     'classic-elb-tls-v1': classify_classic_elb_policy,
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
