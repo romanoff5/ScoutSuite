@@ -1834,6 +1834,12 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "cloudtrail-root-management-write-recent.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

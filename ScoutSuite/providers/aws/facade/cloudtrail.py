@@ -1,3 +1,7 @@
+import asyncio
+import json
+from datetime import datetime, timedelta, timezone
+
 from botocore.exceptions import ClientError
 
 from ScoutSuite.core.console import print_exception
@@ -9,6 +13,88 @@ from ScoutSuite.providers.utils import run_concurrently
 
 
 class CloudTrailFacade(AWSBaseFacade):
+    def __init__(self, session=None):
+        super().__init__(session)
+        self.root_history_status = {}
+
+    async def get_recent_root_write_events(self, region):
+        """Only root management write events from bounded 90-day Event History."""
+        self.root_history_status[region] = 'unknown'
+        cli = AWSFacadeUtils.get_client('cloudtrail', self.session, region)
+        if cli is None:
+            self._record_collection_failure(RuntimeError('client'),'LookupRootEvents')
+            return []
+        before = datetime.now(timezone.utc)
+        params = {
+            'LookupAttributes': [{'AttributeKey':'Username','AttributeValue':'root'}],
+            'StartTime': before-timedelta(days=89),
+            'EndTime': before,
+            'MaxResults': 50,
+        }
+        events, seen, tokens = [], set(), set()
+        for _ in range(20):
+            try:
+                page = await run_concurrently(
+                    lambda params=params.copy(): cli.lookup_events(**params))
+            except Exception as error:
+                self._record_collection_failure(error, 'LookupRootEvents')
+                return events
+            batch = page.get('Events') if isinstance(page,dict) else None
+            if not isinstance(batch,list) or len(batch)>50:
+                self._record_collection_failure(ValueError('MalformedPage'),'LookupRootEvents')
+                return events
+            for event in batch:
+                if not isinstance(event,dict):
+                    self._record_collection_failure(ValueError('MalformedEvent'),'LookupRootEvents')
+                    return events
+                raw = event.get('CloudTrailEvent')
+                try:
+                    body = json.loads(raw) if isinstance(raw,str) else None
+                except (ValueError, TypeError):
+                    body = None
+                if not isinstance(body,dict) or not isinstance(body.get('userIdentity'),dict):
+                    self._record_collection_failure(ValueError('MissingIdentity'),'LookupRootEvents')
+                    return events
+                if body['userIdentity'].get('type') != 'Root':
+                    continue
+                read_only = body.get('readOnly')
+                # CloudTrail sometimes serializes readOnly as a string.
+                writes = (read_only is False or
+                          isinstance(read_only,str) and read_only.lower() == 'false')
+                if not writes:
+                    continue
+                eid = event.get('EventId')
+                name = event.get('EventName')
+                if not isinstance(eid,str) or not eid or not isinstance(name,str) or not name:
+                    self._record_collection_failure(ValueError('MissingEventFields'),'LookupRootEvents')
+                    return events
+                if eid in seen:
+                    continue
+                seen.add(eid)
+                stamp = event.get('EventTime')
+                events.append({
+                    'event_id':eid,'event_name':name,
+                    'event_source':event.get('EventSource'),
+                    'event_time':stamp.isoformat() if hasattr(stamp,'isoformat') else
+                                 stamp if isinstance(stamp,str) else None,
+                    'root_identity_verified':True,
+                    'management_write_verified':True,
+                })
+            token = page.get('NextToken')
+            if token in (None,''):
+                self.root_history_status[region]='complete'
+                return events
+            if not isinstance(token,str) or token in tokens or len(token)>4096:
+                self._record_collection_failure(ValueError('InvalidToken'),'LookupRootEvents')
+                return events
+            tokens.add(token)
+            params['NextToken']=token
+            # LookupEvents is rate-limited to 2 requests/s per account and Region.
+            await asyncio.sleep(0.6)
+        self._record_collection_failure(ValueError('PageLimit'),'LookupRootEvents')
+        return events
+
+
     async def get_trails(self, region):
         if not hasattr(self, 'trail_inventory_status'):
             self.trail_inventory_status = {}

@@ -527,6 +527,14 @@ def classify_ecr_registry_scanning(registry):
     return 'unknown'
 
 
+def classify_cloudtrail_root_write_event(event):
+    if not isinstance(event,dict):
+        return 'unknown'
+    if event.get('root_identity_verified') is True and event.get('management_write_verified') is True:
+        return 'insecure'  # Historical event observed, not proof of ongoing misuse.
+    return 'unknown'
+
+
 def classify_rds_proxy_tls(proxy):
     if not isinstance(proxy,dict):
         return 'unknown'
@@ -1106,6 +1114,7 @@ CLASSIFIERS = {
     'ecs-readonly-root-v1': classify_ecs_writable_root,
     'iam-service-trust-scope-v1': classify_service_role_trust,
     'rds-proxy-require-tls-v1': classify_rds_proxy_tls,
+    'cloudtrail-root-write-history-v1': classify_cloudtrail_root_write_event,
     'iam-persistent-key-review-v1': classify_persistent_iam_key,
     'wafv2-explicit-rate-v1': classify_waf_explicit_rate,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,

@@ -300,6 +300,7 @@
       "cloudtrail-no-logging.json",
       "cloudtrail-not-configured.json",
       "cloudtrail-partial-data-logging.json",
+      "cloudtrail-root-management-write-recent.json",
       "cloudwatch-alarm-without-actions.json",
       "cloudwatch-security-metric-alerting-missing.json",
       "config-recorder-not-configured.json",
