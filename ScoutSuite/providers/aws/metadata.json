@@ -37,6 +37,22 @@
           ]
         }
       }
+    },
+    "athena": {
+      "resources": {
+        "work_groups": {
+          "cols": 2,
+          "path": "services.athena.regions.id.work_groups"
+        }
+      }
+    },
+    "glue": {
+      "resources": {
+        "regions": {
+          "cols": 2,
+          "path": "services.glue.regions"
+        }
+      }
     }
   },
   "management": {
@@ -75,6 +91,10 @@
         "metric_filters": {
           "cols": 2,
           "path": "services.cloudwatch.regions.id.metric_filters"
+        },
+        "log_groups": {
+          "cols": 2,
+          "path": "services.cloudwatch.regions.id.log_groups"
         }
       }
     },
@@ -109,6 +129,10 @@
         "patch_groups": {
           "cols": 2,
           "path": "services.ssm.regions.id.patch_groups"
+        },
+        "documents": {
+          "cols": 2,
+          "path": "services.ssm.regions.id.documents"
         }
       }
     },

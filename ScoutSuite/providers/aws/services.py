@@ -14,6 +14,8 @@ from ScoutSuite.providers.aws.resources.bedrock.base import BedrockPublic
 from ScoutSuite.providers.aws.resources.macie.base import MaciePublic
 from ScoutSuite.providers.aws.resources.identitycenter.base import IdentityCenter
 from ScoutSuite.providers.aws.resources.organizations.base import Organizations
+from ScoutSuite.providers.aws.resources.athena_audit import AthenaAudit
+from ScoutSuite.providers.aws.resources.glue_audit import GlueAudit
 from ScoutSuite.providers.aws.resources.acm.base import Certificates
 from ScoutSuite.providers.aws.resources.awslambda.base import Lambdas
 from ScoutSuite.providers.aws.resources.cloudformation.base import CloudFormation
@@ -101,6 +103,8 @@ class AWSServicesConfig(BaseServicesConfig):
         facade = AWSFacade(credentials)
 
         self.acm = Certificates(facade)
+        self.athena = AthenaAudit(facade)
+        self.glue = GlueAudit(facade)
         self.accessanalyzer = AccessAnalyzer(facade)
         self.awslambda = Lambdas(facade)
         self.cloudformation = CloudFormation(facade)
