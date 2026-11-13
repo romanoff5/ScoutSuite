@@ -586,7 +586,9 @@ def classify_waf_explicit_rate(web_acl):
     """Only explicitly configured ACL rules; other mitigations are not assessed."""
     if not isinstance(web_acl, dict):
         return 'unknown'
-    return {'present': 'secure', 'not_present': 'insecure'}.get(
+    # A Count-only rate rule has no enforcing effect.
+    return {'present': 'secure', 'not_present': 'insecure',
+            'count_only': 'insecure'}.get(
         web_acl.get('explicit_rate_based_rule_status'), 'unknown')
 
 

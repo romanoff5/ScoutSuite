@@ -49,7 +49,18 @@ def test_waf_managed_group_without_explicit_rate_is_review():
             {'wafv2':{'regions':{'eu-central-1':{'web_acls':{'acl':acl}}}}})
     assert len(hits)==1 and ev['counts']['insecure']==1
     raw['rules'].append({'Name':'Rate','Statement':{'RateBasedStatement':
-              {'Limit':100,'AggregateKeyType':'IP'}}})
+              {'Limit':100,'AggregateKeyType':'IP'}},'Action':{'Block':{}}})
     assert obj._normalize(raw)[1]['explicit_rate_based_rule_status']=='present'
+    # AWS WAF Count mode observes requests but cannot limit their rate.
+    raw['rules'][-1]['Action']={'Count':{}}
+    count=obj._normalize(raw)[1]
+    assert count['explicit_rate_based_rule_status']=='count_only'
+    hits, evidence=run('wafv2-web-acl-no-explicit-rate-based-rule.json',
+        {'wafv2':{'regions':{'eu-central-1':{'web_acls':{'acl':count}}}}})
+    assert len(hits)==1 and evidence['counts']['insecure']==1
+    raw['rules'][-1]['Action']={'Challenge':{}}
+    assert obj._normalize(raw)[1]['explicit_rate_based_rule_status']=='conditional'
+    raw['rules'][-1]['Action']={}
+    assert obj._normalize(raw)[1]['explicit_rate_based_rule_status']=='unknown'
     raw['rules']=[{'Name':'Malformed','Statement':None}]
     assert obj._normalize(raw)[1]['explicit_rate_based_rule_status']=='unknown'

@@ -50,3 +50,15 @@ def test_short_lived_active_key_is_still_long_lived_credential():
     _, unknown=parser._parse_user({'UserId':'B','UserName':'other','Arn':'arn:aws:iam::123:user/other',
                                   'tags':{'Tags':[]}})
     assert unknown['persistent_key_review_status']=='unknown'
+
+def test_source_scope_wildcard_or_wrong_account_cannot_prove_bound_trust():
+    arn='arn:aws:iam::123456789012:role/service'
+    def scoped(condition):
+        return review_trust({'PolicyDocument':{'Statement':
+                            stmt('ecs-tasks.amazonaws.com',condition)}}, arn)
+    assert scoped({'ArnLike':{'aws:SourceArn':'arn:aws:ecs:*:*:task/*'}})=='missing'
+    assert scoped({'StringEquals':{'aws:SourceAccount':['123456789012','*']}})=='missing'
+    assert scoped({'StringEquals':{'aws:SourceAccount':'999999999999'}})=='unknown'
+    assert scoped({'StringEquals':{'aws:SourceAccount':'123456789012'}})=='scoped'
+    assert scoped({'ArnLike':{'aws:SourceArn':
+                   'arn:aws:ecs:*:123456789012:task/*'}})=='scoped'

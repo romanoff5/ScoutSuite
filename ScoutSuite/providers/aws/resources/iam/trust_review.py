@@ -1,8 +1,10 @@
-"""Conservative review of supported AWS service role trust scopes.
+"""Conservative review of AWS service-role SourceAccount/SourceArn conditions.
 
-This flags only recognized services for which AWS documents SourceArn/SourceAccount
-confused-deputy protections; it does not claim an exploit is practical.
+A non-empty value is not sufficient: wildcard account slots and OR-valued
+wildcards can leave the role broadly assumable by the service principal.
 """
+import re
+
 SCOPED_SERVICES = frozenset({
     'ecs-tasks.amazonaws.com', 'codedeploy.amazonaws.com',
     'config.amazonaws.com', 'codebuild.amazonaws.com',
@@ -15,14 +17,53 @@ def _values(value):
         return value
     return None
 
-def review_trust(policy):
+def _role_account(role_arn):
+    if not isinstance(role_arn, str):
+        return None
+    parts = role_arn.split(':', 5)
+    if (len(parts) != 6 or parts[0] != 'arn' or parts[2] != 'iam'
+            or not re.fullmatch(r'[0-9]{12}', parts[4])):
+        return None
+    return parts[4]
+
+def _source_binding(key, value, role_account):
+    """Return bounded, unbounded or ambiguous; every OR value must be bounded."""
+    values = _values(value)
+    if not values:
+        return 'ambiguous'
+    accounts = []
+    for raw in values:
+        if not raw or '*' == raw.strip() or '?' in raw or '${' in raw:
+            return 'unbounded' if raw.strip() == '*' else 'ambiguous'
+        if key == 'aws:sourceaccount':
+            if not re.fullmatch(r'[0-9]{12}', raw):
+                return 'unbounded' if '*' in raw else 'ambiguous'
+            accounts.append(raw)
+        elif key == 'aws:sourcearn':
+            parts = raw.split(':', 5)
+            if (len(parts) != 6 or parts[0] != 'arn'
+                    or not parts[1].startswith('aws')
+                    or not parts[2] or not parts[5]):
+                return 'ambiguous'
+            if '*' in parts[4] or not re.fullmatch(r'[0-9]{12}', parts[4]):
+                return 'unbounded' if '*' in parts[4] else 'ambiguous'
+            accounts.append(parts[4])
+        else:
+            return 'ambiguous'
+    if role_account and any(account != role_account for account in accounts):
+        return 'ambiguous'
+    return 'bounded'
+
+def review_trust(policy, role_arn=None):
     doc = policy.get('PolicyDocument') if isinstance(policy, dict) else None
     statements = doc.get('Statement') if isinstance(doc, dict) else None
     if isinstance(statements, dict):
         statements = [statements]
     if not isinstance(statements, list):
         return 'unknown'
+    account = _role_account(role_arn)
     applicable = False
+    ambiguous = False
     for statement in statements:
         if not isinstance(statement, dict):
             return 'unknown'
@@ -47,23 +88,19 @@ def review_trust(policy):
             return 'missing'
         if not isinstance(condition, dict):
             return 'unknown'
-        scoped = False
+        results = []
         for op, keys in condition.items():
             if not isinstance(keys, dict):
                 return 'unknown'
-            # IAM policy key casing is insignificant; positive operators only.
-            if op.lower() not in ('stringequals','stringlike','arnequals','arnlike',
-                                  'foranyvalue:stringequals','foranyvalue:arnlike'):
+            if op.lower() not in ('stringequals', 'stringlike', 'arnequals', 'arnlike',
+                                  'foranyvalue:stringequals', 'foranyvalue:arnlike'):
                 continue
             for key, value in keys.items():
-                if not isinstance(key, str) or key.lower() not in ('aws:sourceaccount','aws:sourcearn'):
-                    continue
-                values = _values(value)
-                if values is None:
-                    return 'unknown'
-                # '*' alone does not meaningfully bind the principal to a source.
-                if any(v.strip() and v.strip() != '*' and not v.strip().startswith('!') for v in values):
-                    scoped = True
-        if not scoped:
-            return 'missing'
-    return 'scoped' if applicable else 'not_applicable'
+                if isinstance(key, str) and key.lower() in ('aws:sourceaccount', 'aws:sourcearn'):
+                    results.append(_source_binding(key.lower(), value, account))
+        if 'bounded' not in results:
+            if 'ambiguous' in results:
+                ambiguous = True
+            else:
+                return 'missing'
+    return 'unknown' if ambiguous else 'scoped' if applicable else 'not_applicable'
