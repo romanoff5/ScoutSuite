@@ -13,12 +13,15 @@ from ScoutSuite.providers.aws.resources.cloudtrail.root_write_events import Root
 
 REGION='eu-central-1'
 
-def event(identity='Root', readonly=False):
-    return {'EventId':'id-1','EventName':'UpdateWebACL',
-            'EventSource':'wafv2.amazonaws.com',
-            'EventTime':datetime.now(timezone.utc),
-            'CloudTrailEvent':json.dumps({'userIdentity':{'type':identity},
-                                          'readOnly':readonly})}
+def event(identity='Root', readonly=False, *, event_type='AwsApiCall', failed=False,
+          name='UpdateWebACL'):
+    body={'userIdentity':{'type':identity},'readOnly':readonly,
+          'eventType':event_type,'managementEvent':True}
+    if failed:
+        body['errorCode']='AccessDenied'
+    return {'EventId':'id-'+name,'EventName':name,
+            'EventSource':'wafv2.amazonaws.com','EventTime':datetime.now(timezone.utc),
+            'CloudTrailEvent':json.dumps(body)}
 def test_lookupevents_root_write_filtered_without_raw_json_retention():
     cli=SimpleNamespace(lookup_events=lambda **kw:{'Events':[event(),event('IAMUser'),event('Root',True)]})
     with patch.object(AWSFacadeUtils,'get_client',return_value=cli):
@@ -48,3 +51,15 @@ def test_root_event_history_failure_cannot_appear_complete():
         facade=CloudTrailFacade(object())
         assert asyncio.run(facade.get_recent_root_write_events(REGION))==[]
     assert facade.root_history_status[REGION]=='unknown'
+
+def test_console_signin_and_failed_root_write_are_not_successful_changes():
+    events = [event(name='ConsoleLogin', event_type='AwsConsoleSignIn'),
+              event(name='FailedUpdate', failed=True),
+              event(name='Describe', readonly=True),
+              event(name='UpdateWebACL')]
+    client = SimpleNamespace(lookup_events=lambda **kwargs: {'Events': events})
+    with patch.object(AWSFacadeUtils, 'get_client', return_value=client):
+        facade = CloudTrailFacade(object())
+        rows = asyncio.run(facade.get_recent_root_write_events(REGION))
+    assert [item['event_name'] for item in rows] == ['UpdateWebACL']
+    assert facade.root_history_status[REGION] == 'complete'

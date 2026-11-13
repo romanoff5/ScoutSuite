@@ -1,15 +1,20 @@
 {
-    "description": "WAFv2 Web ACL Has No Explicit Rate-Based Rule — Review",
-    "rationale": "No RateBasedStatement was found in directly retrieved Web ACL rules. Firewall Manager, managed rule groups, referenced rule groups, CloudFront or another edge service may still provide rate limiting. This is not proof of absent DDoS protection.",
-    "remediation": "Review protection against request bursts and document a suitable rate-based WAF rule or equivalent upstream limits and tested thresholds.",
+    "description": "WAFv2 Web ACL Has No Explicit Enforcing Rate-Based Rule — Review",
+    "rationale": "No directly configured rate-based rule with Block action was established. AWS WAF Count-only rate rules do not limit traffic. CAPTCHA/Challenge may be conditionally enforcing and require manual review. Firewall Manager, managed rule groups, referenced rule groups and upstream defenses are not assessed.",
+    "remediation": "Where appropriate configure a rate-based rule with Block action and a validated threshold/scope, or document an equivalent mitigation. Count-only rules do not enforce a limit; assess Firewall Manager and upstream protections separately.",
     "dashboard_name": "Web ACLs",
     "path": "wafv2.regions.id.web_acls.id",
     "conditions": [
-        "and",
+        "or",
         [
             "explicit_rate_based_rule_status",
             "equal",
             "not_present"
+        ],
+        [
+            "explicit_rate_based_rule_status",
+            "equal",
+            "count_only"
         ]
     ],
     "evidence_policy": "wafv2-explicit-rate-v1",

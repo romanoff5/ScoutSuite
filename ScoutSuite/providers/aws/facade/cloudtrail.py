@@ -58,10 +58,14 @@ class CloudTrailFacade(AWSBaseFacade):
                 if body['userIdentity'].get('type') != 'Root':
                     continue
                 read_only = body.get('readOnly')
-                # CloudTrail sometimes serializes readOnly as a string.
+                # readOnly=false also appears for ConsoleLogin (including failed
+                # logins). Restrict "performed management write" to successful
+                # API calls; attempted/failed writes require a different rule.
                 writes = (read_only is False or
                           isinstance(read_only,str) and read_only.lower() == 'false')
-                if not writes:
+                if (not writes or body.get('eventType') != 'AwsApiCall'
+                        or body.get('managementEvent') is False
+                        or body.get('errorCode')):
                     continue
                 eid = event.get('EventId')
                 name = event.get('EventName')

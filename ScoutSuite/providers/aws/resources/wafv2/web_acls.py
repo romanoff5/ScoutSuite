@@ -28,26 +28,34 @@ class WebACLs(AWSResources):
             self[key] = item
 
     @staticmethod
-    def _explicit_rate_statement(statement, depth=0):
-        """Inspect only directly retrieved ACL statements, not opaque rule groups."""
-        if not isinstance(statement, dict) or depth > 16:
+    def _direct_rate_rule_status(rule):
+        """Only valid top-level RateBasedStatements are meaningful AWS WAF rules.
+
+        AWS WAF does not permit rate statements nested in And/Or/Not.
+        Count is monitoring only; Block enforces a rate limit. CAPTCHA and
+        Challenge enforcement depends on token state and needs manual review.
+        """
+        if not isinstance(rule, dict):
             return None
-        if 'RateBasedStatement' in statement:
-            rate = statement['RateBasedStatement']
-            return True if isinstance(rate, dict) and isinstance(rate.get('Limit'), int) else None
-        for op in ('AndStatement', 'OrStatement'):
-            if op in statement:
-                body = statement[op]
-                children = body.get('Statements') if isinstance(body, dict) else None
-                if not isinstance(children, list) or not children:
-                    return None
-                results = [WebACLs._explicit_rate_statement(s, depth + 1) for s in children]
-                return True if True in results else None if None in results else False
-        if 'NotStatement' in statement:
-            body = statement['NotStatement']
-            return WebACLs._explicit_rate_statement(
-                body.get('Statement') if isinstance(body, dict) else None, depth + 1)
-        return False if statement else None
+        statement = rule.get('Statement')
+        if not isinstance(statement, dict) or not statement:
+            return None
+        if 'RateBasedStatement' not in statement:
+            return 'not_rate'
+        rate = statement['RateBasedStatement']
+        if (not isinstance(rate, dict) or not isinstance(rate.get('Limit'), int)
+                or rate['Limit'] < 1):
+            return None
+        action = rule.get('Action')
+        if not isinstance(action, dict) or len(action) != 1:
+            return None
+        if 'Block' in action:
+            return 'enforcing'
+        if 'Count' in action:
+            return 'count_only'
+        if 'Captcha' in action or 'Challenge' in action:
+            return 'conditional'
+        return None
 
     def _normalize(self, raw):
         if not isinstance(raw, dict):
@@ -91,10 +99,12 @@ class WebACLs(AWSResources):
                     if isinstance(group, dict):
                         info['rule_group_arn'] = group.get('ARN')
                 rule_summary.append(info)
-        rate_results = ([self._explicit_rate_statement(x.get('Statement'))
+        rate_results = ([self._direct_rate_rule_status(x)
                          for x in rules] if rules is not None else None)
         rate_status = ('unknown' if rate_results is None or None in rate_results else
-                       'present' if True in rate_results else 'not_present')
+                       'present' if 'enforcing' in rate_results else
+                       'conditional' if 'conditional' in rate_results else
+                       'count_only' if 'count_only' in rate_results else 'not_present')
         fms = raw.get('managed_by_firewall_manager')
         before = raw.get('pre_process_rule_groups')
         after = raw.get('post_process_rule_groups')
