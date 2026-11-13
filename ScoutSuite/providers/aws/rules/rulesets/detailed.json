@@ -3,9 +3,6 @@
     "rules": {
         "acm-certificate-with-close-expiration-date.json": [
             {
-                "args": [
-                    "7"
-                ],
                 "enabled": true,
                 "level": "warning"
             }
@@ -1784,6 +1781,12 @@
             }
         ],
         "ec2-public-instance-https-open-to-world.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "acm-imported-certificate-renewal-review.json": [
             {
                 "enabled": true,
                 "level": "warning"

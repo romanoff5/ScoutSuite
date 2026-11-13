@@ -345,6 +345,28 @@ def classify_s3_bucket_exposure(bucket):
 
 
 
+def classify_acm_expiring_cert(cert):
+    """In-use certificate expiry evidence: missing NotAfter is UNKNOWN."""
+    if not isinstance(cert, dict):
+        return 'unknown'
+    usage = cert.get('InUseBy')
+    if not isinstance(usage, list):
+        return 'unknown'
+    if not usage:
+        return 'not_applicable'
+    return {'expiring_soon': 'insecure', 'expired': 'insecure',
+            'valid': 'secure'}.get(cert.get('expiry_status'), 'unknown')
+
+
+def classify_acm_imported_renewal(cert):
+    """Imported ACM certificates are not automatically renewed by ACM."""
+    if not isinstance(cert, dict):
+        return 'unknown'
+    return {'review_due': 'insecure', 'not_due': 'secure',
+            'not_applicable': 'not_applicable'}.get(
+                cert.get('renewal_review_status'), 'unknown')
+
+
 def classify_ec2_direct_public_https(instance):
     """Direct inbound HTTPS is an exposure candidate, not verified reachability."""
     if not isinstance(instance, dict):
@@ -1031,6 +1053,8 @@ CLASSIFIERS = {
     'access-analyzer-state-v1': classify_access_analyzer,
     'ec2-imds-v2-v1': classify_imds_v2,
     'ec2-direct-public-https-v1': classify_ec2_direct_public_https,
+    'acm-expiry-45d-v1': classify_acm_expiring_cert,
+    'acm-imported-renewal-90d-v1': classify_acm_imported_renewal,
     'lambda-managed-runtime-v1': classify_lambda_runtime,
     'classic-elb-tls-v1': classify_classic_elb_policy,
     'kms-automatic-rotation-v1': classify_kms_automatic_rotation,
