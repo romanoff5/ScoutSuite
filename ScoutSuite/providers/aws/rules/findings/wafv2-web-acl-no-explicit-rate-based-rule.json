@@ -1,0 +1,17 @@
+{
+    "description": "WAFv2 Web ACL Has No Explicit Rate-Based Rule — Review",
+    "rationale": "No RateBasedStatement was found in directly retrieved Web ACL rules. Firewall Manager, managed rule groups, referenced rule groups, CloudFront or another edge service may still provide rate limiting. This is not proof of absent DDoS protection.",
+    "remediation": "Review protection against request bursts and document a suitable rate-based WAF rule or equivalent upstream limits and tested thresholds.",
+    "dashboard_name": "Web ACLs",
+    "path": "wafv2.regions.id.web_acls.id",
+    "conditions": [
+        "and",
+        [
+            "explicit_rate_based_rule_status",
+            "equal",
+            "not_present"
+        ]
+    ],
+    "evidence_policy": "wafv2-explicit-rate-v1",
+    "id_suffix": "NoExplicitRate"
+}

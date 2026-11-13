@@ -78,6 +78,17 @@ class TaskDefinitions(AWSResources):
                         for row in container.get('secrets', [])
                         if isinstance(row, dict)],
                 })
+            # ECS readonlyRootFilesystem defaults to false when omitted.
+            # Windows task definitions do not support this setting.
+            os_family = (item.get('runtimePlatform') or {}).get('operatingSystemFamily')
+            supported = not (isinstance(os_family, str) and os_family.startswith('WINDOWS_'))
+            filesystem = [c['readonly_root_filesystem'] for c in safe_containers]
+            filesystem_known = (supported and bool(safe_containers) and not malformed
+                                and all(x is None or isinstance(x, bool) for x in filesystem))
+            filesystem_status = ('not_applicable' if not supported else
+                                 'unknown' if not filesystem_known else
+                                 'writable' if any(x is None or x is False for x in filesystem) else
+                                 'read_only')
             privilege = [c['privileged'] for c in safe_containers]
             known = (bool(safe_containers) and not malformed
                      and all(isinstance(p, bool) for p in privilege))
@@ -109,6 +120,8 @@ class TaskDefinitions(AWSResources):
                 'containers': safe_containers,
                 'privilege_observation_complete': known,
                 'has_privileged_container': any(p is True for p in privilege),
+                'writable_root_filesystem_status': filesystem_status,
+                'writable_root_filesystem_observation_complete': filesystem_known,
                 'secret_detector_version': DETECTOR_VERSION,
                 'environment_secret_status': (
                     'detected' if any(c['environment_secret_detections'] for c in safe_containers) else

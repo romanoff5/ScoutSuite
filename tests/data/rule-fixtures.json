@@ -325,6 +325,7 @@
       "ecs-container-insights-disabled.json",
       "ecs-task-definition-environment-secrets.json",
       "ecs-task-definition-privileged.json",
+      "ecs-task-definition-writable-root.json",
       "efs-filesystem-not-encrypted.json",
       "eks-control-plane-audit-logging-disabled.json",
       "eks-public-api-unrestricted.json",
@@ -472,6 +473,7 @@
       "vpc-subnet-with-default-acls.json",
       "vpc-subnet-without-flow-log.json",
       "wafv2-web-acl-empty-allow.json",
+      "wafv2-web-acl-no-explicit-rate-based-rule.json",
       "wafv2-web-acl-unassociated.json"
     ],
     "azure": [

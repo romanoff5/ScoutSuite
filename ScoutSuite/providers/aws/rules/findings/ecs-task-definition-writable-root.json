@@ -1,0 +1,17 @@
+{
+    "description": "Active ECS Task Definition Has Writable Container Root Filesystem",
+    "rationale": "A registered ACTIVE Linux ECS task definition has a container with readonlyRootFilesystem omitted or set to false (the ECS default). Registered does not mean currently deployed.",
+    "remediation": "Set readonlyRootFilesystem=true where compatible and use designated writable volumes for necessary paths; validate current deployment.",
+    "dashboard_name": "Task definitions",
+    "path": "ecs.regions.id.task_definitions.id",
+    "conditions": [
+        "and",
+        [
+            "writable_root_filesystem_status",
+            "equal",
+            "writable"
+        ]
+    ],
+    "evidence_policy": "ecs-readonly-root-v1",
+    "id_suffix": "WritableRoot"
+}

@@ -527,6 +527,25 @@ def classify_ecr_registry_scanning(registry):
     return 'unknown'
 
 
+def classify_ecs_writable_root(task):
+    if not isinstance(task, dict):
+        return 'unknown'
+    status = task.get('writable_root_filesystem_status')
+    if status == 'not_applicable':
+        return 'not_applicable'
+    if task.get('writable_root_filesystem_observation_complete') is not True:
+        return 'unknown'
+    return {'writable': 'insecure', 'read_only': 'secure'}.get(status, 'unknown')
+
+
+def classify_waf_explicit_rate(web_acl):
+    """Only explicitly configured ACL rules; other mitigations are not assessed."""
+    if not isinstance(web_acl, dict):
+        return 'unknown'
+    return {'present': 'secure', 'not_present': 'insecure'}.get(
+        web_acl.get('explicit_rate_based_rule_status'), 'unknown')
+
+
 def classify_ecs_task_privilege(task):
     if not isinstance(task, dict):
         return 'unknown'
@@ -1062,6 +1081,8 @@ CLASSIFIERS = {
     'eks-api-endpoint-v1': classify_eks_api_endpoint,
     'ecr-registry-scanning-v1': classify_ecr_registry_scanning,
     'ecs-task-privileged-v1': classify_ecs_task_privilege,
+    'ecs-readonly-root-v1': classify_ecs_writable_root,
+    'wafv2-explicit-rate-v1': classify_waf_explicit_rate,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,
     'wafv2-empty-allow-v1': classify_wafv2_empty_allow,
     'wafv2-association-v1': classify_wafv2_association,

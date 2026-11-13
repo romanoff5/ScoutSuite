@@ -1797,6 +1797,18 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "ecs-task-definition-writable-root.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "wafv2-web-acl-no-explicit-rate-based-rule.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
