@@ -1,0 +1,24 @@
+<!-- P2: escaped Handlebars values only; do not interpolate raw HTML. -->
+<script id="services.athena.regions.id.work_groups.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Athena workgroup configuration</h4>
+    <ul>
+      <li>Workgroup: <samp>{{name}}</samp></li>
+<li>Region: <samp>{{region}}</samp></li>
+<li>Lifecycle state: <samp>{{state}}</samp></li>
+<li>Workgroup enforcement: <samp>{{enforcement_status}}</samp></li>
+<li>Query result KMS requirement: <samp>{{query_result_kms_status}}</samp></li>
+    </ul>
+    <p>SSE-S3 may still encrypt query results. This check does not prove that query output is plaintext.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.athena.regions.id.work_groups", $("#services\\.athena\\.regions\\.id\\.work_groups\\.partial").html());
+</script>
+<script id="single_athena_work_groups-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.athena.regions.id.work_groups' }}
+</script>
+<script>
+  var single_athena_work_groups_template = Handlebars.compile($("#single_athena_work_groups-template").html());
+</script>

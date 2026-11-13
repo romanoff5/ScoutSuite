@@ -27,11 +27,16 @@ class SSMPublic(Regions):
 
         async def collect(region):
             async with semaphore:
-                return region, await self.facade.ssm.inventory(region)
+                inventory = await self.facade.ssm.inventory(region)
+                share_method = getattr(self.facade.ssm, 'get_document_shares', None)
+                sharing = (await share_method(region)) if share_method else {
+                    'status': 'unknown', 'documents': []}
+                return region, inventory, sharing
 
-        for region, inventory in await asyncio.gather(*(collect(x) for x in chosen)):
+        for region, inventory, sharing in await asyncio.gather(*(collect(x) for x in chosen)):
             data = {'id': region, 'name': region, 'region': region,
-                    'collection': inventory.get('collection', {}),
+                    'collection': dict(inventory.get('collection', {})),
+                    'document_sharing_collection_status': sharing.get('status', 'unknown'),
                     'ec2_comparison_complete': inventory.get('ec2_comparison_complete', False),
                     'scan_freshness_days': inventory.get('scan_freshness_days', 7),
                     'scan_success_independently_verified': False}
@@ -53,8 +58,27 @@ class SSMPublic(Regions):
                                       or raw.get('BaselineName') or value, **raw}
                 data[key] = entries
                 data[key + '_count'] = len(entries)
+
+            documents = {}
+            for raw in sharing.get('documents', []):
+                name = raw.get('name') if isinstance(raw, dict) else None
+                if not isinstance(name, str) or not name:
+                    issue('InvalidSSMDocumentIdentity')
+                    continue
+                key = get_non_provider_id(name)
+                if key in documents:
+                    issue('DuplicateSSMDocumentIdentity')
+                    continue
+                documents[key] = {'id': key, 'name': name, 'region': region,
+                                  'public_sharing_status': raw.get('public_sharing_status', 'unknown')}
+            data['documents'] = documents
+            data['documents_count'] = len(documents)
+            data['collection']['document_sharing'] = sharing.get('status') == 'complete'
             self['regions'][region] = data
         self['regions_count'] = len(self['regions'])
         for key in ('managed_nodes', 'patch_baselines', 'patch_groups'):
             self[key + '_count'] = sum(data[key + '_count']
+                                      for data in self['regions'].values())
+
+        self['documents_count'] = sum(data['documents_count']
                                       for data in self['regions'].values())

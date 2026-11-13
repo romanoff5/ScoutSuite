@@ -1,0 +1,20 @@
+{
+    "description": "CloudWatch Log Group Has No Explicit Retention Period",
+    "rationale": "A completely observed log group without retentionInDays retains data indefinitely. This is a lifecycle and compliance review, not necessarily a defect when indefinite security log retention is approved.",
+    "remediation": "Set a retention period based on documented policy, or document approved indefinite retention and archival/legal hold.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeLogGroups.html"
+    ],
+    "dashboard_name": "Log Groups",
+    "path": "cloudwatch.regions.id.log_groups.id",
+    "conditions": [
+        "and",
+        [
+            "retention_status",
+            "equal",
+            "unlimited"
+        ]
+    ],
+    "id_suffix": "P2UnlimitedRetention",
+    "evidence_policy": "p2-cloudwatch-log-retention-v1"
+}

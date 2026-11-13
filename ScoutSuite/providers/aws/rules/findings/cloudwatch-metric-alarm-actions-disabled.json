@@ -1,0 +1,20 @@
+{
+    "description": "CloudWatch Metric Alarm Has Actions Disabled",
+    "rationale": "Metric alarm has configured actions but ActionsEnabled is false. AWS will not execute these actions when the alarm state changes. This cannot establish the absence of external SIEM alerting.",
+    "remediation": "Enable necessary alarms actions, validate SNS/on-call notification delivery, or document equivalent monitoring.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html"
+    ],
+    "dashboard_name": "Alarms",
+    "path": "cloudwatch.regions.id.alarms.id",
+    "conditions": [
+        "and",
+        [
+            "monitoring_action_status",
+            "equal",
+            "disabled"
+        ]
+    ],
+    "id_suffix": "P2ActionsDisabled",
+    "evidence_policy": "p2-cloudwatch-alarm-actions-v1"
+}

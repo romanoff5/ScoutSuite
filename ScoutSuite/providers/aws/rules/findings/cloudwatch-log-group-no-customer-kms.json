@@ -1,0 +1,20 @@
+{
+    "description": "CloudWatch Log Group Lacks Customer KMS Key (Review)",
+    "rationale": "Without KmsKeyId, CloudWatch Logs still provides AWS-managed at-rest encryption. This rule is for an explicit customer-managed key requirement, not for plaintext logs.",
+    "remediation": "Where policy requires customer key control, associate an AWS KMS key; otherwise approve AWS-managed encryption.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html"
+    ],
+    "dashboard_name": "Log Groups",
+    "path": "cloudwatch.regions.id.log_groups.id",
+    "conditions": [
+        "and",
+        [
+            "customer_kms_status",
+            "equal",
+            "aws_managed"
+        ]
+    ],
+    "id_suffix": "P2CustomerKMSReview",
+    "evidence_policy": "p2-cloudwatch-customer-kms-v1"
+}

@@ -1,0 +1,20 @@
+{
+    "description": "Athena Workgroup Does Not Enforce KMS-Backed Query Results",
+    "rationale": "The enabled workgroup does not enforce KMS encryption for query results. Athena/S3 may still use SSE-S3 and is not necessarily unencrypted. This is a customer KMS policy review.",
+    "remediation": "If required, configure SSE-KMS or CSE-KMS output settings and enable workgroup configuration enforcement; separately validate bucket encryption.",
+    "references": [
+        "https://docs.aws.amazon.com/athena/latest/ug/encrypting-query-results-stored-in-s3.html"
+    ],
+    "dashboard_name": "Athena Workgroups",
+    "path": "athena.regions.id.work_groups.id",
+    "conditions": [
+        "and",
+        [
+            "query_result_kms_status",
+            "equal",
+            "kms_not_enforced"
+        ]
+    ],
+    "id_suffix": "P2KMSResults",
+    "evidence_policy": "p2-athena-workgroup-kms-v1"
+}

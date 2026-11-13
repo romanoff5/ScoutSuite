@@ -1,6 +1,7 @@
 from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.utils import get_name, format_arn
+from ScoutSuite.providers.aws.resources.ec2.p2_checks import assess_account_imds_defaults
 
 
 class RegionalSettings(AWSResources):
@@ -18,3 +19,10 @@ class RegionalSettings(AWSResources):
         self[0] = {}
         self[0]['ebs_encryption_default'] = (await self.facade.ec2.get_ebs_encryption(self.region))['EbsEncryptionByDefault']
         self[0]['ebs_default_encryption_key_id'] = (await self.facade.ec2.get_ebs_default_encryption_key(self.region))['KmsKeyId']
+
+        defaults = await self.facade.ec2.get_instance_metadata_defaults(self.region)
+        self[0]['account_imds_defaults'] = {
+            'HttpTokens': defaults.get('HttpTokens'),
+            'HttpTokensEnforced': defaults.get('HttpTokensEnforced')
+        } if isinstance(defaults, dict) else {}
+        self[0]['account_imds_default_status'] = assess_account_imds_defaults(defaults)

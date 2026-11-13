@@ -12,7 +12,12 @@
                 "resources": {
                     "0": {
                         "ebs_encryption_default": false,
-                        "ebs_default_encryption_key_id": "alias/aws/ebs"
+                        "ebs_default_encryption_key_id": "alias/aws/ebs",
+                        "account_imds_defaults": {
+                            "HttpTokens": "required",
+                            "HttpTokensEnforced": "enabled"
+                        },
+                        "account_imds_default_status": "required"
                     }
                 },
                 "items": [
@@ -33,7 +38,12 @@
                 "resources": {
                     "0": {
                         "ebs_encryption_default": true,
-                        "ebs_default_encryption_key_id": "alias/aws/ebs"
+                        "ebs_default_encryption_key_id": "alias/aws/ebs",
+                        "account_imds_defaults": {
+                            "HttpTokens": "required",
+                            "HttpTokensEnforced": "enabled"
+                        },
+                        "account_imds_default_status": "required"
                     }
                 },
                 "items": [],

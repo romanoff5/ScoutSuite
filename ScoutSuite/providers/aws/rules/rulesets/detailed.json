@@ -1851,6 +1851,72 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "cloudwatch-log-group-unlimited-retention.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "cloudwatch-log-group-no-customer-kms.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "cloudwatch-metric-alarm-actions-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-account-imdsv2-not-required-default.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-security-group-all-egress-to-world.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-running-instances-share-ssh-key-name.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "athena-workgroup-settings-not-enforced.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "athena-workgroup-results-kms-not-enforced.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "glue-catalog-kms-not-configured.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "glue-connection-password-encrypted-response-disabled.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ssm-document-publicly-shared.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

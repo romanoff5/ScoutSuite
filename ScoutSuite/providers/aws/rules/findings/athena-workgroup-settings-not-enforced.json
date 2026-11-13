@@ -1,0 +1,20 @@
+{
+    "description": "Athena Workgroup Configuration Is Not Enforced",
+    "rationale": "An enabled Athena workgroup reports EnforceWorkGroupConfiguration=false, permitting clients to override query execution settings; a governance gap when centralized policy must be enforced.",
+    "remediation": "Review client compatibility, then enforce workgroup configuration, output controls and encryption settings.",
+    "references": [
+        "https://docs.aws.amazon.com/athena/latest/APIReference/API_GetWorkGroup.html"
+    ],
+    "dashboard_name": "Athena Workgroups",
+    "path": "athena.regions.id.work_groups.id",
+    "conditions": [
+        "and",
+        [
+            "enforcement_status",
+            "equal",
+            "not_enforced"
+        ]
+    ],
+    "id_suffix": "P2Enforcement",
+    "evidence_policy": "p2-athena-workgroup-enforcement-v1"
+}

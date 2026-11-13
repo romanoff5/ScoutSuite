@@ -1,0 +1,20 @@
+{
+    "description": "EC2 Account-Level IMDSv2 Default Not Required",
+    "rationale": "The regional account default is explicitly optional or no-preference and HttpTokensEnforced is disabled. This permits launch-time IMDSv1 configurations; it is not proof that currently running EC2 instances use IMDSv1.",
+    "remediation": "After testing AMI and application compatibility, set HttpTokens=required at account/Region scope and consider enforcing IMDSv2. Audit instance-level overrides separately.",
+    "references": [
+        "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html"
+    ],
+    "dashboard_name": "Regions",
+    "path": "ec2.regions.id.regional_settings.id",
+    "conditions": [
+        "and",
+        [
+            "account_imds_default_status",
+            "equal",
+            "not_required"
+        ]
+    ],
+    "id_suffix": "P2IMDSAccountDefault",
+    "evidence_policy": "p2-ec2-imds-account-default-v1"
+}

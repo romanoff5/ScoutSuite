@@ -3,13 +3,15 @@ from ScoutSuite.providers.aws.resources.regions import Regions
 
 from .alarms import Alarms
 from .metric_filters import MetricFilters
+from .log_groups import LogGroups
 from .security_alerting import assess_security_metric_alerting
 
 
 class CloudWatch(Regions):
     _children = [
         (Alarms, 'alarms'),
-        (MetricFilters, 'metric_filters')
+        (MetricFilters, 'metric_filters'),
+        (LogGroups, 'log_groups')
     ]
 
     def __init__(self, facade: AWSFacade):

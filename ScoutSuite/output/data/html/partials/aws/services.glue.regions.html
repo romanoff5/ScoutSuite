@@ -1,0 +1,25 @@
+<!-- P2: escaped Handlebars values only; do not interpolate raw HTML. -->
+<script id="services.glue.regions.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>Glue Data Catalog security evidence</h4>
+    <ul>
+      <li>Region: <samp>{{region}}</samp></li>
+<li>Inventory collection: <samp>{{collection_status}}</samp></li>
+<li>Database usage: <samp>{{database_usage}}</samp></li>
+<li>Connection usage: <samp>{{connection_usage}}</samp></li>
+<li>Catalog KMS configuration: <samp>{{catalog_encryption_status}}</samp></li>
+<li>Connection password API response: <samp>{{connection_password_status}}</samp></li>
+    </ul>
+    <p>KMS configuration is a governance requirement, not proof of unencrypted Glue metadata. UNKNOWN denotes incomplete evidence.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.glue.regions", $("#services\\.glue\\.regions\\.partial").html());
+</script>
+<script id="single_glue_regions-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.glue.regions' }}
+</script>
+<script>
+  var single_glue_regions_template = Handlebars.compile($("#single_glue_regions-template").html());
+</script>

@@ -1,0 +1,26 @@
+<!-- P2: escaped Handlebars values only; do not interpolate raw HTML. -->
+<script id="services.cloudwatch.regions.id.log_groups.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>CloudWatch Logs group retention / KMS evidence</h4>
+    <ul>
+      <li>Log group: <samp>{{name}}</samp></li>
+<li>Region: <samp>{{region}}</samp></li>
+<li>Log group ARN: <samp>{{arn}}</samp></li>
+<li>Retention (days): <samp>{{retention_days}}</samp></li>
+<li>Retention configuration: <samp>{{retention_status}}</samp></li>
+<li>Customer KMS association: <samp>{{customer_kms_status}}</samp></li>
+<li>Customer KMS key: <samp>{{kms_key_arn}}</samp></li>
+    </ul>
+    <p>AWS-managed encryption still applies without an attached customer KMS key. An indefinite retention policy may be intentional.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.cloudwatch.regions.id.log_groups", $("#services\\.cloudwatch\\.regions\\.id\\.log_groups\\.partial").html());
+</script>
+<script id="single_cloudwatch_log_groups-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.cloudwatch.regions.id.log_groups' }}
+</script>
+<script>
+  var single_cloudwatch_log_groups_template = Handlebars.compile($("#single_cloudwatch_log_groups-template").html());
+</script>

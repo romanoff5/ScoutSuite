@@ -245,6 +245,26 @@ class EC2Facade(AWSBaseFacade):
             print_exception('Failed to get route tables: {}'.format(e))
             return []
 
+    async def get_instance_metadata_defaults(self, region):
+        """Read-only account-level IMDS defaults; failure must remain UNKNOWN."""
+        client = AWSFacadeUtils.get_client('ec2', self.session, region)
+        if client is None:
+            return None
+        try:
+            result = await run_concurrently(client.get_instance_metadata_defaults)
+            # Boto3 returns the actual account settings nested in AccountLevel.
+            # Never interpret an absent/malformed nested payload as an empty
+            # but successfully inspected account configuration.
+            if not isinstance(result, dict) or not isinstance(
+                    result.get('AccountLevel'), dict):
+                raise ValueError('MalformedEC2MetadataDefaults')
+            return result['AccountLevel']
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('ec2', exc, 'GetInstanceMetadataDefaults')
+            print_exception('Unable to inspect account-level IMDS defaults: ' +
+                            type(exc).__name__)
+            return None
+
     async def get_ebs_encryption(self, region):
         ec2_client = AWSFacadeUtils.get_client('ec2', self.session, region)
         try:

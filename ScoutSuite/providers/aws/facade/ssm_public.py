@@ -465,3 +465,92 @@ class SSMPublicFacade(AWSBaseFacade):
             'scan_freshness_days': SCAN_MAX_AGE_DAYS,
             'scan_success_independently_verified': False,
         }
+
+    async def get_document_shares(self, region):
+        """Owned SSM document sharing: bounded, read-only, no document content."""
+        client = AWSFacadeUtils.get_client('ssm', self.session, region)
+        if client is None:
+            self.issue('partial', 'SSMDocumentClientUnavailable')
+            return {'status': 'unknown', 'documents': []}
+
+        def collect():
+            records = []
+            next_token = None
+            seen = set()
+            complete = True
+            try:
+                for _ in range(80):
+                    args = {'Filters': [{'Key': 'Owner', 'Values': ['Self']}],
+                            'MaxResults': 50}
+                    if next_token:
+                        args['NextToken'] = next_token
+                    page = client.list_documents(**args)
+                    entries = page.get('DocumentIdentifiers')
+                    if not isinstance(entries, list):
+                        raise ValueError('MalformedSSMDocumentList')
+                    for item in entries:
+                        name = item.get('Name') if isinstance(item, dict) else None
+                        if not isinstance(name, str) or not name:
+                            complete = False
+                            continue
+                        if len(records) >= 400:
+                            complete = False
+                            break
+                        records.append({'name': name, 'public_sharing_status': 'unknown'})
+                    if len(records) >= 400:
+                        if page.get('NextToken'):
+                            complete = False
+                        break
+                    token = page.get('NextToken')
+                    if not token:
+                        break
+                    if not isinstance(token, str) or token in seen:
+                        complete = False
+                        break
+                    seen.add(token)
+                    next_token = token
+                else:
+                    complete = False
+            except Exception:
+                return {'status': 'unknown', 'documents': []}
+            for record in records:
+                try:
+                    ids = []
+                    next_token = None
+                    seen = set()
+                    for _ in range(20):
+                        args = {'Name': record['name'], 'PermissionType': 'Share',
+                                'MaxResults': 20}
+                        if next_token:
+                            args['NextToken'] = next_token
+                        page = client.describe_document_permission(**args)
+                        accounts = page.get('AccountIds')
+                        if not isinstance(accounts, list):
+                            raise ValueError('MalformedSSMDocumentPermission')
+                        ids.extend(accounts)
+                        token = page.get('NextToken')
+                        if not token:
+                            record['public_sharing_status'] = (
+                                'public' if any(isinstance(x, str) and x.lower() == 'all'
+                                                for x in ids) else 'private')
+                            break
+                        if not isinstance(token, str) or token in seen:
+                            complete = False
+                            break
+                        seen.add(token)
+                        next_token = token
+                    else:
+                        complete = False
+                except Exception:
+                    complete = False
+            return {'status': 'complete' if complete else 'partial',
+                    'documents': records}
+        try:
+            result = await run_concurrently(collect)
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('ssm', exc, 'ListOrDescribeSSMDocuments')
+            self.issue('partial', 'SSMDocumentShareCollectionFailed')
+            return {'status': 'unknown', 'documents': []}
+        if result['status'] != 'complete':
+            self.issue('partial', 'SSMDocumentShareCollectionIncomplete')
+        return result

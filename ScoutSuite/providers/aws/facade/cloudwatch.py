@@ -15,6 +15,7 @@ class CloudWatch(AWSBaseFacade):
         super().__init__(session)
         self.metric_filter_collection_status = {}
         self.alarm_collection_status = {}
+        self.log_group_collection_status = {}
 
     @staticmethod
     def _issue(reason):
@@ -50,4 +51,10 @@ class CloudWatch(AWSBaseFacade):
     async def get_metric_filters(self, region):
         data = await self._list_region(region, 'logs', 'describe_metric_filters', 'metricFilters')
         self.metric_filter_collection_status[region] = 'complete' if data is not None else 'unknown'
+        return data if data is not None else []
+
+    async def get_log_groups(self, region):
+        """Enumerate log groups; denied/partial results never become a clean empty list."""
+        data = await self._list_region(region, 'logs', 'describe_log_groups', 'logGroups')
+        self.log_group_collection_status[region] = 'complete' if data is not None else 'unknown'
         return data if data is not None else []

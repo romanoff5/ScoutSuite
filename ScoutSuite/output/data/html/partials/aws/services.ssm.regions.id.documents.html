@@ -1,0 +1,22 @@
+<!-- P2: escaped Handlebars values only; do not interpolate raw HTML. -->
+<script id="services.ssm.regions.id.documents.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>SSM document sharing</h4>
+    <ul>
+      <li>Document name: <samp>{{name}}</samp></li>
+<li>Region: <samp>{{region}}</samp></li>
+<li>Public sharing: <samp>{{public_sharing_status}}</samp></li>
+    </ul>
+    <p>Public sharing exposes document content to other AWS accounts; it does not grant execution permissions by itself.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions.id.documents", $("#services\\.ssm\\.regions\\.id\\.documents\\.partial").html());
+</script>
+<script id="single_ssm_documents-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions.id.documents' }}
+</script>
+<script>
+  var single_ssm_documents_template = Handlebars.compile($("#single_ssm_documents-template").html());
+</script>
