@@ -23,5 +23,13 @@ class Alarms(AWSResources):
             if key in raw_alarm:
                 raw_alarm.pop(key)
 
+        actions = raw_alarm.get('AlarmActions')
+        enabled = raw_alarm.get('ActionsEnabled')
+        raw_alarm['monitoring_action_status'] = (
+            'not_applicable' if isinstance(actions, list) and not actions
+            else 'disabled' if isinstance(actions, list) and actions and enabled is False
+            else 'enabled' if isinstance(actions, list) and actions and enabled is True
+            else 'unknown')
+
         alarm_id = get_non_provider_id(raw_alarm['arn'])
         return alarm_id, raw_alarm

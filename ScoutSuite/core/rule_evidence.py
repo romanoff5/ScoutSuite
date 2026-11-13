@@ -1019,6 +1019,75 @@ def classify_macie_execution(job):
     return 'unknown'
 
 
+
+# P2 configuration-only evidence policies. Do not promote an observed baseline
+# setting to verified compliance with customer-specific controls.
+def _classify_p2(resource, field, bad, good, not_applicable=()):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    value = resource.get(field)
+    if value in bad:
+        return 'insecure'
+    if value in good:
+        return 'secure'
+    if value in not_applicable:
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_p2_log_retention(resource):
+    return _classify_p2(resource, 'retention_status', ('unlimited',), ('configured',))
+
+
+def classify_p2_log_kms(resource):
+    return _classify_p2(resource, 'customer_kms_status', ('aws_managed',), ('customer_kms',))
+
+
+def classify_p2_alarm_actions(resource):
+    return _classify_p2(resource, 'monitoring_action_status',
+                        ('disabled',), ('enabled',), ('not_applicable',))
+
+
+def classify_p2_account_imds(resource):
+    return _classify_p2(resource, 'account_imds_default_status',
+                        ('not_required',), ('required', 'required_default'))
+
+
+def classify_p2_sg_egress(resource):
+    return _classify_p2(resource, 'egress_world_all_protocols_status',
+                        ('unrestricted',), ('restricted',), ('not_applicable',))
+
+
+def classify_p2_ssh_reuse(resource):
+    return _classify_p2(resource, 'ssh_key_reuse_status',
+                        ('reused',), ('unique',), ('not_applicable',))
+
+
+def classify_p2_athena_enforcement(resource):
+    return _classify_p2(resource, 'enforcement_status',
+                        ('not_enforced',), ('enforced',), ('not_applicable',))
+
+
+def classify_p2_athena_kms(resource):
+    return _classify_p2(resource, 'query_result_kms_status',
+                        ('kms_not_enforced',), ('kms_enforced',), ('not_applicable',))
+
+
+def classify_p2_glue_catalog(resource):
+    return _classify_p2(resource, 'catalog_encryption_status',
+                        ('kms_not_configured',), ('kms_configured',), ('not_applicable',))
+
+
+def classify_p2_glue_password(resource):
+    return _classify_p2(resource, 'connection_password_status',
+                        ('unencrypted_response',), ('encrypted_response',),
+                        ('not_applicable',))
+
+
+def classify_p2_ssm_public(resource):
+    return _classify_p2(resource, 'public_sharing_status', ('public',), ('private',))
+
+
 # These published policies cover multiple rules, so bind each to its exact
 # filename/path/observed field instead of guessing from unrelated resource flags.
 SCOPED_POLICIES = {
@@ -1077,6 +1146,17 @@ def _classify_scoped_review(resource, field):
 
 
 CLASSIFIERS = {
+    'p2-cloudwatch-log-retention-v1': classify_p2_log_retention,
+    'p2-cloudwatch-customer-kms-v1': classify_p2_log_kms,
+    'p2-cloudwatch-alarm-actions-v1': classify_p2_alarm_actions,
+    'p2-ec2-imds-account-default-v1': classify_p2_account_imds,
+    'p2-ec2-sg-egress-v1': classify_p2_sg_egress,
+    'p2-ec2-ssh-key-reuse-v1': classify_p2_ssh_reuse,
+    'p2-athena-workgroup-enforcement-v1': classify_p2_athena_enforcement,
+    'p2-athena-workgroup-kms-v1': classify_p2_athena_kms,
+    'p2-glue-catalog-kms-v1': classify_p2_glue_catalog,
+    'p2-glue-password-response-v1': classify_p2_glue_password,
+    'p2-ssm-public-sharing-v1': classify_p2_ssm_public,
     'cis71-s3-bpa-v1': classify_s3_block_public_access,
     'cis71-securityhub-subscription-v1': classify_securityhub_subscription,
     'guardduty-region-enablement-v1': classify_guardduty_region,
