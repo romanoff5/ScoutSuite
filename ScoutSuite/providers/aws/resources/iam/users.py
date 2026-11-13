@@ -13,6 +13,16 @@ class Users(AWSResources):
             self[name] = resource
 
     def _parse_user(self, raw_user):
+        # Standalone visibility check: an active key needs review regardless of age.
+        # ListAccessKeys failures omit AccessKeys and must remain UNKNOWN.
+        keys = raw_user.get('AccessKeys')
+        if isinstance(keys, list) and all(
+                isinstance(key, dict) and key.get('Status') in ('Active', 'Inactive')
+                for key in keys):
+            raw_user['persistent_key_review_status'] = (
+                'active' if any(key['Status'] == 'Active' for key in keys) else 'none')
+        else:
+            raw_user['persistent_key_review_status'] = 'unknown'
         raw_user['id'] = raw_user.pop('UserId')
         raw_user['name'] = raw_user.pop('UserName')
         raw_user['arn'] = raw_user.pop('Arn')

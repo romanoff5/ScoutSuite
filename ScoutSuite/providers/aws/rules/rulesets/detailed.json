@@ -1809,6 +1809,18 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "iam-role-service-trust-missing-source-scope.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "iam-user-active-persistent-access-key-review.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }

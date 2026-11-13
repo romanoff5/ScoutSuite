@@ -527,6 +527,21 @@ def classify_ecr_registry_scanning(registry):
     return 'unknown'
 
 
+def classify_service_role_trust(role):
+    if not isinstance(role, dict):
+        return 'unknown'
+    return {'missing': 'insecure', 'scoped': 'secure',
+            'not_applicable': 'not_applicable'}.get(
+                role.get('service_trust_scope_status'), 'unknown')
+
+
+def classify_persistent_iam_key(user):
+    if not isinstance(user, dict):
+        return 'unknown'
+    return {'active': 'insecure', 'none': 'secure'}.get(
+        user.get('persistent_key_review_status'), 'unknown')
+
+
 def classify_ecs_writable_root(task):
     if not isinstance(task, dict):
         return 'unknown'
@@ -1082,6 +1097,8 @@ CLASSIFIERS = {
     'ecr-registry-scanning-v1': classify_ecr_registry_scanning,
     'ecs-task-privileged-v1': classify_ecs_task_privilege,
     'ecs-readonly-root-v1': classify_ecs_writable_root,
+    'iam-service-trust-scope-v1': classify_service_role_trust,
+    'iam-persistent-key-review-v1': classify_persistent_iam_key,
     'wafv2-explicit-rate-v1': classify_waf_explicit_rate,
     'eks-control-plane-audit-v1': classify_eks_control_plane_audit,
     'wafv2-empty-allow-v1': classify_wafv2_empty_allow,
