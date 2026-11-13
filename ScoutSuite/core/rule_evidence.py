@@ -353,9 +353,11 @@ def classify_cloudwatch_security_metric_alerting(region):
             or region.get('metric_alarms_collection_status') != 'complete'):
         return 'unknown'
     state = region.get('security_metric_alerting_status')
-    if state in ('missing', 'missing_recognized_filters'):
+    if state in ('missing', 'unlinked_security_filters'):
         return 'insecure'
-    return 'unknown'  # Existing configuration does not establish alert delivery.
+    # Alternative filter syntax, metric math, and apparent linked alarms all
+    # require manual end-to-end verification; none is a verified PASS.
+    return 'unknown'
 
 
 def classify_acm_expiring_cert(cert):
@@ -384,8 +386,9 @@ def classify_ec2_direct_public_https(instance):
     """Direct inbound HTTPS is an exposure candidate, not verified reachability."""
     if not isinstance(instance, dict):
         return 'unknown'
-    return {'exposed': 'insecure', 'not_exposed': 'secure'}.get(
-        instance.get('public_https_status'), 'unknown')
+    return {'exposed': 'insecure', 'not_exposed': 'secure',
+            'not_applicable': 'not_applicable'}.get(
+                instance.get('public_https_status'), 'unknown')
 
 
 def classify_imds_v2(instance):

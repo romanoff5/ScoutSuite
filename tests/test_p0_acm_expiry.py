@@ -76,3 +76,14 @@ def test_rules_registered_and_old_newer_than_bug_not_used():
         for profile in ('default.json', 'detailed.json'):
             rules = json.loads((root / 'rulesets' / profile).read_text())['rules']
             assert rules[filename][0]['enabled'] is True
+
+def test_multiple_certificates_on_same_domain_do_not_overwrite():
+    obj = Certificates.__new__(Certificates)
+    common = {'DomainName': '*.example.org', 'Type': 'IMPORTED',
+              'InUseBy': ['arn:aws:elasticloadbalancing:region:123:loadbalancer/app/a'],
+              'NotAfter': NOW + timedelta(days=20)}
+    first_id, first = obj._parse_certificate(dict(common, CertificateArn='arn:aws:acm:r:123:certificate/one'))
+    second_id, second = obj._parse_certificate(dict(common, CertificateArn='arn:aws:acm:r:123:certificate/two'))
+    assert first_id != second_id
+    assert first['name'] == second['name'] == '*.example.org'
+    assert first['arn'] != second['arn']

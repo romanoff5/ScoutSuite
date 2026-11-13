@@ -1,6 +1,6 @@
 {
-    "description": "CloudWatch Security Metric-Filter Alerting Is Missing or Not Recognized",
-    "rationale": "The selected Region has a complete read-only inventory of CloudWatch metric alarms and Logs metric filters but has no metric filters, no metric alarms with actions, or no recognized CloudTrail security event metric-filter patterns. Exact-pattern checks may miss equivalent syntactic forms. This assesses CloudWatch metric-filter based alerting only; external SIEM, EventBridge and centralized organization monitoring may provide equivalent coverage and require separate verification.",
+    "description": "CloudWatch Security Metric-Filter Alerting Absent or Recognized Security Filters Unlinked",
+    "rationale": "When regional read-only inventory is complete, no CloudWatch Logs metric filters or no actionable metric alarms, or known security filters with no linked, action-enabled metric alarm, indicate missing local CloudWatch security-event alerting. Unknown API results, noncanonical filter patterns and metric-math alarms require manual review. Organization-wide EventBridge, third-party SIEM or centralized monitoring may provide equivalent coverage.",
     "remediation": "Configure or demonstrate equivalent monitoring for unauthorized API calls, root-account activity and security control changes. Validate end-to-end notification delivery. If using external SIEM, EventBridge or a centralized account, record evidence and document the exception.",
     "dashboard_name": "CloudWatch Monitoring",
     "path": "cloudwatch.regions.id",
@@ -14,7 +14,7 @@
         [
             "security_metric_alerting_status",
             "equal",
-            "missing_recognized_filters"
+            "unlinked_security_filters"
         ]
     ],
     "evidence_policy": "cloudwatch-security-metric-alerting-v1",
