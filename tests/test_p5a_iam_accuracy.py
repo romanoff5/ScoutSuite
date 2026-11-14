@@ -167,6 +167,18 @@ def test_ec2_runinstances_multiple_required_resource_types_and_scoped_arn():
                                'ec2:RunInstances', USER) == 'unknown'
 
 
+def test_narrow_deny_on_synthetic_name_does_not_hide_other_create_paths():
+    arn = f'arn:aws:lambda:us-east-1:{ACCOUNT}:function:P5ACandidate'
+    rows = docs(stmt('lambda:CreateFunction'),
+                stmt('lambda:CreateFunction', arn, effect='Deny'))
+    assert creation_permission(rows, 'lambda:CreateFunction', USER) == 'yes'
+
+    instance = f'arn:aws:ec2:us-east-1:{ACCOUNT}:instance/i-0123456789abcdef0'
+    rows = docs(stmt('ec2:RunInstances'),
+                stmt('ec2:RunInstances', instance, effect='Deny'))
+    assert creation_permission(rows, 'ec2:RunInstances', USER) == 'yes'
+
+
 def test_b2_user_unrelated_deny_and_scoped_create_is_candidate():
     rows = [stmt('iam:PassRole', TARGET),
             stmt('lambda:CreateFunction',
