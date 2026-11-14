@@ -165,14 +165,17 @@ def _role_documents_complete(role, policies):
     return docs, incomplete
 
 
-def _candidate_actions(docs, target_arn, target, kind, source_arn):
+def _candidate_actions(docs, target_arn, target, kind, source_arn, creation_cache):
     if kind == 'assume':
         return identity_permission(docs, 'sts:AssumeRole', target_arn) == 'yes'
     for _, action, principal in SERVICE_PATHS:
         if _service_trust(target, principal) != 'yes':
             continue
-        if (identity_permission(docs, 'iam:PassRole', target_arn, principal) == 'yes'
-                and creation_permission(docs, action, source_arn) == 'yes'):
+        if identity_permission(docs, 'iam:PassRole', target_arn, principal) != 'yes':
+            continue
+        if action not in creation_cache:
+            creation_cache[action] = creation_permission(docs, action, source_arn)
+        if creation_cache[action] == 'yes':
             return True
     return False
 
@@ -278,6 +281,7 @@ def extend_relationship_graph_b2(graph, roles, users, groups, policies):
                     incomplete |= missing
         if incomplete:
             continue
+        creation_cache = {}
         for target in sorted(admin_roles, key=lambda r: r['arn']):
             pairs += 1
             if pairs > MAX_PAIRS:
@@ -286,12 +290,12 @@ def extend_relationship_graph_b2(graph, roles, users, groups, policies):
             target_arn = target['arn']
             if arn == target_arn:
                 continue
-            if _candidate_actions(docs, target_arn, target, 'assume', arn) and (
+            if _candidate_actions(docs, target_arn, target, 'assume', arn, creation_cache) and (
                     _trust_principal(target, arn) == 'yes'):
                 if edge(arn, target_arn, 'assumerole_privileged_candidate'):
                     source['p4b2_role_assumerole_status' if kind == 'role'
                            else 'p4b2_user_assumerole_status'] = 'candidate'
-            if kind == 'user' and _candidate_actions(docs, target_arn, target, 'passrole', arn):
+            if kind == 'user' and _candidate_actions(docs, target_arn, target, 'passrole', arn, creation_cache):
                 if edge(arn, target_arn, 'user_passrole_privileged_candidate'):
                     source['p4b2_user_passrole_status'] = 'candidate'
                     for name in user_to_groups.get(arn) or []:
