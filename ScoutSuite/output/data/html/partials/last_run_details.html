@@ -72,6 +72,12 @@
                                         {{/if}}
                                     </td>
                                 </tr>
+                                {{#each collector_gaps}}
+                                <tr><td colspan="12">
+                                    Explicit regional collector gap:
+                                    <samp>{{this}}</samp>
+                                </td></tr>
+                                {{/each}}
                                 {{#each collection_issues}}
                                 <tr>
                                     <td colspan="12">

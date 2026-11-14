@@ -138,7 +138,7 @@ def test_codebuild_listing_paginates_and_records_failures():
 
     result, issues = run(lambda s: s.add_client_error('list_projects', service_error_code='AccessDeniedException',
                                                       http_status_code=403))
-    assert result == [] and issues == [{'status': 'denied', 'scope': 'codebuild', 'reason_code': 'AccessDenied'}]
+    assert result == [] and issues == [{'status': 'denied', 'scope': 'codebuild', 'reason_code': 'AccessDenied', 'region': REGION}]
 
     result, issues = run(lambda s: s.add_client_error('list_projects', service_error_code='ThrottlingException',
                                                       http_status_code=400))
