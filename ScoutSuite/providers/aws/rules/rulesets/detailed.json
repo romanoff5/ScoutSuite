@@ -1989,6 +1989,48 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "elbv2-alb-health-check-response-mismatch.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "elbv2-alb-other-unhealthy-targets.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-running-instance-role-broad-s3-read-candidate.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-db-instance-no-actionable-alarm.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-db-instance-event-subscription-missing.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-db-cluster-no-actionable-alarm.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-db-cluster-event-subscription-missing.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
