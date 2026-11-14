@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "provenance": "Entirely fabricated AWS-like enum facts. Freeze independent positive/negative rule-engine oracles; not field validation or proof of effective IAM permissions. NOT_APPLICABLE IAM candidate negatives are synthetic predicate controls, not an assertion that the IAM collector emits this state.",
+  "cases": [
+    {
+      "rule_id": "ec2-instance-imdsv1-enabled",
+      "positive": "optional",
+      "negative": "required",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "ec2-account-imdsv2-not-required-default",
+      "positive": "not_required",
+      "negative": "required",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "cloudwatch-log-group-unlimited-retention",
+      "positive": "unlimited",
+      "negative": "configured",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "cloudwatch-log-group-no-customer-kms",
+      "positive": "aws_managed",
+      "negative": "customer_kms",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-proxy-require-tls-disabled",
+      "positive": "disabled",
+      "negative": "enabled",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b-oidc-broad-subject-trust",
+      "positive": "broad_subject",
+      "negative": "scoped_subject",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b-passrole-privileged-delegation",
+      "positive": "candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b-privileged-oidc-role",
+      "positive": "candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b2-group-contributed-passrole",
+      "positive": "candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b2-oidc-audience-review",
+      "positive": "review",
+      "negative": "scoped",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b2-oidc-subject-wildcard-review",
+      "positive": "review",
+      "negative": "scoped",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b2-role-assumerole-privileged",
+      "positive": "candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b2-user-assumerole-privileged",
+      "positive": "candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-p4b2-user-passrole-to-privileged-role",
+      "positive": "candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "iam-role-service-trust-missing-source-scope",
+      "positive": "missing",
+      "negative": "scoped",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "ec2-public-instance-https-open-to-world",
+      "positive": "exposed",
+      "negative": "not_exposed",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "ec2-running-instance-role-broad-s3-read-candidate",
+      "positive": "broad_grant_candidate",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-proxy-no-registered-targets",
+      "positive": "no_targets",
+      "negative": "healthy",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-proxy-all-targets-unavailable",
+      "positive": "all_unavailable",
+      "negative": "healthy",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-proxy-partial-target-degradation",
+      "positive": "degraded",
+      "negative": "healthy",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-db-instance-no-actionable-alarm",
+      "positive": "missing",
+      "negative": "actionable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-db-cluster-no-actionable-alarm",
+      "positive": "missing",
+      "negative": "actionable",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-db-instance-event-subscription-missing",
+      "positive": "missing",
+      "negative": "active",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "rds-db-cluster-event-subscription-missing",
+      "positive": "missing",
+      "negative": "active",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "s3-bucket-effective-public-exposure",
+      "positive": "exposed",
+      "negative": "no_bucket_level_exposure_detected",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "s3-bucket-public-access-block-incomplete",
+      "positive": "missing",
+      "negative": "complete",
+      "unknown": "unknown"
+    },
+    {
+      "rule_id": "s3-critical-bucket-object-lock-absent",
+      "positive": "absent",
+      "negative": "not_applicable",
+      "unknown": "unknown"
+    }
+  ]
+}
