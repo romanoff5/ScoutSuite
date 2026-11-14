@@ -3,7 +3,7 @@
 <div class="row" id="services.{{service_name}}.findings.row">
     <div class="col-sm-12" id="services.{{service_name}}.findings.list">
         <div class="form-group container row">
-        <div class="col-sm-4">
+        <div class="col-sm-2">
             <input class="form-control dashboard-filter" type="text" id="dashboardFilter" placeholder="Filter findings">
         </div>
         <div class="col-sm-2">
@@ -14,6 +14,9 @@
         </div>
         <div class="col-sm-2">
             <button class="form-control btn btn-warning" id="finding-title-warning">Warning</button>
+        </div>
+        <div class="col-sm-2">
+            <button class="form-control btn btn-outline-secondary" id="finding-title-review">Review</button>
         </div>
         <div class="col-sm-2">
             <button class="form-control btn btn-danger" id="finding-title-danger">Danger</button>
@@ -27,6 +30,9 @@
                     <div class="col-sm-11">
                         <i class="fa finding-badge finding-badge-{{dashboard_color level checked_items flagged_items assessment_status}}"></i>
                         <a href="#services.{{../service_name}}.findings.{{key}}.items">{{description}}</a>
+                        {{#if finding_disposition}}
+                        <span class="badge badge-secondary">{{finding_disposition}}</span>
+                        {{/if}}
                     </div>
                     <div class="col-sm-1">
                         <button class="finding btn fa collapsed" style="background-color:transparent" data-toggle="collapse" data-target="#item-{{key}}" aria-expanded="false" aria-controls="item-{{key}}"></button>
@@ -69,6 +75,16 @@
                                 <li>{{dashboard_name}} flagged: {{flagged_items}}</li>
                                 {{#if assessment_status}}
                                 <li>Assessment status: {{assessment_status}}</li>
+                                {{/if}}
+                                {{#if policy_requirement}}
+                                <li>Policy requirement: {{policy_requirement}}</li>
+                                <li>Severity assigned by policy: {{severity_assigned}}</li>
+                                {{#if policy_profile}}
+                                <li>Selected policy profile: {{policy_profile.id}} / {{policy_profile.version}}</li>
+                                {{/if}}
+                                {{#if policy_threshold}}
+                                <li>Approved policy threshold: {{policy_threshold}}</li>
+                                {{/if}}
                                 {{/if}}
                                 {{#if evaluation_summary.counts.unknown}}
                                 <li>{{dashboard_name}} with unknown evidence: {{evaluation_summary.counts.unknown}}</li>

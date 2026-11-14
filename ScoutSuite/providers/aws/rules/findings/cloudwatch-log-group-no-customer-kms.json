@@ -16,5 +16,7 @@
         ]
     ],
     "id_suffix": "P2CustomerKMSReview",
-    "evidence_policy": "p2-cloudwatch-customer-kms-v1"
+    "evidence_policy": "p2-cloudwatch-customer-kms-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_cloudwatch_customer_kms"
 }

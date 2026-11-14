@@ -6,6 +6,7 @@ import tempfile
 from ScoutSuite.core.console import print_debug, print_error, prompt_yes_no, print_exception
 
 from ScoutSuite.core.rule import Rule
+from ScoutSuite.core.policy_profiles import COMPLIANCE_PROFILE_ID, validate_compliance_thresholds
 from ScoutSuite.core.rule_definition import RuleDefinition
 
 aws_ip_ranges_filename = 'ip-ranges.json'
@@ -21,6 +22,8 @@ def _check_profile(data):
     values = (data.get('profile_id'), data.get('profile_version'))
     declared = any(value is not None for value in values)
     if not declared:
+        if 'policy_thresholds' in data:
+            raise PolicyProfileError('Thresholds require a compliance profile')
         return
     if not all(isinstance(value, str) and value for value in values):
         raise PolicyProfileError('Profile ID and version must both be present')
@@ -32,6 +35,13 @@ def _check_profile(data):
         raise PolicyProfileError('Unsupported policy profile schema version')
     if not isinstance(data.get('rules'), dict) or not data['rules']:
         raise PolicyProfileError('Profile must explicitly select rule definitions')
+    if data['profile_id'] == COMPLIANCE_PROFILE_ID:
+        try:
+            validate_compliance_thresholds(data)
+        except ValueError as exc:
+            raise PolicyProfileError(str(exc)) from exc
+    elif 'policy_thresholds' in data:
+        raise PolicyProfileError('Policy thresholds are restricted to the compliance profile')
     benchmark = data.get('benchmark')
     if benchmark is not None:
         if (not isinstance(benchmark, dict)
@@ -121,6 +131,7 @@ class Ruleset:
                     self.about = ruleset['about'] if 'about' in ruleset else ''
                     self.profile_id = ruleset.get('profile_id')
                     self.profile_version = ruleset.get('profile_version')
+                    self.policy_thresholds = ruleset.get('policy_thresholds', {})
                     self.benchmark = ruleset.get('benchmark')
                     self.control_mappings = ruleset.get('control_mappings', {})
                     self.rules = {}
@@ -146,6 +157,7 @@ class Ruleset:
         self.about = ruleset['about']
         self.profile_id = ruleset.get('profile_id')
         self.profile_version = ruleset.get('profile_version')
+        self.policy_thresholds = ruleset.get('policy_thresholds', {})
         self.benchmark = ruleset.get('benchmark')
         self.control_mappings = ruleset.get('control_mappings', {})
         self.rules = {}

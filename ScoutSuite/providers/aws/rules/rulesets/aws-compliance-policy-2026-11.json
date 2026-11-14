@@ -1,0 +1,55 @@
+{
+    "schema_version": 1,
+    "profile_id": "aws-compliance-policy",
+    "profile_version": "2026.11.0",
+    "about": "EXAMPLE organization-approved policy, opt in only. The 365-day threshold and KMS/access requirements are not universal SOC 2 or ISO 27001 requirements; confirm the organization's actual approved policy before scanning. Findings are policy violations, not compliance certification.",
+    "policy_thresholds": {
+        "max_cloudwatch_retention_days": 365,
+        "require_cloudwatch_customer_kms": true,
+        "disallow_shared_ec2_key_name": true,
+        "require_restricted_ec2_egress": true,
+        "require_athena_result_kms": true,
+        "require_glue_catalog_kms": true
+    },
+    "rules": {
+        "cloudwatch-log-group-retention-exceeds-policy.json": [
+            {
+                "enabled": true,
+                "level": "warning",
+                "args": [
+                    "365"
+                ]
+            }
+        ],
+        "cloudwatch-log-group-no-customer-kms.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-running-instances-share-ssh-key-name.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "ec2-security-group-all-egress-to-world.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "athena-workgroup-results-kms-not-enforced.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "glue-catalog-kms-not-configured.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ]
+    }
+}

@@ -16,5 +16,7 @@
         ]
     ],
     "id_suffix": "P2SharedKeyName",
-    "evidence_policy": "p2-ec2-ssh-key-reuse-v1"
+    "evidence_policy": "p2-ec2-ssh-key-reuse-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "disallow_shared_ec2_key_name"
 }

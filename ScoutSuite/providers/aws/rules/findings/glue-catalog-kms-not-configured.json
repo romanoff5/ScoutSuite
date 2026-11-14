@@ -16,5 +16,7 @@
         ]
     ],
     "id_suffix": "P2CatalogKMS",
-    "evidence_policy": "p2-glue-catalog-kms-v1"
+    "evidence_policy": "p2-glue-catalog-kms-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_glue_catalog_kms"
 }

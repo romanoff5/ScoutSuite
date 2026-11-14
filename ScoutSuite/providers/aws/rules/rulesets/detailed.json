@@ -1855,13 +1855,13 @@
         "cloudwatch-log-group-unlimited-retention.json": [
             {
                 "enabled": true,
-                "level": "warning"
+                "level": "review"
             }
         ],
         "cloudwatch-log-group-no-customer-kms.json": [
             {
                 "enabled": true,
-                "level": "warning"
+                "level": "review"
             }
         ],
         "cloudwatch-metric-alarm-actions-disabled.json": [
@@ -1879,13 +1879,13 @@
         "ec2-security-group-all-egress-to-world.json": [
             {
                 "enabled": true,
-                "level": "warning"
+                "level": "review"
             }
         ],
         "ec2-running-instances-share-ssh-key-name.json": [
             {
                 "enabled": true,
-                "level": "warning"
+                "level": "review"
             }
         ],
         "athena-workgroup-settings-not-enforced.json": [
@@ -1897,13 +1897,13 @@
         "athena-workgroup-results-kms-not-enforced.json": [
             {
                 "enabled": true,
-                "level": "warning"
+                "level": "review"
             }
         ],
         "glue-catalog-kms-not-configured.json": [
             {
                 "enabled": true,
-                "level": "warning"
+                "level": "review"
             }
         ],
         "glue-connection-password-encrypted-response-disabled.json": [

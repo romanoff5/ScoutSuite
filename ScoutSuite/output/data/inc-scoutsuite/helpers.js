@@ -240,7 +240,11 @@ function dashboardColor (level, checked, flagged, assessment) {
     if (checked === 0) {
         return 'unknown disabled-link'
     } else if (flagged === 0) {
-        return incomplete ? 'incomplete disabled-link' : 'good disabled-link'
+        if (incomplete) return 'incomplete disabled-link'
+        // A policy-dependent recommendation without policy authority is
+        // REVIEW even if no observations are flagged: never imply PASS.
+        if (assessment === 'review' || level === 'review') return 'review disabled-link'
+        return 'good disabled-link'
     } else {
         return level
     }
@@ -252,6 +256,7 @@ Handlebars.registerHelper('dashboard_color', dashboardColor)
 // status and fall back to the colour derived from the counters.
 const SERVICE_STATUS = {
     issues: {label: 'Issues found'},
+    review_required: {badge: 'review', label: 'Policy review required'},
     passed: {badge: 'good', label: 'Passed'},
     not_in_use: {badge: 'notused', label: 'Not in use'},
     incomplete: {badge: 'incomplete', label: 'Incomplete'},
