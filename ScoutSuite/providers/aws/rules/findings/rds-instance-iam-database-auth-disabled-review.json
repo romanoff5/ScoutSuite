@@ -1,0 +1,22 @@
+{
+    "description": "RDS Standalone IAM Database Authentication Disabled (Review)",
+    "rationale": "An observed standalone instance running a supported engine has IAMDatabaseAuthenticationEnabled=false. Password database authentication may be an approved design; unsupported engines and cluster-controlled settings are excluded.",
+    "remediation": "Where policy requires IAM DB authentication, enable it after evaluating engine support, applications and authentication flows.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "iam_db_auth_status",
+            "equal",
+            "disabled"
+        ]
+    ],
+    "id_suffix": "P4AIAMDBAuth",
+    "evidence_policy": "p4a-rds-iam-db-auth-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_rds_iam_db_auth"
+}

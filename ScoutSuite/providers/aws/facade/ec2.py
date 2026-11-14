@@ -110,6 +110,43 @@ class EC2Facade(AWSBaseFacade):
             print_exception(f'Failed to describe EC2 security groups: {e}')
             return []
 
+    async def get_default_vpc_usage(self, region, vpc_id):
+        """Bounded IGW and ENI census; denied/partial inventory stays UNKNOWN."""
+        from ScoutSuite.core.run_context import get_current_run_context
+        client = AWSFacadeUtils.get_client('ec2', self.session, region)
+        if client is None:
+            return {'status': 'unknown'}
+
+        def collect():
+            counts = {}
+            operations = (
+                ('describe_internet_gateways', 'InternetGateways', 'igw_count', 'attachment.vpc-id'),
+                ('describe_network_interfaces', 'NetworkInterfaces', 'eni_count', 'vpc-id'))
+            for operation, key, count_name, filter_name in operations:
+                rows_count = 0
+                pages = client.get_paginator(operation).paginate(
+                    Filters=[{'Name': filter_name, 'Values': [vpc_id]}])
+                for index, page in enumerate(pages):
+                    if index >= 40:
+                        raise ValueError('P4ADefaultVpcPageCap')
+                    values = page.get(key) if isinstance(page, dict) else None
+                    if not isinstance(values, list) or any(not isinstance(v, dict) for v in values):
+                        raise ValueError('P4ADefaultVpcMalformedPage')
+                    rows_count += len(values)
+                    if rows_count > 10000:
+                        raise ValueError('P4ADefaultVpcResourceCap')
+                counts[count_name] = rows_count
+            return {'status': 'complete', **counts}
+
+        try:
+            return await run_concurrently(collect)
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('ec2', exc, 'P4ADefaultVpcInventory')
+            ctx = get_current_run_context()
+            if ctx is not None:
+                ctx.record_collection_issue('partial', 'vpc', 'P4ADefaultVpcCollectionIncomplete')
+            return {'status': 'unknown'}
+
     async def get_vpcs(self, region: str):
         ec2_client = AWSFacadeUtils.get_client('ec2', self.session, region)
         try:

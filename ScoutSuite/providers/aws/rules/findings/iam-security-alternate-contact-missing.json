@@ -1,0 +1,20 @@
+{
+    "description": "AWS Account Security Alternate Contact Missing",
+    "rationale": "AWS Account Management GetAlternateContact returned ResourceNotFound for SECURITY. Denied APIs, unsupported partitions and malformed payloads remain UNKNOWN. No contact details are collected.",
+    "remediation": "Register an organization-monitored security contact and confirm contact lifecycle ownership.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "Security Contacts",
+    "path": "iam.security_contacts.id",
+    "conditions": [
+        "and",
+        [
+            "security_contact_status",
+            "equal",
+            "missing"
+        ]
+    ],
+    "id_suffix": "P4ASecurityContact",
+    "evidence_policy": "p4a-security-contact-v1"
+}

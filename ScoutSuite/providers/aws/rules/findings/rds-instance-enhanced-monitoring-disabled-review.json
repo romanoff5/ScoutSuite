@@ -1,0 +1,22 @@
+{
+    "description": "RDS Standalone Instance Enhanced Monitoring Disabled (Review)",
+    "rationale": "A running standalone RDS instance has MonitoringInterval=0; Enhanced Monitoring is optional and depends on organization telemetry requirements. Cluster-managed settings and unsupported states are not inferred.",
+    "remediation": "Where monitoring policy requires OS metrics, configure Enhanced Monitoring and an appropriate monitoring role.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "enhanced_monitoring_status",
+            "equal",
+            "disabled"
+        ]
+    ],
+    "id_suffix": "P4AEnhancedMonitoring",
+    "evidence_policy": "p4a-rds-enhanced-monitoring-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_rds_enhanced_monitoring"
+}

@@ -1,6 +1,13 @@
 """An opt-in policy contract for AWS compliance-review findings."""
 COMPLIANCE_PROFILE_ID = "aws-compliance-policy"
 POLICY_RULE_REQUIREMENTS = {
+ "vpc-default-with-igw-and-no-network-interfaces-review.json": "disallow_unused_default_vpc_with_igw",
+ "rds-instance-enhanced-monitoring-disabled-review.json": "require_rds_enhanced_monitoring",
+ "rds-instance-detailed-query-metrics-disabled-review.json": "require_rds_detailed_query_metrics",
+ "rds-instance-iam-database-auth-disabled-review.json": "require_rds_iam_db_auth",
+ "rds-instance-monitoring-auth-all-disabled-review.json": "require_rds_observability_and_iam_auth",
+ "ssm-document-public-sharing-permitted-review.json": "require_ssm_public_document_sharing_blocked",
+ "ec2-running-instance-detailed-monitoring-disabled-review.json": "require_ec2_detailed_monitoring",
  "cloudwatch-log-group-unlimited-retention.json": "require_finite_cloudwatch_retention",
  "cloudwatch-log-group-no-customer-kms.json": "require_cloudwatch_customer_kms",
  "ec2-running-instances-share-ssh-key-name.json": "disallow_shared_ec2_key_name",

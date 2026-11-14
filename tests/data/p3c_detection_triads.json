@@ -435,6 +435,91 @@
         "negative": "secure",
         "incomplete": "unknown"
       }
+    },
+    {
+      "id": "S26",
+      "rule_id": "vpc-default-with-igw-and-no-network-interfaces-review.json",
+      "report_case": "A-18",
+      "field": "default_vpc_gateway_status",
+      "base": {},
+      "states": {
+        "positive": "unused_candidate",
+        "negative": "in_use",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S27",
+      "rule_id": "iam-security-alternate-contact-missing.json",
+      "report_case": "A-21",
+      "field": "security_contact_status",
+      "base": {},
+      "states": {
+        "positive": "missing",
+        "negative": "configured",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S28",
+      "rule_id": "rds-instance-monitoring-auth-all-disabled-review.json",
+      "report_case": "A-33",
+      "field": "monitoring_auth_baseline_status",
+      "base": {},
+      "states": {
+        "positive": "all_disabled",
+        "negative": "not_all_disabled",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S29",
+      "rule_id": "ssm-document-public-sharing-permitted-review.json",
+      "report_case": "A-34",
+      "field": "document_public_sharing_setting_status",
+      "base": {},
+      "states": {
+        "positive": "enabled",
+        "negative": "blocked",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S30",
+      "rule_id": "ec2-running-instance-detailed-monitoring-disabled-review.json",
+      "report_case": "A-36",
+      "field": "detailed_monitoring_status",
+      "base": {},
+      "states": {
+        "positive": "basic",
+        "negative": "detailed",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
     }
   ]
 }

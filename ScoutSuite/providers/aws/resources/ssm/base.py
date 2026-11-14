@@ -31,12 +31,22 @@ class SSMPublic(Regions):
                 share_method = getattr(self.facade.ssm, 'get_document_shares', None)
                 sharing = (await share_method(region)) if share_method else {
                     'status': 'unknown', 'documents': []}
-                return region, inventory, sharing
+                reader = getattr(self.facade.ssm, 'get_public_document_sharing_setting', None)
+                if reader is None:
+                    setting = 'unknown'
+                else:
+                    try:
+                        setting = await reader(region)
+                    except Exception:
+                        issue('SSMDocumentShareSettingUnavailable')
+                        setting = 'unknown'
+                return region, inventory, sharing, setting
 
-        for region, inventory, sharing in await asyncio.gather(*(collect(x) for x in chosen)):
+        for region, inventory, sharing, setting in await asyncio.gather(*(collect(x) for x in chosen)):
             data = {'id': region, 'name': region, 'region': region,
                     'collection': dict(inventory.get('collection', {})),
                     'document_sharing_collection_status': sharing.get('status', 'unknown'),
+                    'document_public_sharing_setting_status': setting,
                     'ec2_comparison_complete': inventory.get('ec2_comparison_complete', False),
                     'scan_freshness_days': inventory.get('scan_freshness_days', 7),
                     'scan_success_independently_verified': False}

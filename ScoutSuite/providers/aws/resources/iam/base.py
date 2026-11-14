@@ -25,6 +25,18 @@ class IAM(AWSCompositeResources):
 
     async def fetch_all(self, partition_name='aws', **kwargs):
         await self._fetch_children(self)
+        reader = getattr(self.facade.iam, 'get_security_alternate_contact_status', None)
+        if reader is None:
+            status = 'unknown'
+        else:
+            try:
+                status = await reader(partition_name)
+            except Exception:
+                status = 'unknown'
+        # Contact PII never enters the report; only verified registration state.
+        self['security_contacts'] = {'security': {
+            'id': 'security', 'name': 'Security alternate contact',
+            'security_contact_status': status}}
 
         # We do not want the report to count the password policies as resources, they aren't really resources.
         self['password_policy_count'] = 0

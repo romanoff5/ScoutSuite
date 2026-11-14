@@ -202,9 +202,11 @@
       "id": "A-18",
       "domain": "network",
       "control": "unused_default_vpc_with_gateway",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "A default VPC with internet gateway is not equivalent to an unused security group."
+      "coverage": "partial",
+      "rule_ids": [
+        "vpc-default-with-igw-and-no-network-interfaces-review.json"
+      ],
+      "limitation": "Complete default VPC IGW and zero ENI inventory indicates a possible unused VPC, not proof of historical inactivity or zero dependencies."
     },
     {
       "id": "A-19",
@@ -230,9 +232,11 @@
       "id": "A-21",
       "domain": "governance",
       "control": "account_security_contact_absent",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "No direct alternate-account security contact registration rule."
+      "coverage": "direct",
+      "rule_ids": [
+        "iam-security-alternate-contact-missing.json"
+      ],
+      "limitation": "Account-level SECURITY alternate contact status is read-only and excludes cross-account organizational contact governance and contact PII."
     },
     {
       "id": "A-22",
@@ -355,17 +359,24 @@
       "id": "A-33",
       "domain": "database",
       "control": "database_enhanced_monitoring_insights_iam_auth",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "No composite control covering all three monitoring/authentication settings."
+      "coverage": "direct",
+      "rule_ids": [
+        "rds-instance-monitoring-auth-all-disabled-review.json",
+        "rds-instance-enhanced-monitoring-disabled-review.json",
+        "rds-instance-detailed-query-metrics-disabled-review.json",
+        "rds-instance-iam-database-auth-disabled-review.json"
+      ],
+      "limitation": "Direct for running standalone RDS with supported IAM DB-auth engine. Database Insights Standard may still provide metrics; cluster-managed controls remain not applicable."
     },
     {
       "id": "A-34",
       "domain": "documents",
       "control": "ssm_public_sharing_capability_not_docs",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "Document-public-sharing capability is not identical to an actually public document."
+      "coverage": "direct",
+      "rule_ids": [
+        "ssm-document-public-sharing-permitted-review.json"
+      ],
+      "limitation": "Regional account service setting Enable permits new public sharing, but does not mean any SSM document is currently public."
     },
     {
       "id": "A-35",
@@ -382,9 +393,11 @@
       "id": "A-36",
       "domain": "monitoring",
       "control": "ec2_detailed_monitoring_disabled",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "No exact instance detailed-monitoring finding in default catalog."
+      "coverage": "direct",
+      "rule_ids": [
+        "ec2-running-instance-detailed-monitoring-disabled-review.json"
+      ],
+      "limitation": "CloudWatch basic vs detailed monitoring from DescribeInstances; stopped/pending instances do not imply active telemetry gaps."
     },
     {
       "id": "A-37",
