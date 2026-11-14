@@ -703,6 +703,57 @@ async def _run_impl(context: RunContext,
         )
         cloud_provider.collection_status = current
 
+    # Build AWS evidence coverage AFTER all collection and rule evaluation issues
+    # have been recorded. Offline --local replay retains the original matrix.
+    if provider == 'aws' and not fetch_local:
+        from ScoutSuite.providers.aws.coverage_matrix import build_aws_coverage_matrix
+        enabled_rule_counts = {}
+        for configurations in finding_rules.rules.values():
+            for rule in configurations:
+                if rule.enabled:
+                    enabled_rule_counts[rule.service] = (
+                        enabled_rule_counts.get(rule.service, 0) + 1)
+        matrix = build_aws_coverage_matrix(
+            cloud_provider.service_list, cloud_provider.services, context,
+            requested_regions=regions, excluded_regions=excluded_regions,
+            skipped_services=skipped_services,
+            enabled_rule_counts=enabled_rule_counts)
+        cloud_provider.collection_status['coverage_matrix'] = matrix
+        if not matrix['complete']:
+            cloud_provider.collection_status['complete'] = False
+            cloud_provider.collection_status['status'] = 'partial'
+
+        incomplete_services = {
+            row['service'] for row in matrix['rows']
+            if row['status'] not in ('OBSERVED_COMPLETE', 'SKIPPED')
+        }
+        skipped_services_in_matrix = {
+            row['service'] for row in matrix['rows']
+            if row['status'] == 'SKIPPED'
+        }
+        # One unknown Region invalidates a clean *service-wide* dashboard
+        # claim; preserve all observed findings and per-Region detail.
+        for service, details in cloud_provider.last_run.get('summary', {}).items():
+            if service in skipped_services_in_matrix:
+                details['coverage_status'] = 'skipped'
+                details['status'] = 'not_assessed'
+                continue
+            rows = [row for row in matrix['rows'] if row['service'] == service]
+            details['coverage_status'] = (
+                'incomplete' if service in incomplete_services else
+                'observed_complete' if rows else 'not_assessed')
+            if service in incomplete_services:
+                if details.get('status') in ('passed', 'not_in_use'):
+                    details['status'] = 'incomplete'
+                service_data = cloud_provider.services.get(service)
+                if isinstance(service_data, dict):
+                    for finding in service_data.get('findings', {}).values():
+                        if (isinstance(finding, dict)
+                                and not finding.get('flagged_items')
+                                and finding.get('assessment_status') != 'incomplete'):
+                            finding['assessment_status'] = 'incomplete'
+                            details['incomplete_rules'] = details.get('incomplete_rules', 0) + 1
+
     # Save config and create HTML report
     try:
         html_report_path = report.save(cloud_provider, exceptions, force_write, debug)

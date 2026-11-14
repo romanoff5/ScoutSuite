@@ -89,7 +89,7 @@ def test_elbv2_legacy_rule_id_and_checked_counts_with_unknown_tls(tmp_path):
         ]
         assert context.collection_issues == [{
             'status': 'partial', 'scope': 'elbv2',
-            'reason_code': 'RuleEvidenceUnknown'
+            'reason_code': 'RuleEvidenceUnknown', 'region': 'us-east-1'
         }]
     finally:
         context.cleanup()

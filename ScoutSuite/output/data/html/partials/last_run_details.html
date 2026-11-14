@@ -1,5 +1,5 @@
 <script id="last_run_details-template" type="text/x-handlebars-template">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Execution Details</h5>
@@ -23,6 +23,74 @@
                     <p><strong>Scout version:</strong> <samp>{{last_run.version}}</samp></p>
                     <p><strong>Using ruleset</strong> <samp>{{last_run.ruleset_name}}</samp>:
                     <p class="ml-4 mr-4 text-justify"><em>{{last_run.ruleset_about}}</em></p>
+                    {{#if collection_status.coverage_matrix}}
+                    <hr>
+                    <h5>AWS Evidence Completeness / Region Coverage Matrix</h5>
+                    <p>
+                        <strong>Scope:</strong>
+                        {{collection_status.coverage_matrix.scope}}.
+                        These are observed API responses and evidence-backed rule checks.
+                        <strong>Zero findings is not proof of compliance or complete coverage.</strong>
+                        "Checked resources" counts distinct evidence-policy paths, not all
+                        assets. Inventory counts may include multiple resource types.
+                    </p>
+                    <p>
+                        <strong>Matrix status:</strong> {{collection_status.coverage_matrix.status}};
+                        <strong>Incomplete rows:</strong>
+                        {{collection_status.coverage_matrix.incomplete_rows}}
+                        of {{collection_status.coverage_matrix.rows_count}}
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm">
+                            <thead class="thead-dark"><tr>
+                                <th>Service</th><th>Region</th><th>Coverage</th>
+                                <th>Inventory records</th><th>Checked</th>
+                                <th>Unknown</th><th>Findings</th>
+                                <th>API OK</th><th>API denied</th>
+                                <th>API errors</th><th>Skipped rules</th>
+                                <th>Evidence interpretation</th>
+                            </tr></thead>
+                            <tbody>
+                            {{#each collection_status.coverage_matrix.rows}}
+                                <tr>
+                                    <td><samp>{{service}}</samp></td>
+                                    <td><samp>{{region}}</samp></td>
+                                    <td><strong>{{status}}</strong></td>
+                                    <td>{{inventory_records_observed}}</td>
+                                    <td>{{checked_resources}}</td>
+                                    <td>{{unknown_resources}}</td>
+                                    <td>{{flagged_rule_items}}</td>
+                                    <td>{{api.success}} (absent {{api.absent}})</td>
+                                    <td>{{api.denied}}</td>
+                                    <td>{{api.failed}} / {{api.unsupported}}</td>
+                                    <td>{{skipped_checks}}</td>
+                                    <td>{{zero_findings_interpretation}}
+                                        {{#if issues_without_region}}
+                                            <span title="Unscoped legacy collection issue">
+                                                (unscoped evidence gaps)
+                                            </span>
+                                        {{/if}}
+                                    </td>
+                                </tr>
+                                {{#each collector_gaps}}
+                                <tr><td colspan="12">
+                                    Explicit regional collector gap:
+                                    <samp>{{this}}</samp>
+                                </td></tr>
+                                {{/each}}
+                                {{#each collection_issues}}
+                                <tr>
+                                    <td colspan="12">
+                                        Collection issue for {{../service}} / {{../region}}:
+                                        <samp>{{status}}</samp> — <samp>{{reason_code}}</samp>
+                                    </td>
+                                </tr>
+                                {{/each}}
+                            {{/each}}
+                            </tbody>
+                        </table>
+                    </div>
+                    {{/if}}
                 </div>
             </div>
         </div>

@@ -92,7 +92,7 @@ def test_zero_rule_empty_services_are_not_in_use_unless_collection_failed():
                 'emr': {'regions': {}, 'clusters_count': 0},
                 'secretsmanager': {'regions': {}, 'secrets_count': 11},
                 'legacy': None}
-    issues = [{'status': 'denied', 'scope': 'emr', 'reason_code': 'AccessDenied'}]
+    issues = [{'status': 'denied', 'scope': 'emr', 'reason_code': 'AccessDenied', 'region': REGION}]
     summary = summary_for(services, issues)
     assert summary['codebuild']['status'] == 'not_in_use'
     assert summary['emr']['status'] == 'incomplete'
@@ -138,11 +138,11 @@ def test_codebuild_listing_paginates_and_records_failures():
 
     result, issues = run(lambda s: s.add_client_error('list_projects', service_error_code='AccessDeniedException',
                                                       http_status_code=403))
-    assert result == [] and issues == [{'status': 'denied', 'scope': 'codebuild', 'reason_code': 'AccessDenied'}]
+    assert result == [] and issues == [{'status': 'denied', 'scope': 'codebuild', 'reason_code': 'AccessDenied', 'region': REGION}]
 
     result, issues = run(lambda s: s.add_client_error('list_projects', service_error_code='ThrottlingException',
                                                       http_status_code=400))
-    assert result == [] and issues == [{'status': 'failed', 'scope': 'codebuild', 'reason_code': 'ListProjectsThrottlingException'}]
+    assert result == [] and issues == [{'status': 'failed', 'scope': 'codebuild', 'reason_code': 'ListProjectsThrottlingException', 'region': REGION}]
 
 
 def stubbed(service, facade_call, add):

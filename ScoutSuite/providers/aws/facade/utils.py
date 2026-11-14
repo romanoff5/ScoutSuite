@@ -16,7 +16,8 @@ class AWSFacadeUtils:
     # No process-global client cache: credentials are isolated by RunContext.
 
     @staticmethod
-    def record_listing_failure(scope: str, error: Exception, operation: str) -> None:
+    def record_listing_failure(scope: str, error: Exception, operation: str,
+                               region: str = None) -> None:
         """Record a swallowed inventory-listing error as incomplete collection.
 
         Only the sanitized error code is stored, never the SDK message.
@@ -26,7 +27,9 @@ class AWSFacadeUtils:
             return
         code = error.response.get('Error', {}).get('Code', '') if isinstance(error, ClientError) else ''
         kind = 'denied' if code in DENIED_CODES else 'unsupported' if code in UNSUPPORTED_CODES else 'failed'
-        context.record_collection_issue(kind, scope, safe_collection_issue_code(operation + (code or 'Error')))
+        context.record_collection_issue(
+            kind, scope, safe_collection_issue_code(operation + (code or 'Error')),
+            region=region)
 
     @staticmethod
     async def get_all_pages(service: str, region: str, session: boto3.session.Session, paginator_name: str,
@@ -72,7 +75,7 @@ class AWSFacadeUtils:
         client = AWSFacadeUtils.get_client(service, session, region)
         if client is None:
             if context is not None:
-                context.record_collection_issue('failed', service, 'ClientConstruction')
+                context.record_collection_issue('failed', service, 'ClientConstruction', region=region)
             return empty
         try:
             paginator = client.get_paginator(paginator_name).paginate(**paginator_args)
@@ -81,12 +84,12 @@ class AWSFacadeUtils:
             code = error.response.get('Error', {}).get('Code', 'ClientError')
             if code in DENIED_CODES:
                 if context is not None:
-                    context.record_collection_issue('denied', service, 'AccessDenied')
+                    context.record_collection_issue('denied', service, 'AccessDenied', region=region)
                 print_exception('Paginator access denied for ' + service)
                 return empty
             if code in UNSUPPORTED_CODES:
                 if context is not None:
-                    context.record_collection_issue('unsupported', service, 'UnsupportedOperation')
+                    context.record_collection_issue('unsupported', service, 'UnsupportedOperation', region=region)
                 print_exception('Paginator operation unsupported for ' + service)
                 return empty
             # Re-raised: the caller decides. Some codes are expected answers
@@ -96,12 +99,12 @@ class AWSFacadeUtils:
             raise
         except (ReadTimeoutError, ConnectTimeoutError, EndpointConnectionError):
             if context is not None:
-                context.record_collection_issue('failed', service, 'Timeout')
+                context.record_collection_issue('failed', service, 'Timeout', region=region)
             print_exception('Paginator timeout for ' + service)
             return empty
         except (KeyError, TypeError):
             if context is not None:
-                context.record_collection_issue('failed', service, 'MalformedPage')
+                context.record_collection_issue('failed', service, 'MalformedPage', region=region)
             print_exception('Malformed paginator page for ' + service)
             return empty
 
@@ -136,8 +139,54 @@ class AWSFacadeUtils:
                     retries={'mode': 'standard', 'total_max_attempts': 3}
                 )
                 if region:
-                    return session.client(service, region_name=region, config=config)
-                return session.client(service, config=config)
+                    client = session.client(service, region_name=region, config=config)
+                else:
+                    client = session.client(service, config=config)
+                # Registered once for each run-scoped, cached client. Botocore
+                # emits after-call for final responses, including HTTP errors.
+                # Never persist parameters, parsed payloads, request IDs or secrets.
+                if context is not None and context.provider == 'aws':
+                    events = getattr(getattr(client, 'meta', None), 'events', None)
+                    if events is not None:
+                        location = region or 'global'
+
+                        def observe(http_response=None, parsed=None, event_name=None, **_kw):
+                            try:
+                                if http_response is None or not isinstance(event_name, str):
+                                    return
+                                status_code = getattr(http_response, 'status_code', None)
+                                error = parsed.get('Error', {}) if isinstance(parsed, dict) else {}
+                                code = error.get('Code') if isinstance(error, dict) else None
+                                operation = event_name.rsplit('.', 1)[-1]
+                                expected_absences = {
+                                    ('s3', 'GetPublicAccessBlock',
+                                     'NoSuchPublicAccessBlockConfiguration'),
+                                    ('s3', 'GetBucketEncryption',
+                                     'ServerSideEncryptionConfigurationNotFoundError'),
+                                    ('backup', 'GetBackupVaultAccessPolicy',
+                                     'ResourceNotFoundException'),
+                                }
+                                if (service, operation, code) in expected_absences:
+                                    outcome = 'absent'
+                                elif code in DENIED_CODES or status_code in (401, 403):
+                                    outcome = 'denied'
+                                elif code in UNSUPPORTED_CODES:
+                                    outcome = 'unsupported'
+                                elif code is not None:
+                                    outcome = 'failed'
+                                elif isinstance(status_code, int) and status_code >= 400:
+                                    outcome = 'failed'
+                                elif isinstance(status_code, int) and status_code < 400:
+                                    outcome = 'success'
+                                else:
+                                    return
+                                context.record_aws_api(service, location, operation, outcome)
+                            except (AttributeError, TypeError, ValueError):
+                                # Telemetry must not interfere with AWS API calls.
+                                pass
+
+                        events.register('after-call.*.*', observe)
+                return client
 
             context = get_current_run_context()
             if context is None:

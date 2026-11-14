@@ -196,7 +196,7 @@ class TestM08DS3Exposure(TestCase):
                 # RunContext deduplicates identical issue tuples per scope.
                 self.assertEqual(ctx.collection_issues, [{
                     'status': 'partial', 'scope': 's3',
-                    'reason_code': 'RuleEvidenceUnknown'
+                    'reason_code': 'RuleEvidenceUnknown', 'region': 'global'
                 }])
             finally:
                 await ctx.aclose()
