@@ -57,3 +57,45 @@ Re-exporting the same report and key produces byte-for-byte equivalent canonical
 For **rule-logic regression**, continue to run source-to-rule fixtures and metamorphic tests on wholly synthetic AWS payloads. P4-F adds a private-safe reproducibility and drift envelope around those outcomes; it does not replace the fixture suite.
 
 Only names present in installed AWS service metadata are emitted. Unknown/custom rule names are HMAC-pseudonymized and flagged `definition_unavailable`, not exported verbatim. This prevents user-created naming conventions from silently leaking identifiers.
+
+## P4-F2: actual predicate rerun over allowlisted semantic facts
+
+P4-F2 keeps all production `RESULTS` and HTML reports **unchanged**. Real account IDs,
+ARNs, resource IDs and display names remain present in the normal client report.
+Only an explicit `facts-export` produces a separate, HMAC-pseudonymized artifact.
+
+Supported initial rules:
+
+| Rule | Allowlisted semantic fact |
+|---|---|
+| `ec2-instance-imdsv1-enabled` | `imds_v2_status` |
+| `ec2-account-imdsv2-not-required-default` | `account_imds_default_status` |
+| `cloudwatch-log-group-unlimited-retention` | `retention_status` |
+| `cloudwatch-log-group-no-customer-kms` | `customer_kms_status` |
+| `rds-proxy-require-tls-disabled` | `tls_status` |
+
+Facts are fixed enum values plus HMAC resource tokens. The snapshot has a
+canonical SHA-256 and HMAC integrity envelope. It contains no raw AWS API
+response, IAM policy, resource name, ARN, account ID or path. Rule replay
+uses the **actual ScoutSuite recurse/pass_conditions engine**, with the
+latest installed JSON conditions, but only when the new definition still
+matches an explicitly allowlisted path/field/enum grammar. Changed
+predicates (`equal` / `notEqual`) are reexecuted; changed unsupported
+paths, conditions or service semantics are `rule_not_replayable`, never PASS.
+Unknown facts, unavailable inventory and incomplete collection remain partial.
+Rule semantic fact coverage is bounded; this is NOT a general AWS report replay.
+
+```bash
+python tools/p4f_evidence.py facts-export --report PATH_TO_RESULTS.json --key-file .p4f.snapshot-key --output analysis.p4f2.snapshot.json
+python tools/p4f_evidence.py facts-replay --snapshot analysis.p4f2.snapshot.json --key-file .p4f.snapshot-key
+```
+
+Exit 0 means supported conditions were fully reexecuted over complete source
+evidence, 2 means partial or unsupported condition semantics, 3 means
+integrity/privacy/schema validation failure. **Never** interpret exit 0 as
+proof of AWS security/compliance: no live access, effective IAM authorization
+or broader asset completeness is established.
+
+The legacy `replay` command remains P4-F v1 observation replay; the
+new `facts-replay` command is P4-F2 predicate execution. Both are
+strictly offline and require the same local key.
