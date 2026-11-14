@@ -124,8 +124,12 @@ class EC2Facade(AWSBaseFacade):
                 ('describe_network_interfaces', 'NetworkInterfaces', 'eni_count', 'vpc-id'))
             for operation, key, count_name, filter_name in operations:
                 rows_count = 0
-                pages = client.get_paginator(operation).paginate(
-                    Filters=[{'Name': filter_name, 'Values': [vpc_id]}])
+                params = {'Filters': [{'Name': filter_name, 'Values': [vpc_id]}]}
+                if operation == 'describe_network_interfaces':
+                    # Managed-resource ENIs may otherwise be hidden from the
+                    # census, leading to a false "unused default VPC" candidate.
+                    params['IncludeManagedResources'] = True
+                pages = client.get_paginator(operation).paginate(**params)
                 for index, page in enumerate(pages):
                     if index >= 40:
                         raise ValueError('P4ADefaultVpcPageCap')
