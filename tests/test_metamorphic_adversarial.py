@@ -57,7 +57,11 @@ def mutate_one(seed, path, new_value):
     for part in path[:-1]:
         cursor = cursor[part]
     last = path[-1]
-    assert last in cursor, 'Mutation path must reference an existing input'
+    if isinstance(cursor, list):
+        assert isinstance(last, int) and 0 <= last < len(cursor), (
+            'Mutation list index must exist')
+    else:
+        assert last in cursor, 'Mutation path must reference an existing input'
     cursor[last] = deepcopy(new_value)
     assert diff_count(seed, changed) == 1, 'Exactly one input field may change'
     assert seed == old, 'Mutations must never leak back into the baseline fixture'
