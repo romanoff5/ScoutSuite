@@ -1,0 +1,20 @@
+{
+    "description": "Most Recent Completed AWS Backup Restore Test Failed Validation",
+    "rationale": "The newest fully observed restore testing job completed but its separately reported validation FAILED or TIMED_OUT. Application recovery is not established by a successful restore job alone.",
+    "remediation": "Fix validation errors and repeat the restore and validation test.",
+    "references": [
+        "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html"
+    ],
+    "dashboard_name": "Restore testing plans",
+    "path": "backup.regions.id.restore_testing_plans.id",
+    "conditions": [
+        "and",
+        [
+            "latest_validation_status",
+            "equal",
+            "failed"
+        ]
+    ],
+    "id_suffix": "backuprestoretestinglatestvalidationfailed",
+    "evidence_policy": "backup-latest-validation-failure-v1"
+}

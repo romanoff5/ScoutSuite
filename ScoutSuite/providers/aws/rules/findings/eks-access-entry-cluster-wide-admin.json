@@ -1,0 +1,20 @@
+{
+    "description": "EKS Access Entry Has Cluster-Scoped Administrator Policy",
+    "rationale": "An API Access Entry associates AmazonEKSAdminPolicy at cluster scope. This is a broad Kubernetes API grant; aws-auth and Kubernetes RBAC remain outside the assessment.",
+    "remediation": "Review scope and narrow admin access to approved namespaces or less privileged policies.",
+    "references": [
+        "https://docs.aws.amazon.com/eks/latest/userguide/access-policies.html"
+    ],
+    "dashboard_name": "EKS Access Entries",
+    "path": "eks.regions.id.clusters.id.access_entries.id",
+    "conditions": [
+        "and",
+        [
+            "admin_grant_status",
+            "equal",
+            "admin"
+        ]
+    ],
+    "id_suffix": "eksaccessentryclusterwideadmin",
+    "evidence_policy": "eks-api-wide-admin-v1"
+}

@@ -64,6 +64,47 @@ class RDSFacade(AWSBaseFacade):
         self._record_incomplete('DescribeDBProxiesPageCap')
         return result
 
+
+    async def get_db_proxy_targets(self, region, proxy_name):
+        """Read-only bounded target health census; partial results are never healthy."""
+        if not isinstance(proxy_name, str) or not proxy_name:
+            self._record_incomplete('DescribeDBProxyTargetsMissingProxy')
+            return {'status': 'unknown', 'targets': []}
+        client = AWSFacadeUtils.get_client('rds', self.session, region)
+        if client is None:
+            self._record_incomplete('DescribeDBProxyTargetsClientUnavailable')
+            return {'status': 'unknown', 'targets': []}
+        rows, seen, marker = [], set(), None
+        for _ in range(100):
+            kwargs = {'DBProxyName': proxy_name, 'MaxRecords': 100}
+            if marker:
+                kwargs['Marker'] = marker
+            try:
+                page = await run_concurrently(
+                    lambda kwargs=kwargs: client.describe_db_proxy_targets(**kwargs))
+            except Exception as error:
+                AWSFacadeUtils.record_listing_failure(
+                    'rds', error, 'DescribeDBProxyTargets')
+                self._record_incomplete('DescribeDBProxyTargetsIncomplete')
+                return {'status': 'partial', 'targets': rows}
+            batch = page.get('Targets') if isinstance(page, dict) else None
+            if not isinstance(batch, list) or len(batch) > 100 or any(
+                    not isinstance(item, dict) for item in batch):
+                self._record_incomplete('DescribeDBProxyTargetsMalformedPage')
+                return {'status': 'partial', 'targets': rows}
+            rows.extend(batch)
+            token = page.get('Marker')
+            if token in (None, ''):
+                return {'status': 'complete', 'targets': rows}
+            if (not isinstance(token, str) or len(token) > 4096
+                    or token in seen):
+                self._record_incomplete('DescribeDBProxyTargetsInvalidMarker')
+                return {'status': 'partial', 'targets': rows}
+            seen.add(token)
+            marker = token
+        self._record_incomplete('DescribeDBProxyTargetsPageLimit')
+        return {'status': 'partial', 'targets': rows}
+
     async def get_instances(self, region: str, vpc: str):
         try:
             await self._cache_instances(region)
