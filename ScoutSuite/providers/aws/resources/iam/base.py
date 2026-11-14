@@ -5,6 +5,7 @@ from ScoutSuite.providers.aws.resources.iam.policies import Policies
 from ScoutSuite.providers.aws.resources.iam.users import Users
 from ScoutSuite.providers.aws.resources.iam.roles import Roles
 from ScoutSuite.providers.aws.resources.iam.passwordpolicy import PasswordPolicy
+from ScoutSuite.providers.aws.resources.iam.relationship_graph import build_relationship_graph
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.core.console import print_exception
 
@@ -72,6 +73,22 @@ class IAM(AWSCompositeResources):
                         policy_id, policy['PolicyDocument'], 'policies', None, None)
         except Exception as e:
             print_exception(f'Error finalizing IAM service: {e}')
+
+        # The derived graph is produced after managed policy attachments have
+        # been associated with their IAM roles. It does not make AWS API calls.
+        try:
+            self['relationship_graph'] = build_relationship_graph(
+                self.get('roles'), self.get('policies'))
+        except Exception as exc:
+            print_exception(f'Error building IAM relationship candidates: {type(exc).__name__}')
+            self['relationship_graph'] = {
+                'schema': 'iam-relationships-p4b-v1', 'status': 'unknown',
+                'nodes': {}, 'edges': {}, 'nodes_count': 0, 'edges_count': 0}
+            for role in self.get('roles', {}).values():
+                if isinstance(role, dict):
+                    role['p4b_passrole_path_status'] = 'unknown'
+                    role['p4b_oidc_scope_status'] = 'unknown'
+                    role['p4b_privileged_oidc_status'] = 'unknown'
 
     def _parse_inline_policies_permissions(self, resource_type):
         for resource_id in self[resource_type]:
