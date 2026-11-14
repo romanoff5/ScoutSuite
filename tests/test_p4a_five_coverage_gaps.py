@@ -234,3 +234,22 @@ def test_ec2_detailed_monitoring_basic_detailed_stopped_and_incomplete():
         assert ev["counts"][
             {"basic": "insecure", "detailed": "secure", "not_applicable": "not_applicable",
              "unknown": "unknown"}[expected]] == 1
+
+
+def test_default_vpc_counts_managed_enis_not_only_visible_customer_enis():
+    """The SDK must be asked to include AWS-managed ENIs to avoid false candidates."""
+    class Client:
+        def get_paginator(self, operation):
+            def paginate(**kwargs):
+                if operation == "describe_network_interfaces":
+                    assert kwargs.get("IncludeManagedResources") is True
+                    return iter([{"NetworkInterfaces": [{}]}])
+                assert "IncludeManagedResources" not in kwargs
+                return iter([{"InternetGateways": [{}]}])
+            return SimpleNamespace(paginate=paginate)
+
+    facade = EC2Facade(object(), "synthetic-owner")
+    with patch.object(AWSFacadeUtils, "get_client", return_value=Client()):
+        result = asyncio.run(facade.get_default_vpc_usage(REGION, "vpc-synthetic"))
+    assert result == {"status": "complete", "igw_count": 1, "eni_count": 1}
+    assert classify_default_vpc_gateway(True, result) == "in_use"
