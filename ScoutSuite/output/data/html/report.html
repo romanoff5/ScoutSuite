@@ -33,6 +33,7 @@
     <script src="inc-scoutsuite/pagination.js"></script>
     <script src="inc-scoutsuite/provider.js"></script>
     <script src="inc-scoutsuite/helpers.js"></script>
+    <script src="inc-scoutsuite/scan_history.js"></script>
     <link href="inc-scoutsuite/css/scoutsuite.css" rel="stylesheet">
     <link id="scout-theme" href="inc-scoutsuite/css/scoutsuite-dark.css" rel="stylesheet">
 </head>
@@ -62,6 +63,72 @@
                 </div>
             </h4>
         </div>
+
+        <!-- P4-F2: local, keyless scan history. Never upload reports. -->
+        <section class="scout-history" aria-label="Local scan and snapshot history">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <button type="button" class="btn btn-outline-secondary" id="scout-history-toggle"
+                        aria-controls="scout-history-panel" aria-expanded="false">
+                    <i class="fa fa-history" aria-hidden="true"></i> Scans &amp; Snapshots
+                </button>
+                <span class="text-muted small">Local browser view · No keys or cloud API calls</span>
+            </div>
+            <div id="scout-history-panel" hidden class="card p-3 mb-3">
+                <h3 class="h5">Scan history &amp; P4-F2 semantic facts</h3>
+                <p class="small mb-2">Load previous Scout <code>RESULTS.js</code>/<code>RESULTS.json</code>
+                    files or exported P4-F/P4-F2 snapshots. The current report is already included.
+                    Real resource IDs and names stay visible for regular RESULTS; signed snapshot identities
+                    remain pseudonymous. Select files manually because the browser cannot enumerate your disk.</p>
+                <div class="form-group mb-2">
+                    <label for="scout-history-files"><strong>Add versions from local files</strong></label>
+                    <input type="file" id="scout-history-files" class="form-control-file"
+                           accept=".js,.json" multiple aria-describedby="scout-history-privacy">
+                    <small class="form-text text-muted" id="scout-history-privacy">
+                        Data remains in this browser tab, is not uploaded, and is not saved to browser storage.
+                        Maximum 24 versions; 64 MiB per file. Reload clears imported files.
+                    </small>
+                </div>
+                <div id="scout-history-message" role="status" class="text-muted small mb-2"></div>
+                <div class="form-row mb-2">
+                    <div class="col-md-5">
+                        <label for="scout-history-before">Baseline version</label>
+                        <select class="form-control" id="scout-history-before"></select>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="scout-history-after">Compare against</label>
+                        <select class="form-control" id="scout-history-after"></select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-secondary btn-block"
+                                id="scout-history-reset">Clear imports</button>
+                    </div>
+                </div>
+                <p class="small font-weight-bold mb-1" id="scout-history-summary"></p>
+                <p class="small text-warning mb-2" role="note" id="scout-history-warning"></p>
+                <div class="table-responsive scout-history-table">
+                    <table class="table table-sm table-striped" aria-label="Finding changes by version">
+                        <thead><tr><th scope="col">Finding rule</th><th scope="col">Before</th>
+                            <th scope="col">After</th><th scope="col">New</th>
+                            <th scope="col">Resolved</th><th scope="col">Evidence</th></tr></thead>
+                        <tbody id="scout-history-rows"></tbody>
+                    </table>
+                </div>
+                <h4 class="h6 mt-3">P4-F2 semantic replay preview (five allowlisted AWS checks)</h4>
+                <p class="small" id="scout-history-replay-note"></p>
+                <div class="table-responsive scout-history-table">
+                    <table class="table table-sm table-striped" aria-label="Semantic AWS rule checks">
+                        <thead><tr><th scope="col">Rule</th><th scope="col">Matched</th>
+                            <th scope="col">Unknown facts</th><th scope="col">Scope</th></tr></thead>
+                        <tbody id="scout-history-semantic"></tbody>
+                    </table>
+                </div>
+                <p class="small text-muted mb-0">
+                    The UI compares recorded observations; it does not certify effective IAM permissions,
+                    confirm remediation or verify a P4-F HMAC signature without its private key.
+                    The authenticated Python P4-F2 replay remains available separately.
+                </p>
+            </div>
+        </section>
 
         <!-- Title section -->
         <!--<div id="section_title-div">-->
