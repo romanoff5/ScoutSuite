@@ -165,7 +165,7 @@ def alb_fixture():
                    'resource_record_sets': [{
                        'Name': 'web.example.net.', 'Type': 'A',
                        'AliasTarget': {'DNSName': 'dualstack.' + LB_DNS + '.'}}]}
-    }}}}}
+    }}}}
     return source
 
 
