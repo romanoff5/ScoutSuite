@@ -22,7 +22,7 @@ FORBIDDEN = re.compile(
     r'(?<![0-9])[0-9]{12}(?![0-9])|arn:(?:aws|aws-us-gov|aws-cn):|'
     r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|'
     r'\\b(?:client_name|customer_account_id|internal_host|private_domain)\\b', re.I)
-SYNTHETIC_MINIMUM = 15
+SYNTHETIC_MINIMUM = 25
 
 
 def _load(path):

@@ -158,9 +158,12 @@
       "id": "A-14",
       "domain": "reliability",
       "control": "alb_unhealthy_targets_healthcheck_mismatch",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "P3-B collects targets but no rule fully evaluates health-check mismatch."
+      "coverage": "partial",
+      "rule_ids": [
+        "elbv2-alb-health-check-response-mismatch.json",
+        "elbv2-alb-other-unhealthy-targets.json"
+      ],
+      "limitation": "AWS health state and response-code mismatch are detected; mismatch is not proof that the application's health-check path is wrong."
     },
     {
       "id": "A-15",
@@ -207,9 +210,11 @@
       "id": "A-19",
       "domain": "identity",
       "control": "instance_role_broad_bucket_read",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "No dedicated semantic evaluation of effective S3 wildcard read privilege on an instance role."
+      "coverage": "partial",
+      "rule_ids": [
+        "ec2-running-instance-role-broad-s3-read-candidate.json"
+      ],
+      "limitation": "Broad identity policy Allow is a grant candidate; SCPs, permissions boundaries and explicit denies may make effective S3 access narrower."
     },
     {
       "id": "A-20",
@@ -548,9 +553,14 @@
       "id": "B-15",
       "domain": "monitoring",
       "control": "database_specific_alarm_subscription_missing",
-      "coverage": "gap",
-      "rule_ids": [],
-      "limitation": "Generic CloudWatch security metric filters do not prove RDS event/alarm coverage."
+      "coverage": "partial",
+      "rule_ids": [
+        "rds-db-instance-no-actionable-alarm.json",
+        "rds-db-instance-event-subscription-missing.json",
+        "rds-db-cluster-no-actionable-alarm.json",
+        "rds-db-cluster-event-subscription-missing.json"
+      ],
+      "limitation": "Local RDS metric alarms and source event subscriptions are evaluated; EventBridge, external SIEM and cross-account delivery are not verified."
     },
     {
       "id": "B-16",
