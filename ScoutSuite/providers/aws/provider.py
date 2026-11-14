@@ -123,6 +123,12 @@ class AWSProvider(BaseProvider):
             # Without EC2 security groups the origin exposure stays unknown.
             self._classify_elbv2_waf_protection()
 
+        # P3-B: process cross-service relationships after ELBv2 WAF classification.
+        # Missing EC2/ACM/Route53 inventory is UNKNOWN, never a false PASS.
+        if 'elbv2' in self.service_list:
+            from ScoutSuite.providers.aws.resources.elbv2.p3b_correlation import correlate_p3b
+            correlate_p3b(self.services, self.service_list)
+
         if 's3' in self.service_list and 'iam' in self.service_list:
             self._match_iam_policies_and_buckets()
 

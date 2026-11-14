@@ -20,6 +20,16 @@
             <div class="list-group-item-text item-margin">Secure Transport: <span id="s3.buckets.{{@key}}.secure_transport_enabled">{{convert_bool_to_enabled secure_transport_enabled}}</span></div>
             <div class="list-group-item-text item-margin">Static Website Hosting: <span id="s3.buckets.{{@key}}.web_hosting_enabled">{{convert_bool_to_enabled web_hosting_enabled}}</span></div>
         </div>
+        <div class="list-group-item">
+            <h4>P3-B: critical bucket Object Lock policy</h4>
+            <p>Tag inventory: <samp>{{tag_collection_status}}</samp></p>
+            <p>Object Lock required by explicit tag: <samp>{{object_lock_requirement}}</samp></p>
+            <p>Object Lock: <samp>{{object_lock_status}}</samp></p>
+            <p>Default retention: <samp>{{object_lock_default_retention_status}}</samp>,
+               mode: <samp>{{object_lock_default_mode}}</samp>,
+               days: <samp>{{object_lock_default_days}}</samp></p>
+            <p>Existing object versions, legal holds and restore testing are not validated by this rule.</p>
+        </div>
         {{> services.s3.public_access_block_configuration resource_type = 'bucket' resource_path = (concat 's3.buckets' @key)}}
         <div class="list-group-item">
             {{#if policy}}

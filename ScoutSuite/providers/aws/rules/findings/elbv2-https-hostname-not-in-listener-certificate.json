@@ -1,0 +1,21 @@
+{
+    "description": "Public Route53 Hostname Not Covered by ALB HTTPS Listener Certificate",
+    "rationale": "An observed public Route53 alias/CNAME points to the ALB, but no certificate in the verified HTTPS/443 SNI certificate list covers its hostname. Unseen DNS outside the account or partial ACM/listener inventory remains UNKNOWN.",
+    "remediation": "Attach an appropriate SAN or single-label wildcard ACM certificate to the listener and verify the external TLS handshake.",
+    "references": [
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_DescribeTargetGroups.html",
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_DescribeListenerCertificates.html"
+    ],
+    "dashboard_name": "Load Balancers",
+    "path": "elbv2.regions.id.vpcs.id.lbs.id",
+    "conditions": [
+        "and",
+        [
+            "https_hostname_coverage_status",
+            "equal",
+            "mismatch"
+        ]
+    ],
+    "id_suffix": "P3BHostnameCertMismatch",
+    "evidence_policy": "p3b-alb-hostname-cert-v1"
+}

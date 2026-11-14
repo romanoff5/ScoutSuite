@@ -27,6 +27,15 @@ class LoadBalancers(AWSCompositeResources):
                     for (load_balancer_id, load_balancer) in self.items()}
         )
 
+        # P3-B: independently collect registered targets. Incomplete AWS APIs are
+        # UNKNOWN and will never be interpreted as an absent backend.
+        for load_balancer in self.values():
+            if load_balancer.get('Type') == 'application':
+                status, groups = await self.facade.elbv2.get_target_group_inventory(
+                    self.region, load_balancer['arn'])
+                load_balancer['target_group_inventory_status'] = status
+                load_balancer['target_groups'] = groups
+
         # RC9: AWS WAF association per internet-facing ALB; origin exposure is classified
         # in preprocessing once security groups are resolved from the EC2 inventory.
         prefix_lists = None

@@ -1207,7 +1207,43 @@ def _classify_scoped_review(resource, field):
     return 'unknown'
 
 
+def _classify_p3b(resource, field, bad, good, not_applicable='not_applicable'):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    value = resource.get(field)
+    if value == bad:
+        return 'insecure'
+    if value == good:
+        return 'secure'
+    if value == not_applicable:
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_p3b_backend_bypass(resource):
+    return _classify_p3b(resource, 'backend_bypass_status',
+                         'potential_bypass', 'no_direct_backend_path')
+
+
+def classify_p3b_hostname_cert(resource):
+    return _classify_p3b(resource, 'https_hostname_coverage_status',
+                         'mismatch', 'covered')
+
+
+def classify_p3b_object_lock(resource):
+    return _classify_p3b(resource, 'object_lock_status', 'absent', 'enabled')
+
+
+def classify_p3b_object_lock_default_retention(resource):
+    return _classify_p3b(resource, 'object_lock_default_retention_status',
+                         'missing', 'configured')
+
+
 CLASSIFIERS = {
+    'p3b-alb-backend-bypass-v1': classify_p3b_backend_bypass,
+    'p3b-alb-hostname-cert-v1': classify_p3b_hostname_cert,
+    'p3b-s3-object-lock-v1': classify_p3b_object_lock,
+    'p3b-s3-object-lock-retention-v1': classify_p3b_object_lock_default_retention,
     'rds-proxy-targets-empty-v1': classify_p3a_rds_empty,
     'rds-proxy-targets-unavailable-v1': classify_p3a_rds_unavailable,
     'rds-proxy-targets-degraded-v1': classify_p3a_rds_degraded,
