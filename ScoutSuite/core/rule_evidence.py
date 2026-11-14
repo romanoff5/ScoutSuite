@@ -1405,13 +1405,18 @@ def evaluate_rule_evidence(rule, services):
             raise ValueError('Unexpected retention policy filename')
         args = getattr(rule, 'args', [])
         if (not isinstance(args, list) or len(args) != 1
-                or not isinstance(args[0], str) or not args[0].isdecimal()):
-            raise ValueError('Explicit numeric retention threshold required')
-        maximum = int(args[0])
-        if not 1 <= maximum <= 3650:
-            raise ValueError('Retention threshold out of range')
-        def classifier(resource):
-            return classify_policy_log_retention(resource, maximum)
+                or not isinstance(args[0], str) or not args[0].isdecimal()
+                or not 1 <= int(args[0]) <= 3650):
+            # An unconfigured rule cannot evaluate resources, but a completely
+            # empty inventory is NOT_APPLICABLE, not a rule-engine failure.
+            # If resources do exist, mark each as UNKNOWN / incomplete. An
+            # approved policy profile fails validation before reaching here.
+            def classifier(resource):
+                return 'unknown'
+        else:
+            maximum = int(args[0])
+            def classifier(resource):
+                return classify_policy_log_retention(resource, maximum)
     elif policy in SCOPED_POLICIES:
         binding = SCOPED_POLICIES[policy].get(getattr(rule, 'filename', None))
         if binding is None:
