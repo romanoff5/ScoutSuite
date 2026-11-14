@@ -47,3 +47,14 @@ never export confidential report evidence to public regression fixtures.
 
 Rollback: revert the P5-B commit; historical reports are not modified.
 No new AWS API permissions, cloud credentials, network probes or live scans.
+
+
+## P5-B IAM Deny precision
+
+The IAM relationship graph now evaluates policy statements for the **specific
+action and target ARN** instead of making every identity indeterminate when an
+unrelated `Deny` occurs. Explicit matching Deny overrides Allow; conditional
+matching Deny, `NotAction`, `NotResource`, incomplete documents and missing
+permission-boundary evidence cannot produce a confirmed path. Both P4-B and
+P4-B2 remain *potential* privilege escalation analysis, not policy simulator
+verification. No new API permissions were requested.

@@ -86,6 +86,41 @@ def _permission(row, action, target, service=None):
     return 'yes' if service in allowed else 'no'
 
 
+
+def _identity_action_authorization(docs, action, target_arn, service=None):
+    """Action/resource-scoped identity-policy candidate, NOT effective IAM access.
+
+    Matching explicit Deny blocks. A conditional Deny or unsupported
+    NotAction/NotResource remains unknown only for the affected authorization.
+    SCP/RCP, session policies and resource-based permissions are not simulated.
+    """
+    allowed, uncertain = False, False
+    for _, statements in docs:
+        for row in statements:
+            action_match = _matches_action(row, action)
+            if action_match == 'no':
+                continue
+            resource_match = _matches_resource(row, target_arn)
+            if resource_match == 'no':
+                continue
+            if action_match != 'yes' or resource_match != 'yes':
+                uncertain = True
+                continue
+            effect = row.get('Effect')
+            if effect == 'Deny':
+                if row.get('Condition') is None:
+                    return 'no'
+                uncertain = True
+            elif effect == 'Allow':
+                verdict = _permission(row, action, target_arn, service)
+                if verdict == 'yes':
+                    allowed = True
+                elif verdict == 'unknown':
+                    uncertain = True
+            else:
+                uncertain = True
+    return 'unknown' if uncertain else 'yes' if allowed else 'no'
+
 def _role_documents(role, policies_by_id):
     docs = []
     incomplete = False
@@ -129,25 +164,16 @@ def _role_documents(role, policies_by_id):
 
 
 def _admin_hint(role, docs, incomplete):
-    """Admin-looking identity grant; never assert effective administrator privileges."""
+    """Broad admin candidate; irrelevant Deny cannot hide a separate Allow."""
     if role.get('role_boundary_collection_status') not in (None, 'complete'):
         return 'unknown'
-    if role.get('permissions_boundary'):
+    if role.get('permissions_boundary') or incomplete:
         return 'unknown'
-    admin = False
-    for _, rows in docs:
-        for row in rows:
-            if row.get('Effect') == 'Deny' or 'NotAction' in row or 'NotResource' in row:
-                incomplete = True
-            if (row.get('Effect') == 'Allow' and row.get('Condition') is None and
-                    _matches_action(row, 'iam:CreateRole') == 'yes' and
-                    _matches_action(row, 'ec2:RunInstances') == 'yes' and
-                    _matches_action(row, 's3:DeleteObject') == 'yes' and
-                    _matches_resource(row, '*') == 'yes'):
-                admin = True
-    if incomplete:
+    probes = [_identity_action_authorization(docs, action, '*')
+              for action in ('iam:CreateRole', 'ec2:RunInstances', 's3:DeleteObject')]
+    if 'unknown' in probes:
         return 'unknown'
-    return 'admin_policy_candidate' if admin else 'no_admin_grant_observed'
+    return 'admin_policy_candidate' if all(x == 'yes' for x in probes) else 'no_admin_grant_observed'
 
 
 def _trust_entries(role):
@@ -346,9 +372,6 @@ def build_relationship_graph(roles, policies):
                 or source.get('permissions_boundary')):
             source['p4b_passrole_path_status'] = 'unknown'
             continue
-        if any(row.get('Effect') == 'Deny' or 'NotAction' in row or
-               'NotResource' in row for _, rows in docs for row in rows):
-            incomplete = True
         for target in admins:
             target_arn = target['arn']
             if target_arn == source_arn:
@@ -357,14 +380,16 @@ def build_relationship_graph(roles, policies):
             for label, service_action, service_principal in SERVICE_PATHS:
                 if _service_trust(target, service_principal) != 'yes':
                     continue
+                if incomplete or _identity_action_authorization(
+                        docs, 'iam:PassRole', target_arn, service_principal) != 'yes':
+                    continue
+                if _identity_action_authorization(docs, service_action, '*') != 'yes':
+                    continue
                 passing = [(policy, row) for policy, rows in docs for row in rows
                            if _permission(row, 'iam:PassRole', target_arn, service_principal) == 'yes']
                 capable = [(policy, row) for policy, rows in docs for row in rows
                            if _permission(row, service_action, '*') == 'yes']
                 if not passing or not capable:
-                    continue
-                if incomplete:
-                    source['p4b_passrole_path_status'] = 'unknown'
                     continue
                 source['p4b_passrole_path_status'] = 'candidate'
                 source['p4b_passrole_target_arns'].append(target_arn)

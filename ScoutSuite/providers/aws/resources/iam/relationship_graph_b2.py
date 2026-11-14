@@ -5,7 +5,7 @@ never confirmed IAM effective permissions (SCP/RCP/session/resource policies,
 account constraints, organization boundaries and service execution not simulated).
 """
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
-    _admin_hint, _edge_id, _matches_action, _oidc_scope, _permission,
+    _admin_hint, _edge_id, _identity_action_authorization, _matches_action, _oidc_scope, _permission,
     _role_documents, _service_trust, _trust_entries, _values,
     SERVICE_PATHS,
 )
@@ -39,11 +39,6 @@ def _entity_documents(entity, policies, kind):
                            entity.get('p4b2_boundary') is not None):
         incomplete = True
     return docs, incomplete
-
-
-def _has_uncertain_effect(docs):
-    return any(row.get('Effect') != 'Allow' or 'NotAction' in row or
-               'NotResource' in row for _, rows in docs for row in rows)
 
 
 def _trust_principal(target, principal_arn):
@@ -164,23 +159,18 @@ def _role_documents_complete(role, policies):
     if (role.get('role_boundary_collection_status') not in (None, 'complete')
             or role.get('permissions_boundary')):
         incomplete = True
-    if _has_uncertain_effect(docs):
-        incomplete = True
     return docs, incomplete
 
 
 def _candidate_actions(docs, target_arn, target, kind):
     if kind == 'assume':
-        return any(_permission(row, 'sts:AssumeRole', target_arn) == 'yes'
-                   for _, rows in docs for row in rows)
+        return _identity_action_authorization(docs, 'sts:AssumeRole', target_arn) == 'yes'
     for _, action, principal in SERVICE_PATHS:
         if _service_trust(target, principal) != 'yes':
             continue
-        passrole = any(_permission(row, 'iam:PassRole', target_arn, principal) == 'yes'
-                       for _, rows in docs for row in rows)
-        can_create = any(_permission(row, action, '*') == 'yes'
-                         for _, rows in docs for row in rows)
-        if passrole and can_create:
+        passrole = _identity_action_authorization(docs, 'iam:PassRole', target_arn, principal)
+        can_create = _identity_action_authorization(docs, action, '*')
+        if passrole == 'yes' and can_create == 'yes':
             return True
     return False
 
@@ -284,7 +274,6 @@ def extend_relationship_graph_b2(graph, roles, users, groups, policies):
                     group_docs, missing = _entity_documents(group_index[name], lookup, 'group')
                     docs.extend(group_docs)
                     incomplete |= missing
-        incomplete |= _has_uncertain_effect(docs)
         if incomplete:
             continue
         for target in sorted(admin_roles, key=lambda r: r['arn']):
@@ -307,8 +296,8 @@ def extend_relationship_graph_b2(graph, roles, users, groups, policies):
                         group = group_index[name]
                         g_docs, g_incomplete = _entity_documents(group, lookup, 'group')
                         if not g_incomplete and any(
-                                _permission(row, 'iam:PassRole', target_arn, p) == 'yes'
-                                for _, rs in g_docs for row in rs
+                                _identity_action_authorization(g_docs, 'iam:PassRole',
+                                                               target_arn, p) == 'yes'
                                 for _, _, p in SERVICE_PATHS):
                             group['p4b2_group_passrole_status'] = 'candidate'
         if graph['status'] == 'partial':
