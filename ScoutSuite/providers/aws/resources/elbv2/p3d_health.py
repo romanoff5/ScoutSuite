@@ -15,6 +15,7 @@ def annotate_alb_health(services):
                 lb['p3d_health_mismatch_status'] = 'unknown'
                 lb['p3d_unhealthy_status'] = 'unknown'
                 lb['p3d_unhealthy_target_evidence'] = []
+                lb['p3d_health_mismatch_evidence'] = []
                 if lb.get('Type') != 'application':
                     lb['p3d_health_mismatch_status'] = 'not_applicable'
                     lb['p3d_unhealthy_status'] = 'not_applicable'
