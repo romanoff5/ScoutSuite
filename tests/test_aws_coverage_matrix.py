@@ -216,3 +216,21 @@ def test_explicit_collector_partial_page_overrides_good_api_responses():
     assert row['status'] == 'PARTIAL'
     assert row['collector_gaps'] == ['metric_alarms_collection_status:partial']
     assert row['zero_findings_interpretation'] == 'NOT_VERIFIED_CLEAN'
+
+
+def test_missing_requested_region_and_explicitly_excluded_region_are_visible():
+    ctx = RunContext(provider='aws')
+    ctx.record_aws_api('ec2', 'eu-central-1', 'DescribeInstances', 'success')
+    ctx.record_evidence_observation(
+        'ec2', 'eu-central-1', 'ec2.regions.eu-central-1.instances.i1', 'secure')
+    resources = {'ec2': {'regions': {'eu-central-1': {'instances_count': 1}}}}
+    matrix = build_aws_coverage_matrix(
+        ['ec2'], resources, ctx,
+        requested_regions=['eu-central-1', 'eu-west-1'],
+        excluded_regions=['us-east-2'], enabled_rule_counts={'ec2': 5})
+    assert _row(matrix, 'ec2', 'eu-central-1')['status'] == 'OBSERVED_COMPLETE'
+    assert _row(matrix, 'ec2', 'eu-west-1')['status'] == 'UNKNOWN'
+    excluded = _row(matrix, 'ec2', 'us-east-2')
+    assert excluded['status'] == 'SKIPPED'
+    assert excluded['region_excluded'] is True
+    assert excluded['skipped_checks'] == 5

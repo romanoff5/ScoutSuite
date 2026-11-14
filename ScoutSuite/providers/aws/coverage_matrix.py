@@ -65,15 +65,17 @@ def _collector_gaps(region_data):
     return sorted(gaps)[:64]
 
 
-def _regions(service_data, requested_regions):
+def _regions(service_data, requested_regions, excluded_regions):
     if not isinstance(service_data, dict):
         return ['undetermined']
     if 'regions' not in service_data:
         return ['global']
     records = service_data.get('regions')
-    if isinstance(records, dict) and records:
-        return sorted(records)
-    return sorted(set(requested_regions)) if requested_regions else ['undetermined']
+    observed = set(records) if isinstance(records, dict) else set()
+    # Explicitly requested but undiscovered Regions must remain visible as
+    # UNKNOWN, and excluded Regions must remain visible as SKIPPED.
+    regions = observed | set(requested_regions) | set(excluded_regions)
+    return sorted(regions) if regions else ['undetermined']
 
 
 def _findings_in_region(service, region, data):
@@ -101,8 +103,9 @@ def _findings_in_region(service, region, data):
 
 
 def build_aws_coverage_matrix(service_list, services, context,
-                              requested_regions=(), skipped_services=(),
-                              enabled_rule_counts=None, extra_issues=()):
+                              requested_regions=(), excluded_regions=(),
+                              skipped_services=(), enabled_rule_counts=None,
+                              extra_issues=()):
     """Return bounded JSON-safe observability, not a positive compliance verdict.
 
     'checked_resources' counts *distinct evaluated evidence-policy paths*; no
@@ -139,10 +142,13 @@ def build_aws_coverage_matrix(service_list, services, context,
     selected = sorted(set(service_list))
     # Explicitly skipped services remain visible, without fabricated API calls.
     for service in sorted(set(selected) | set(skipped_services) | set(enabled_rule_counts)):
-        skipped = service not in selected
+        service_skipped = service not in selected
         data = services.get(service) if isinstance(services, dict) else None
-        regions = ['not_scanned'] if skipped else _regions(data, requested_regions)
+        regions = (['not_scanned'] if service_skipped
+                   else _regions(data, requested_regions, excluded_regions))
         for region in regions:
+            region_excluded = region in excluded_regions
+            skipped = service_skipped or region_excluded
             matching = [
                 issue for issue in issues
                 if _canonical(issue.get('scope')) in (service, 'aws', 'assessment')
@@ -181,6 +187,7 @@ def build_aws_coverage_matrix(service_list, services, context,
             skipped_checks = enabled_rule_counts.get(service, 0) if skipped else 0
             rows.append({
                 'service': service, 'region': region, 'status': state,
+                'region_excluded': region_excluded,
                 'inventory_records_observed': inventory,
                 'checked_resources': 0 if skipped else evid['checked'],
                 'unknown_resources': 0 if skipped else evid['unknown'],

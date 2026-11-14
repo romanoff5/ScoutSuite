@@ -8,7 +8,9 @@ report. The matrix is deliberately **not** a compliance score.
 
 Each row corresponds to an AWS service and a Region. Global services use
 `global`; when regional discovery is incomplete, `undetermined` or the
-explicitly selected Region is preserved. Services omitted by `--services` or
+explicitly selected Region is preserved. Explicitly requested Regions not
+returned by discovery are shown as `UNKNOWN`; `--excluded-regions` entries
+are shown as `SKIPPED` rather than silently disappearing. Services omitted by `--services` or
 `--skip-services` are visible as `SKIPPED` when rules exist for them.
 
 | Status | Meaning |

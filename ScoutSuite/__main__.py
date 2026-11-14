@@ -715,7 +715,8 @@ async def _run_impl(context: RunContext,
                         enabled_rule_counts.get(rule.service, 0) + 1)
         matrix = build_aws_coverage_matrix(
             cloud_provider.service_list, cloud_provider.services, context,
-            requested_regions=regions, skipped_services=skipped_services,
+            requested_regions=regions, excluded_regions=excluded_regions,
+            skipped_services=skipped_services,
             enabled_rule_counts=enabled_rule_counts)
         cloud_provider.collection_status['coverage_matrix'] = matrix
         if not matrix['complete']:
