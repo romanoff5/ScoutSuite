@@ -201,7 +201,9 @@ def test_uncollected_service_is_unknown_not_zero_resources():
 
 
 @pytest.mark.parametrize("tamper", [
-    lambda s: s["rules"]["ec2-instance-imdsv1-enabled"]["facts"][0].update(value="required"),
+    lambda s: s["rules"]["ec2-instance-imdsv1-enabled"]["facts"][0].update(
+        value="optional" if s["rules"]["ec2-instance-imdsv1-enabled"]["facts"][0]["value"] != "optional"
+        else "required"),
     lambda s: s["rules"]["rds-proxy-require-tls-disabled"]["facts"][0].update(
         token="hmac:" + "0" * 40),
     lambda s: s["integrity"].update(sha256="f" * 64),
