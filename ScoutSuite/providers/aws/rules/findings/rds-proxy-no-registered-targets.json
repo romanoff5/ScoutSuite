@@ -1,0 +1,20 @@
+{
+    "description": "Available RDS Proxy Has No Registered Database Targets",
+    "rationale": "An available RDS Proxy returned a complete, empty target inventory. This is a backend configuration gap, not proof of an application outage.",
+    "remediation": "Register the intended RDS instance or cluster targets and validate backend connectivity.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBProxyTargets.html"
+    ],
+    "dashboard_name": "RDS Proxies",
+    "path": "rds.regions.id.proxies.id",
+    "conditions": [
+        "and",
+        [
+            "target_health_status",
+            "equal",
+            "no_targets"
+        ]
+    ],
+    "id_suffix": "rdsproxynoregisteredtargets",
+    "evidence_policy": "rds-proxy-targets-empty-v1"
+}

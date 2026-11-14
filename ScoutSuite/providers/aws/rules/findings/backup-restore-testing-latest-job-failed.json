@@ -1,0 +1,20 @@
+{
+    "description": "Most Recent Observed AWS Backup Restore Test Failed",
+    "rationale": "The newest observed restore testing job from a fully enumerated recent history failed or was aborted. This does not establish all-time restore failure.",
+    "remediation": "Investigate the failed restore test and rerun with application validation.",
+    "references": [
+        "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html"
+    ],
+    "dashboard_name": "Restore testing plans",
+    "path": "backup.regions.id.restore_testing_plans.id",
+    "conditions": [
+        "and",
+        [
+            "latest_restore_job_status",
+            "equal",
+            "failed"
+        ]
+    ],
+    "id_suffix": "backuprestoretestinglatestjobfailed",
+    "evidence_policy": "backup-latest-restore-failure-v1"
+}

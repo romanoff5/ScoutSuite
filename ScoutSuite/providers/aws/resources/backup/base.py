@@ -8,6 +8,7 @@ from ScoutSuite.providers.aws.resources.regions import Regions
 
 from .vaults import Vaults
 from .plans import Plans
+from .restore_assurance import assess_restore_testing_plan
 
 
 class MissingCollection(list):
@@ -366,4 +367,7 @@ class BackupPublic(Regions):
                 for j in matching_jobs]
             test['results_status'] = (
                 'partial' if status['restore_jobs'] != 'complete'
+                or status['restore_testing_plans'] != 'complete'
                 or not test.get('selection_collection_complete') else 'complete')
+            test.update(assess_restore_testing_plan(
+                test, matching_jobs, test['results_status']))

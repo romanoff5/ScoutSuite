@@ -2,6 +2,7 @@
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.utils import get_non_provider_id
+from .access_review import classify_eks_cluster_admin
 
 
 class Clusters(AWSResources):
@@ -24,6 +25,53 @@ class Clusters(AWSResources):
                     context.record_collection_issue('partial', 'eks', 'DuplicateClusterKey')
                 continue
             self[key] = value
+        await self._enrich_access()
+
+
+    async def _enrich_access(self):
+        """Record only EKS API-issued permissions; never infer complete Kubernetes RBAC."""
+        import asyncio
+        gate = asyncio.Semaphore(4)
+        async def enrich(cluster):
+            mode = cluster.get('access_config', {}).get('authenticationMode')
+            method = getattr(self.facade.eks, 'get_access_entries', None)
+            if method is None:
+                result = {'status': 'unknown', 'entries': []}
+            else:
+                async with gate:
+                    try:
+                        result = await method(self.region, cluster['name'], mode)
+                    except Exception:
+                        context = get_current_run_context()
+                        if context is not None:
+                            context.record_collection_issue(
+                                'partial', 'eks', 'EKSAccessEntriesEnrichmentFailed')
+                        result = {'status': 'unknown', 'entries': []}
+            cluster['access_entry_inventory_status'] = result.get('status', 'unknown')
+            cluster['access_authentication_mode'] = mode
+            mapped = {}
+            partial = result.get('status') not in ('complete', 'not_applicable')
+            for row in result.get('entries', []):
+                principal = row.get('principal_arn') if isinstance(row, dict) else None
+                if not isinstance(principal, str) or not principal or get_non_provider_id(principal) in mapped:
+                    partial = True
+                    continue
+                key = get_non_provider_id(principal)
+                policies = row.get('policies')
+                policy_status = row.get('policy_collection_status')
+                permission = classify_eks_cluster_admin(policies, policy_status)
+                mapped[key] = {
+                    'id': key, 'name': principal, 'principal_arn': principal,
+                    'region': self.region, 'cluster': cluster['name'],
+                    'policy_collection_status': policy_status,
+                    'admin_grant_status': permission, 'policies': policies,
+                }
+            if partial and result.get('status') == 'complete':
+                cluster['access_entry_inventory_status'] = 'partial'
+            cluster['access_entries'] = mapped
+            cluster['access_entries_count'] = len(mapped)
+
+        await asyncio.gather(*(enrich(c) for c in self.values()))
 
     def _parse_cluster(self, raw):
         if not isinstance(raw, dict):

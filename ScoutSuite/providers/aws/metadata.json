@@ -483,6 +483,10 @@
         "clusters": {
           "cols": 2,
           "path": "services.eks.regions.id.clusters"
+        },
+        "access_entries": {
+          "cols": 2,
+          "path": "services.eks.regions.id.clusters.id.access_entries"
         }
       }
     }

@@ -1918,6 +1918,54 @@
                 "level": "warning"
             }
         ],
+        "rds-proxy-no-registered-targets.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-proxy-all-targets-unavailable.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-proxy-partial-target-degradation.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "eks-access-entry-cluster-admin.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "eks-access-entry-cluster-wide-admin.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "backup-restore-testing-latest-job-failed.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "backup-restore-testing-latest-validation-failed.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "backup-restore-testing-stale-execution.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "elbv2-waf-backend-public-bypass-candidate.json": [
             {
                 "enabled": true,

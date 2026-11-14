@@ -1,0 +1,25 @@
+{
+    "description": "AWS Backup Restore Testing Plan Has No Recent Execution (45-Day Review)",
+    "rationale": "LastExecutionTime exceeds 45 days, or a plan older than 45 days has never executed. This policy-oriented cadence threshold is not a universal compliance requirement; recent execution alone is not proof of success.",
+    "remediation": "Align the restore testing schedule with organizational requirements and document verified results.",
+    "references": [
+        "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html"
+    ],
+    "dashboard_name": "Restore testing plans",
+    "path": "backup.regions.id.restore_testing_plans.id",
+    "conditions": [
+        "or",
+        [
+            "restore_testing_schedule_status",
+            "equal",
+            "stale"
+        ],
+        [
+            "restore_testing_schedule_status",
+            "equal",
+            "never_executed_stale"
+        ]
+    ],
+    "id_suffix": "backuprestoretestingstaleexecution",
+    "evidence_policy": "backup-restore-testing-freshness-v1"
+}
