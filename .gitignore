@@ -78,3 +78,7 @@ report-*
 # Local owner task documents; not part of the published fork.
 /ScoutSuite_AWS_Codex_Tasks.md
 /ScoutSuite_AWS_Codex_Tasks_Fork.md
+
+# P4-F local identities and evidence snapshots (never commit client material)
+*.snapshot-key
+*.p4f.snapshot.json
