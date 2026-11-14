@@ -18,7 +18,7 @@ import zipfile
 
 
 SOURCE = Path(__file__).resolve().parents[1]
-PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests',
+PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'p3c',
           'sqlite_http', 'xss_browser', 'report_e2e', 'packaging')
 CLI_CASES = {'test_empty', 'test_aws_provider', 'test_gcp_provider', 'test_azure_provider',
              'test_unauthenticated', 'test_keyboardinterrupted'}
@@ -307,6 +307,11 @@ class Pipeline:
                                 json.loads((self.root / 'fixtures.json').read_text(encoding='utf-8')))
         self.write('test-execution', data)
         print(json.dumps(data, sort_keys=True), flush=True)
+
+    def p3c(self):
+        """Network-isolated quality gate in the pinned test venv, never system Python."""
+        self.run([python_at(self.root, 'test'), '-B', '-m', 'tools.p3c_quality', '--check'],
+                 cwd=SOURCE)
 
     def sqlite_http(self):
         """Run true HTTP/TCP integration inside a loopback-only net namespace.

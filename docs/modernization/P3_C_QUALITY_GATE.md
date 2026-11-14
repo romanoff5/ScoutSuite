@@ -16,12 +16,12 @@ abstracts are manually normalized; they are **not original findings** and are
 | --- | ---: |
 | Source set A / B | 39 / 27 |
 | AWS configuration cases | 63 |
-| Direct rule-contract mappings | 33 |
+| Direct rule-contract mappings | 32 |
 | Partial semantic mappings | 22 |
-| Genuine rule gaps | 8 |
+| Genuine rule gaps | 9 |
 | Application / dependency outside scanner scope | 3 |
-| Direct mapping share of in-scope cases | 52.38% |
-| Direct plus partial mapping share | 87.30% |
+| Direct mapping share of in-scope cases | 50.79% |
+| Direct plus partial mapping share | 85.71% |
 
 A **direct** mapping means the existing rule evaluates the **general control
 condition** described by the abstract case. It does *not* mean the original
@@ -74,8 +74,8 @@ equivalence to a particular Prowler release or configuration profile.
 ## Usage (offline; no AWS credentials)
 
 ```shell
-python -B tools/p3c_quality.py --check
-python -B tools/p3c_quality.py --json p3c-summary.json --markdown p3c-summary.md
+python -B -m tools.p3c_quality --check
+python -B -m tools.p3c_quality --json p3c-summary.json --markdown p3c-summary.md
 ```
 
 The first command is part of the four-platform Offline CI workflow.

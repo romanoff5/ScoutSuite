@@ -405,11 +405,9 @@
       "id": "A-39",
       "domain": "identity",
       "control": "aws_support_role_absent",
-      "coverage": "direct",
-      "rule_ids": [
-        "iam-no-support-role.json"
-      ],
-      "limitation": "IAM support-access recommendation depends on operating model."
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "Support-access rule exists but is disabled in the default ruleset; the default scanner does not detect this condition."
     },
     {
       "id": "B-01",

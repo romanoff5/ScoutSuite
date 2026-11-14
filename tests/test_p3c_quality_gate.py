@@ -23,9 +23,9 @@ def test_p3c_report_census_and_quality_thresholds():
     census = result['report_cases']
     assert census['total'] == 66 and census['in_scope'] == 63
     assert census['coverage'] == {
-        'direct': 33, 'partial': 22, 'gap': 8, 'out_of_scope': 3}
+        'direct': 32, 'partial': 22, 'gap': 9, 'out_of_scope': 3}
     assert census['by_group']['A'] == {
-        'direct': 15, 'partial': 17, 'gap': 7}
+        'direct': 14, 'partial': 17, 'gap': 8}
     assert census['by_group']['B'] == {
         'direct': 18, 'partial': 5, 'gap': 1, 'out_of_scope': 3}
     metrics = result['synthetic_detection']

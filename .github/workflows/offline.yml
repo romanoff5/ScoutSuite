@@ -87,7 +87,7 @@ jobs:
         run: python -B tools/ci.py tests
       - name: P3-C anonymized coverage and synthetic TP-FP-UNKNOWN quality gate
         if: "!cancelled() && steps.build.outcome == 'success'"
-        run: python -B tools/p3c_quality.py --check
+        run: python -B tools/ci.py p3c
       - name: Real TCP loopback SQLite report HTTP integration (isolated Linux namespace)
         if: "!cancelled() && steps.build.outcome == 'success' && runner.os == 'Linux'"
         run: python -B tools/ci.py sqlite_http
