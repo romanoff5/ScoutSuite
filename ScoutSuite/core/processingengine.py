@@ -1,6 +1,7 @@
 from ScoutSuite.core.console import print_debug, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
+from ScoutSuite.core.finding_confidence import build_finding_confidence
 from ScoutSuite.core.policy_profiles import COMPLIANCE_PROFILE_ID, policy_requirement_for
 from ScoutSuite.utils import manage_dictionary
 
@@ -128,6 +129,10 @@ class ProcessingEngine:
                                     'compliance_verified': False,
                                 } for entry in entries]
 
+                    if self.ruleset.rule_type == 'findings':
+                        finding = cloud_provider.services[service][self.ruleset.rule_type][rule.key]
+                        finding['confidence_assessment'] = build_finding_confidence(rule, finding)
+
                 except Exception as e:
                     print_exception(f'Failed to process rule defined in {rule.filename}: {e}')
                     # Never encode a failed evaluation as an empty compliant result.
@@ -136,6 +141,8 @@ class ProcessingEngine:
                     finding['checked_items'] = 0
                     finding['flagged_items'] = 0
                     finding['assessment_status'] = 'incomplete'
+                    if self.ruleset.rule_type == 'findings':
+                        finding['confidence_assessment'] = build_finding_confidence(rule, finding)
                     context = get_current_run_context()
                     if context is not None:
                         context.record_collection_issue('failed', service, 'RuleEvaluation')

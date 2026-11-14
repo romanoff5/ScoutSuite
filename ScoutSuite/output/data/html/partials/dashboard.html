@@ -76,6 +76,15 @@
                                 {{#if assessment_status}}
                                 <li>Assessment status: {{assessment_status}}</li>
                                 {{/if}}
+                                {{#if confidence_assessment}}
+                                <li>Claim: {{confidence_assessment.claim_type}}</li>
+                                <li>Verification: {{confidence_assessment.verification_status}}</li>
+                                <li>Confidence: {{confidence_assessment.confidence}}</li>
+                                <li>Evidence quality: {{confidence_assessment.evidence_quality}}</li>
+                                {{#each confidence_assessment.reason_codes}}
+                                <li>Reason: {{this}}</li>
+                                {{/each}}
+                                {{/if}}
                                 {{#if policy_requirement}}
                                 <li>Policy requirement: {{policy_requirement}}</li>
                                 <li>Severity assigned by policy: {{severity_assigned}}</li>

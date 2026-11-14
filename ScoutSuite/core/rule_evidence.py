@@ -1532,6 +1532,42 @@ def classify_policy_log_retention(resource, maximum_days):
     return 'insecure' if days > maximum_days else 'secure'
 
 
+
+
+# An explicit allowlist of normalized, non-secret diagnostic attributes.
+# Original IDs/ARNs are retained in local reports, never in public P4-F snapshots.
+P5B_EVIDENCE_FIELDS = {
+    'iam': ('arn', 'name', 'p4b_passrole_path_status', 'p4b_passrole_target_arns',
+            'p4b_privileged_oidc_status', 'p4b2_user_passrole_status',
+            'p4b2_user_assumerole_status', 'p4b2_role_assumerole_status',
+            'p4b2_group_passrole_status', 'p4b2_oidc_audience_status',
+            'p4b2_oidc_subject_status', 'p4b2_access_analyzer_status'),
+    'cloudwatch': ('security_metric_alerting_status', 'metric_filters_collection_status',
+                   'metric_alarms_collection_status', 'retention_status',
+                   'retention_days', 'customer_kms_status'),
+    'ec2': ('public_https_status', 'backend_bypass_status'),
+    'elbv2': ('backend_bypass_status', 'https_hostname_coverage_status',
+              'https_hostnames_checked', 'https_hostname_mismatches'),
+    'backup': ('latest_restore_job_status', 'latest_validation_status',
+               'restore_testing_schedule_status', 'last_observed_restore_job_id',
+               'last_observed_restore_duration_minutes', 'rto_assessment_status'),
+    'acm': ('arn', 'DomainName', 'SubjectAlternativeNames', 'expiry_status',
+            'renewal_review_status'),
+}
+
+
+def _p5b_facts(resource, service):
+    """Only approved simple values; never copy arbitrary source objects or secrets."""
+    if not isinstance(resource, dict):
+        return {}
+    result = {}
+    for field in P5B_EVIDENCE_FIELDS.get(service, ()):
+        value = resource.get(field)
+        if type(value) in (str, bool, int, float) or (
+                isinstance(value, list) and all(type(item) is str for item in value)):
+            result[field] = value
+    return result
+
 def evaluate_rule_evidence(rule, services):
     """Evaluate optional status metadata without changing flagged item IDs."""
     policy = getattr(rule, 'evidence_policy', None)
@@ -1573,6 +1609,7 @@ def evaluate_rule_evidence(rule, services):
 
     counts = {key: 0 for key in ('secure', 'insecure', 'unknown', 'not_applicable')}
     unknown_paths = []
+    observations = []
     parts = rule.path.split('.')
     # SSL policy is a scalar; classification needs the parent listener
     # Protocol to distinguish HTTP/not-applicable from HTTPS/unknown.
@@ -1597,6 +1634,13 @@ def evaluate_rule_evidence(rule, services):
             segments = path.split('.')
             region = segments[2] if len(segments) > 2 and segments[1] == 'regions' else 'global'
             context.record_evidence_observation(segments[0], region, path, status)
+        if status in ('insecure', 'unknown'):
+            observations.append({
+                'resource_path': path,
+                'outcome': status,
+                'evidence_policy': policy,
+                'observed_attributes': _p5b_facts(resource, path.split('.')[0]),
+            })
         if status == 'unknown':
             unknown_paths.append(path)
 
@@ -1627,6 +1671,7 @@ def evaluate_rule_evidence(rule, services):
         'assessment_status': status,
         'counts': counts,
         'unknown_resources': unknown_paths,
+        'observations': observations,
         'evaluated_resources': counts['secure'] + counts['insecure'],
         'compliance_verified': False,
     }
