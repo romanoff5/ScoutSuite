@@ -8,14 +8,16 @@
     "dashboard_name": "Restore testing plans",
     "path": "backup.regions.id.restore_testing_plans.id",
     "conditions": [
-        "and",
+        "or",
         [
             "restore_testing_schedule_status",
-            "in",
-            [
-                "stale",
-                "never_executed_stale"
-            ]
+            "equal",
+            "stale"
+        ],
+        [
+            "restore_testing_schedule_status",
+            "equal",
+            "never_executed_stale"
         ]
     ],
     "id_suffix": "backuprestoretestingstaleexecution",
