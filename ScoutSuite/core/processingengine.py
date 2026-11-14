@@ -129,10 +129,6 @@ class ProcessingEngine:
                                     'compliance_verified': False,
                                 } for entry in entries]
 
-                    if self.ruleset.rule_type == 'findings':
-                        finding = cloud_provider.services[service][self.ruleset.rule_type][rule.key]
-                        finding['confidence_assessment'] = build_finding_confidence(rule, finding)
-
                 except Exception as e:
                     print_exception(f'Failed to process rule defined in {rule.filename}: {e}')
                     # Never encode a failed evaluation as an empty compliant result.
@@ -141,8 +137,6 @@ class ProcessingEngine:
                     finding['checked_items'] = 0
                     finding['flagged_items'] = 0
                     finding['assessment_status'] = 'incomplete'
-                    if self.ruleset.rule_type == 'findings':
-                        finding['confidence_assessment'] = build_finding_confidence(rule, finding)
                     context = get_current_run_context()
                     if context is not None:
                         context.record_collection_issue('failed', service, 'RuleEvaluation')
@@ -152,6 +146,11 @@ class ProcessingEngine:
                     ):
                         cloud_provider.services[service][self.ruleset.rule_type][rule.key][
                             'assessment_status'] = 'incomplete'
+                # Apply confidence only after global collection gaps have finalized
+                # the finding's assessment status (including the failure path).
+                if self.ruleset.rule_type == 'findings' and not skip_dashboard:
+                    finding = cloud_provider.services[service][self.ruleset.rule_type][rule.key]
+                    finding['confidence_assessment'] = build_finding_confidence(rule, finding)
 
     @staticmethod
     def _collection_gap_scopes(cloud_provider):

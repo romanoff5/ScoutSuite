@@ -13,10 +13,10 @@ ATTACK_PATH_POLICIES = frozenset((
     'iam-p4b2-user-assumerole-v1',
     'iam-p4b2-role-assumerole-v1',
     'iam-p4b2-group-passrole-v1',
-    'p3b-alb-backend-bypass-v1',
 ))
 POTENTIAL_EXPOSURE_POLICIES = frozenset((
     'ec2-direct-public-https-v1',
+    'p3b-alb-backend-bypass-v1',
 ))
 TLS_POLICIES = frozenset(('p3b-alb-hostname-cert-v1',))
 MONITORING_POLICIES = frozenset(('cloudwatch-security-metric-alerting-v1',))
@@ -125,7 +125,7 @@ def build_finding_confidence(rule, finding):
         }
     if kind == 'LOCAL_MONITORING_CONFIGURATION':
         result['monitoring_assurance'] = {
-            'local_cloudwatch': 'MISSING' if bad and flagged else 'EXTERNAL_UNVERIFIED',
+            'local_cloudwatch': 'MISSING' if bad and flagged else 'UNKNOWN',
             'external_siem': 'EXTERNAL_UNVERIFIED',
             'end_to_end_delivery': 'EXTERNAL_UNVERIFIED',
             'verified_configured': False,

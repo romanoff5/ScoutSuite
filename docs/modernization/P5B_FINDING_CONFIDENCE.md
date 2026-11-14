@@ -58,3 +58,12 @@ matching Deny, `NotAction`, `NotResource`, incomplete documents and missing
 permission-boundary evidence cannot produce a confirmed path. Both P4-B and
 P4-B2 remain *potential* privilege escalation analysis, not policy simulator
 verification. No new API permissions were requested.
+
+
+## Regression: assessment finalization ordering
+
+The confidence builder runs **after** all rule-level and pre-existing
+global collection gaps are applied. An observed finding within a partially
+collected scope retains its potential/configuration claim, but its
+`evidence_quality` is `PARTIAL`, never `COMPLETE`. ALB bypass is treated
+as potential network exposure (not as an IAM simulation result).

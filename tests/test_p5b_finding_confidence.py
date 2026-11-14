@@ -3,6 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from ScoutSuite.core.finding_confidence import build_finding_confidence
+from ScoutSuite.core.processingengine import ProcessingEngine
 from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,13 +36,20 @@ def test_config_is_confirmed_not_compliance_certified():
 
 def test_attack_candidate_never_promoted_to_confirmed_permission():
     for policy in ('iam-p4b2-user-passrole-v1',
-                   'iam-p4b2-user-assumerole-v1',
-                   'p3b-alb-backend-bypass-v1'):
+                   'iam-p4b2-user-assumerole-v1'):
         result = assessed(policy)
         assert result['verification_status'] == 'POTENTIAL'
         assert result['confidence'] == 'MEDIUM'
         assert result['iam_simulator_status'] == 'NOT_RUN'
         assert result['attack_execution_verified'] is False
+
+
+def test_alb_bypass_is_network_potential_not_iam_simulator():
+    result = assessed('p3b-alb-backend-bypass-v1')
+    assert result['verification_status'] == 'POTENTIAL'
+    assert result['claim_type'] == 'POTENTIAL_NETWORK_EXPOSURE'
+    assert result['network_path_checks']['routing'] == 'UNVERIFIED'
+    assert 'iam_simulator_status' not in result
 
 
 def test_incomplete_scope_is_partial_but_observed_bad_configuration_remains():
@@ -119,3 +127,26 @@ def test_html_dashboard_escapes_all_confidence_fields():
     assert '{{confidence_assessment.confidence}}' in text
     assert '{{confidence_assessment.verification_status}}' in text
     assert '{{{' not in text
+
+
+def test_global_collection_gap_downgrades_confidence_after_rule_evaluation():
+    # Regression: ProcessingEngine applies global gap scopes in the else
+    # clause after evaluating the rule; confidence must use the final status.
+    report = SimpleNamespace(
+        services={'iam': {'users': {'u': {'p4b2_user_passrole_status': 'candidate'}}}},
+        service_list=['iam'],
+        collection_status={'issues': [{'scope': 'iam', 'reason_code': 'AccessDenied'}]},
+    )
+    test_rule = SimpleNamespace(
+        filename='iam-p4b2-user-passrole-to-privileged-role.json',
+        key='iam-p4b2-user-passrole-to-privileged-role',
+        service='iam', path='iam.users.id', description='Synthetic IAM',
+        dashboard_name='IAM users', conditions=[], enabled=True, level='review',
+        evidence_policy='iam-p4b2-user-passrole-v1',
+    )
+    rules = SimpleNamespace(rule_type='findings', rules={'iam-p4b2': [test_rule]})
+    ProcessingEngine(rules).run(report)
+    finding = report.services['iam']['findings'][test_rule.key]
+    assert finding['assessment_status'] == 'incomplete'
+    assert finding['confidence_assessment']['evidence_quality'] == 'PARTIAL'
+    assert finding['confidence_assessment']['verification_status'] == 'POTENTIAL'
