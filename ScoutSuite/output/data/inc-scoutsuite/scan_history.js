@@ -179,11 +179,13 @@
   }
 
   function sameIdentitySpace(a, b) {
-    if (a.type === 'report' && b.type === 'report') {
-      return a.provider === b.provider && !!a.account && a.account === b.account
-    }
-    if (a.type === 'report' || b.type === 'report') return false
-    return a.data.key_id === b.data.key_id
+    // A P4-F HMAC key_id is NOT evidence that either unverified file is
+    // authentic, or that the two snapshots describe the same AWS account.
+    // The keyless UI can compare observed counts, never assert remediation
+    // based on anonymous tokens. Use authenticated CLI for verified identity
+    // comparisons. Only full, same-account RESULTS may claim resolved items.
+    return a.type === 'report' && b.type === 'report' &&
+      a.provider === b.provider && !!a.account && a.account === b.account
   }
 
   function compare(a, b) {
