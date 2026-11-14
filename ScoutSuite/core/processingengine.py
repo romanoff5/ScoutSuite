@@ -1,6 +1,7 @@
 from ScoutSuite.core.console import print_debug, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
+from ScoutSuite.core.policy_profiles import COMPLIANCE_PROFILE_ID, policy_requirement_for
 from ScoutSuite.utils import manage_dictionary
 
 from ScoutSuite.core.utils import recurse
@@ -86,6 +87,25 @@ class ProcessingEngine:
                                 finding['assessment_status'] = 'incomplete'
                             elif evidence['assessment_status'] == 'not_applicable':
                                 finding['assessment_status'] = 'not_applicable'
+                        requirement = policy_requirement_for(rule)
+                        if requirement:
+                            policy_values = getattr(self.ruleset, 'policy_thresholds', {}) or {}
+                            explicit = (getattr(self.ruleset, 'profile_id', None)
+                                        == COMPLIANCE_PROFILE_ID
+                                        and requirement in policy_values
+                                        and rule.level in ('warning', 'danger'))
+                            finding['finding_category'] = 'policy_dependent'
+                            finding['policy_requirement'] = requirement
+                            finding['severity_assigned'] = bool(explicit)
+                            if explicit:
+                                finding['finding_disposition'] = (
+                                    'POLICY_VIOLATION' if finding['flagged_items']
+                                    else 'POLICY_CHECK')
+                                finding['policy_threshold'] = policy_values[requirement]
+                            else:
+                                finding['finding_disposition'] = 'REVIEW'
+                                if finding.get('assessment_status') != 'incomplete':
+                                    finding['assessment_status'] = 'review'
                         profile_id = getattr(self.ruleset, 'profile_id', None)
                         if profile_id:
                             finding['policy_profile'] = {
