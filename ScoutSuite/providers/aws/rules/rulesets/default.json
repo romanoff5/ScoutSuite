@@ -1924,6 +1924,30 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "elbv2-waf-backend-public-bypass-candidate.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "elbv2-https-hostname-not-in-listener-certificate.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-critical-bucket-object-lock-absent.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "s3-critical-bucket-default-retention-missing.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
         ]
     }
 }
