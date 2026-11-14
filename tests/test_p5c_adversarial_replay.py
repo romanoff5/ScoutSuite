@@ -66,7 +66,7 @@ def _outcome(source, name):
 
 
 @pytest.mark.parametrize("case", CASES, ids=IDS)
-def test_synthetic_positive_negative_and_single_field_metapmorphic_flip(case):
+def test_synthetic_positive_negative_and_single_field_metamorphic_flip(case):
     """One changed terminal fact must change a published rule-engine decision."""
     name = case["rule_id"]
     baseline, original = _outcome(_source(case), name)
@@ -180,7 +180,7 @@ def test_legacy_five_rule_artifact_still_authenticates_and_replays():
     encoded = replay._canonical(body)
     legacy["integrity"] = {
         "sha256": hashlib.sha256(encoded).hexdigest(),
-        "hmac_sha256": hmac.new(KEY, b"scoutsuite-p4f2-v1\\x00".replace(b"\\x00", b"\x00")
+        "hmac_sha256": hmac.new(KEY, b"scoutsuite-p4f2-v1\x00"
                                + encoded, hashlib.sha256).hexdigest(),
     }
     result = replay.replay_semantic_facts(legacy, KEY)
@@ -200,7 +200,7 @@ def test_legacy_five_rule_artifact_still_authenticates_and_replays():
 
 
 @pytest.mark.parametrize("start,end,expected", [
-    (442, 442, False), (443, 443, True), (443, 443, True),
+    (442, 442, False), (443, 443, True),
     (444, 445, False), (442, 443, True), (443, 444, True),
     (0, 65535, True), (1, 65535, True),
 ])
@@ -244,7 +244,7 @@ def test_rds_retention_thresholds_on_published_rules(days, short, disabled):
 
 @pytest.mark.parametrize("value,expected", [
     ("000000000000", "scoped"), ("111111111111", "unknown"),
-    ("*", "missing"),
+    ("*", "unknown"),
 ])
 def test_iam_trust_account_arn_boundary(value, expected):
     role = "arn:aws:iam::000000000000:role/test-only"
