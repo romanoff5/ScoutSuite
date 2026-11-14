@@ -99,7 +99,7 @@ def test_export_signed_privacy_stable_and_normal_report_unchanged():
     assert original == before
     assert original["services"]["ec2"]["regions"]["eu-central-1"]["vpcs"][
         "vpc-private"]["instances"]["i-secret-instance"]["arn"].startswith("arn:aws")
-    assert len(snap["rules"]) == 5
+    assert len(snap["rules"]) == 27
     assert export(before) == snap
     for record in snap["rules"].values():
         assert all(fact["token"].startswith("hmac:") for fact in record["facts"])
@@ -114,12 +114,17 @@ def test_replay_current_actual_rule_conditions_all_five():
     assert replay["compliance_verified"] is False
     assert set(replay["rules"]) == NAMES
     for name, row in replay["rules"].items():
-        assert row["status"] == "replayed", name
-        assert row["conditions_reexecuted"] is True
-        assert row["predicate_changed"] is False
-        assert row["unknown"] == 0
-        assert row["checked"] > 0
-        assert len(row["matched_tokens"]) == 1, name
+        if name in engine.LEGACY_ADAPTERS:
+            assert row["status"] == "replayed", name
+            assert row["conditions_reexecuted"] is True
+            assert row["predicate_changed"] is False
+            assert row["unknown"] == 0
+            assert row["checked"] > 0
+            assert len(row["matched_tokens"]) == 1, name
+        else:
+            # The original P4-F2 sample deliberately lacks IAM/S3 and
+            # new EC2/RDS annotation fields; never interpret that as PASS.
+            assert row["status"] == "partial", name
 
 
 def test_changed_supported_predicate_is_actually_reexecuted(monkeypatch):
@@ -248,7 +253,7 @@ def test_cli_facts_export_and_replay(tmp_path, capsys):
     content = json.loads(target.read_text(encoding="utf-8"))
     assert content["format"] == engine.FORMAT
     assert tool.main(["facts-replay", "--snapshot", str(target),
-                      "--key-file", str(key)]) == 0
+                      "--key-file", str(key)]) == 2  # intentionally incomplete
     assert tool.main(["facts-export", "--report", str(inp),
                       "--key-file", str(key), "--output", str(target)]) == 3
     outputs = capsys.readouterr()
