@@ -10,7 +10,7 @@ class CodeBuild(AWSBaseFacade):
             # Paginated: a single ListProjects call returns at most 100 names.
             projects = await AWSFacadeUtils.get_all_pages('codebuild', region, self.session, 'list_projects', 'projects')
         except Exception as e:
-            AWSFacadeUtils.record_listing_failure('codebuild', e, 'ListProjects')
+            AWSFacadeUtils.record_listing_failure('codebuild', e, 'ListProjects', region=region)
             print_exception(f'Failed to get CodeBuild projects: {e}')
             return []
         else:
