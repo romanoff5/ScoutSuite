@@ -1022,3 +1022,41 @@ calls. See `docs/modernization/M10_WAFV2.md`.
   `master` was fast-forwarded and verified at the same SHA. No PR or upstream
   push was made. The published RC5 tag/wheel still contains the defect; a
   future release requires fresh packaging and live acceptance.
+
+
+## P5-B — finding confidence, evidence quality (2026-11-15)
+
+- Implemented additive `confidence_assessment` v1 in
+  `ScoutSuite/core/finding_confidence.py` and final-status integration in
+  `ScoutSuite/core/processingengine.py`. Evidence-backed verification states
+  distinguish confirmed configuration, potential IAM/network paths, partial
+  observations, policy REVIEW and UNKNOWN. HIGH/MEDIUM/UNKNOWN confidence does
+  not represent exploit probability, severity or compliance certification.
+- Extended versioned `evaluation_summary` with structured
+  `observations` for insecure/unknown resource outcomes: original local-report
+  resource paths, policy IDs, outcomes and allowlisted simple diagnostic facts.
+  Real ARN/account IDs remain in confidential normal reports; anonymized P4-F
+  and P4-F2 snapshot exports continue to omit them.
+- Exposed escaped confidence/evidence quality and reason codes in the HTML
+  finding dashboard. Existing rule IDs, flagged items, severity and assessment
+  semantics remain unchanged, including existing opt-in compliance thresholds.
+- Reconciled concurrent P5-A IAM accuracy implementation at
+  `bbc9644b6579d6bf92d00d02cdf6ccc8fd438168`. Its separate
+  `policy_accuracy.py`, resource-specific creation-ARN witnesses and
+  action/resource-aware Deny handling are preserved rather than overwritten by
+  an earlier P5-B prototype. The original P5-B prototype branches were
+  superseded; the integrated P5-B commit is
+  `0e255902100218aae3890082f4ba75b3cb99981c`.
+- [Offline CI run #43655427432](https://github.com/romanoff5/ScoutSuite/actions/runs/43655427432)
+  passed all four jobs: Ubuntu 24.04 and Windows 2022 on Python 3.11 and
+  3.14. Linux 3.11 full guarded suite: 1116 passed plus 35 subtests.
+  P3-C synthetic quality gate: 66 crosswalk cases, direct 36 / partial 26 /
+  out-of-scope 3 / gap 1, gate PASS. Browser/XSS, SQLite HTTP, lint,
+  dependency/build and packaging gates passed.
+- No live cloud tests, new permissions, external authorization simulation,
+  network probe or verified external monitoring delivery were introduced.
+  Not yet implemented: IAM policy simulator, complete route/NACL/host checks,
+  external SIEM delivery attestation, an authoritative production DNS/SNI
+  inventory or measured application RTO/RPO. Documentation and rollback:
+  `docs/modernization/P5B_FINDING_CONFIDENCE.md`. Roll back the P5-B
+  integration commit; P5-A remains intact.
