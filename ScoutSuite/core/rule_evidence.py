@@ -1239,7 +1239,46 @@ def classify_p3b_object_lock_default_retention(resource):
                          'missing', 'configured')
 
 
+
+def classify_p3d_alb_mismatch(resource):
+    return _classify_p3b(resource, 'p3d_health_mismatch_status',
+                         'response_mismatch', 'not_observed')
+
+
+def classify_p3d_other_unhealthy(resource):
+    return _classify_p3b(resource, 'p3d_unhealthy_status',
+                         'other_unhealthy', 'not_observed')
+
+
+def classify_p3d_broad_s3_read(resource):
+    return _classify_p3b(resource, 's3_wildcard_read_status',
+                         'broad_grant_candidate', 'no_broad_grant_observed')
+
+
+def classify_p3d_rds_metric_alarm(resource):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    status = resource.get('rds_alarm_status')
+    return ('insecure' if status in ('missing', 'no_action') else
+            'secure' if status == 'actionable' else
+            'not_applicable' if status == 'not_applicable' else 'unknown')
+
+
+def classify_p3d_rds_event_subscription(resource):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    status = resource.get('rds_event_subscription_status')
+    return ('insecure' if status in ('missing', 'inactive') else
+            'secure' if status == 'active' else
+            'not_applicable' if status == 'not_applicable' else 'unknown')
+
+
 CLASSIFIERS = {
+    'p3d-alb-health-mismatch-v1': classify_p3d_alb_mismatch,
+    'p3d-alb-other-unhealthy-v1': classify_p3d_other_unhealthy,
+    'p3d-ec2-s3-broad-read-v1': classify_p3d_broad_s3_read,
+    'p3d-rds-metric-alarm-v1': classify_p3d_rds_metric_alarm,
+    'p3d-rds-event-subscription-v1': classify_p3d_rds_event_subscription,
     'p3b-alb-backend-bypass-v1': classify_p3b_backend_bypass,
     'p3b-alb-hostname-cert-v1': classify_p3b_hostname_cert,
     'p3b-s3-object-lock-v1': classify_p3b_object_lock,

@@ -1,0 +1,20 @@
+{
+    "description": "Running EC2 instance role has broad S3 read Allow statement",
+    "rationale": "An IAM role associated through the instance profile of a running EC2 instance contains an unconditional Allow of broad s3:Get*/s3:List* (or s3:* / *) on wildcard S3 resources. This is a policy grant candidate; effective access may be reduced by SCPs, permission boundaries, session constraints, explicit Deny and bucket/KMS policies.",
+    "remediation": "Scope S3 actions and resources to the minimum required buckets and object prefixes; independently evaluate effective permissions and cross-account resource policies.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html"
+    ],
+    "dashboard_name": "Instances",
+    "path": "ec2.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "s3_wildcard_read_status",
+            "equal",
+            "broad_grant_candidate"
+        ]
+    ],
+    "id_suffix": "P3DBroadS3Read",
+    "evidence_policy": "p3d-ec2-s3-broad-read-v1"
+}

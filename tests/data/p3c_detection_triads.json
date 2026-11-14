@@ -316,6 +316,125 @@
         "negative": "secure",
         "incomplete": "unknown"
       }
+    },
+    {
+      "id": "S19",
+      "rule_id": "elbv2-alb-health-check-response-mismatch.json",
+      "report_case": "A-14",
+      "field": "p3d_health_mismatch_status",
+      "base": {},
+      "states": {
+        "positive": "response_mismatch",
+        "negative": "not_observed",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S20",
+      "rule_id": "elbv2-alb-other-unhealthy-targets.json",
+      "report_case": "A-14",
+      "field": "p3d_unhealthy_status",
+      "base": {},
+      "states": {
+        "positive": "other_unhealthy",
+        "negative": "not_observed",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S21",
+      "rule_id": "ec2-running-instance-role-broad-s3-read-candidate.json",
+      "report_case": "A-19",
+      "field": "s3_wildcard_read_status",
+      "base": {},
+      "states": {
+        "positive": "broad_grant_candidate",
+        "negative": "no_broad_grant_observed",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S22",
+      "rule_id": "rds-db-instance-no-actionable-alarm.json",
+      "report_case": "B-15",
+      "field": "rds_alarm_status",
+      "base": {},
+      "states": {
+        "positive": "missing",
+        "negative": "actionable",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S23",
+      "rule_id": "rds-db-instance-event-subscription-missing.json",
+      "report_case": "B-15",
+      "field": "rds_event_subscription_status",
+      "base": {},
+      "states": {
+        "positive": "inactive",
+        "negative": "active",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S24",
+      "rule_id": "rds-db-cluster-no-actionable-alarm.json",
+      "report_case": "B-15",
+      "field": "rds_alarm_status",
+      "base": {},
+      "states": {
+        "positive": "no_action",
+        "negative": "actionable",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S25",
+      "rule_id": "rds-db-cluster-event-subscription-missing.json",
+      "report_case": "B-15",
+      "field": "rds_event_subscription_status",
+      "base": {},
+      "states": {
+        "positive": "missing",
+        "negative": "active",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
     }
   ]
 }

@@ -287,3 +287,38 @@ class RDSFacade(AWSBaseFacade):
             self._record_incomplete('DescribeDBSecurityGroupsIncomplete')
             print_exception(f'Failed to get RDS security groups: {e}')
             return []
+
+    async def get_event_subscriptions(self, region):
+        """Read-only RDS source event subscription census; no silent empty on failure."""
+        client = AWSFacadeUtils.get_client('rds', self.session, region)
+        if client is None:
+            self._record_incomplete('DescribeEventSubscriptionsClientUnavailable')
+            return 'unknown', []
+        rows, seen, marker = [], set(), None
+        for _ in range(100):
+            kwargs = {'MaxRecords': 100}
+            if marker:
+                kwargs['Marker'] = marker
+            try:
+                page = await run_concurrently(
+                    lambda kwargs=kwargs: client.describe_event_subscriptions(**kwargs))
+            except Exception as error:
+                AWSFacadeUtils.record_listing_failure('rds', error, 'DescribeEventSubscriptions')
+                self._record_incomplete('DescribeEventSubscriptionsIncomplete')
+                return 'partial', rows
+            batch = page.get('EventSubscriptionsList') if isinstance(page, dict) else None
+            if not isinstance(batch, list) or len(batch) > 100 or any(
+                    not isinstance(x, dict) for x in batch):
+                self._record_incomplete('DescribeEventSubscriptionsMalformedPage')
+                return 'partial', rows
+            rows.extend(batch)
+            token = page.get('Marker')
+            if token in (None, ''):
+                return 'complete', rows
+            if not isinstance(token, str) or len(token) > 4096 or token in seen:
+                self._record_incomplete('DescribeEventSubscriptionsInvalidMarker')
+                return 'partial', rows
+            seen.add(token)
+            marker = token
+        self._record_incomplete('DescribeEventSubscriptionsPageLimit')
+        return 'partial', rows

@@ -143,12 +143,30 @@ class ELBv2Facade(AWSBaseFacade):
                     for row in rows:
                         if not isinstance(row, dict) or not isinstance(row.get('Target'), dict):
                             raise ValueError('MalformedTargetDescription')
-                    out.append({'arn': arn, 'target_type': group.get('TargetType'),
-                                'port': group.get('Port'), 'registered_targets': [
-                                    {'id': row['Target'].get('Id'),
-                                     'port': row['Target'].get('Port'),
-                                     'health_state': (row.get('TargetHealth') or {}).get('State')}
-                                    for row in rows]})
+                    # Retain health-check configuration and each target's
+                    # diagnostic state/reason. A response-code mismatch is
+                    # a symptom, not proof that the configured path is wrong.
+                    if not all(isinstance(row.get('TargetHealth'), dict) for row in rows):
+                        raise ValueError('MalformedTargetHealthDetails')
+                    out.append({
+                        'arn': arn, 'name': group.get('TargetGroupName'),
+                        'target_type': group.get('TargetType'),
+                        'protocol': group.get('Protocol'), 'protocol_version': group.get('ProtocolVersion'),
+                        'port': group.get('Port'), 'vpc_id': group.get('VpcId'),
+                        'health_check': {
+                            key: group.get(key)
+                            for key in ('HealthCheckEnabled', 'HealthCheckProtocol',
+                                        'HealthCheckPort', 'HealthCheckPath',
+                                        'HealthCheckIntervalSeconds', 'HealthCheckTimeoutSeconds',
+                                        'HealthyThresholdCount', 'UnhealthyThresholdCount', 'Matcher')
+                        },
+                        'registered_targets': [
+                            {'id': row['Target'].get('Id'),
+                             'port': row['Target'].get('Port'),
+                             'health_state': row['TargetHealth'].get('State'),
+                             'health_reason': row['TargetHealth'].get('Reason'),
+                             'health_description': row['TargetHealth'].get('Description')}
+                            for row in rows]})
                 return out
             result = await run_concurrently(collect)
             return 'complete', result

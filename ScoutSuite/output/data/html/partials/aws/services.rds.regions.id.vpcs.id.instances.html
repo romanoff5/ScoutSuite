@@ -31,6 +31,20 @@
                 <li class="list-group-item-text">Publicly Accessible: <span id="rds.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.instance_publicly_accessible">{{convert_bool_to_enabled PubliclyAccessible}}</span>
             </ul>
         </div>
+        <div class="list-group-item">
+            <h4>RDS monitoring (local account and Region only)</h4>
+            <p>Actionable AWS/RDS metric alarm: <samp>{{rds_alarm_status}}</samp></p>
+            <p>Active RDS SNS event subscription: <samp>{{rds_event_subscription_status}}</samp></p>
+            {{#each rds_alarm_evidence}}
+            <p>Alarm <samp>{{name}}</samp> (<samp>{{arn}}</samp>):
+               <samp>{{classification}}</samp>; actions enabled <samp>{{actions_enabled}}</samp></p>
+            {{/each}}
+            {{#each rds_event_subscription_evidence}}
+            <p>Subscription <samp>{{id}}</samp>: <samp>{{classification}}</samp>;
+               status <samp>{{status}}</samp>; topic <samp>{{sns_topic_arn}}</samp></p>
+            {{/each}}
+            <p>EventBridge, external SIEM, cross-account alarms and actual notification delivery are not assessed.</p>
+        </div>
     </script>
     <script>
       Handlebars.registerPartial("services.rds.regions.id.vpcs.id.instances", $("#services\\.rds\\.regions\\.id\\.vpcs\\.id\\.instances\\.partial").html());

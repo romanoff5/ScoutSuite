@@ -1,0 +1,25 @@
+{
+    "description": "RDS standalone DB instance has no active local RDS event subscription",
+    "rationale": "A complete RDS DescribeEventSubscriptions inventory has no active subscription explicitly covering this DB instance or its source type, or only inactive subscriptions. This does not establish the absence of EventBridge or cross-account notification.",
+    "remediation": "Configure a suitable DB instance event subscription to a monitored SNS topic or document equivalent EventBridge/external alerting and delivery tests.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Events.Subscribing.html"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "or",
+        [
+            "rds_event_subscription_status",
+            "equal",
+            "missing"
+        ],
+        [
+            "rds_event_subscription_status",
+            "equal",
+            "inactive"
+        ]
+    ],
+    "id_suffix": "P3DInstanceEvent",
+    "evidence_policy": "p3d-rds-event-subscription-v1"
+}

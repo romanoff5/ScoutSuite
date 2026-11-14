@@ -63,6 +63,19 @@
         {{/if}}
         {{/if}}
     
+        <div class="list-group-item">
+            <h4>EC2 instance profile: broad S3 read grant candidate</h4>
+            <p>Finding status: <samp>{{s3_wildcard_read_status}}</samp></p>
+            {{#each s3_wildcard_read_role_arns}}<p>Attached role: <samp>{{this}}</samp></p>{{/each}}
+            {{#each s3_wildcard_read_evidence}}
+            <p>Policy: <samp>{{policy}}</samp> (<samp>{{policy_origin}}</samp>),
+               statement: <samp>{{statement_sid}}</samp>,
+               allowed action: <samp>{{action}}</samp>,
+               resource: <samp>{{resource}}</samp></p>
+            {{/each}}
+            <p>Identity-based Allow evidence only; effective S3 permissions depend on explicit Deny,
+               boundaries, SCP, sessions, S3 bucket policies and KMS policies.</p>
+        </div>
         <!-- M10-Q: all cross-service evidence is Handlebars-escaped and offline-safe. -->
         <div class="list-group-item">
             <h4>Cross-service coverage (M10-Q)</h4>

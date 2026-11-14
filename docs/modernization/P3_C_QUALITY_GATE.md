@@ -17,11 +17,11 @@ abstracts are manually normalized; they are **not original findings** and are
 | Source set A / B | 39 / 27 |
 | AWS configuration cases | 63 |
 | Direct rule-contract mappings | 32 |
-| Partial semantic mappings | 22 |
-| Genuine rule gaps | 9 |
+| Partial semantic mappings | 25 |
+| Genuine rule gaps | 6 |
 | Application / dependency outside scanner scope | 3 |
 | Direct mapping share of in-scope cases | 50.79% |
-| Direct plus partial mapping share | 85.71% |
+| Direct plus partial mapping share | 90.48% |
 
 A **direct** mapping means the existing rule evaluates the **general control
 condition** described by the abstract case. It does *not* mean the original
@@ -36,7 +36,7 @@ fails on missing/deleted entries and invalid rule references.
 
 ## Actual-rule synthetic TP / TN / UNKNOWN matrix
 
-The `tests/data/p3c_detection_triads.json` corpus defines 18 synthetic
+The `tests/data/p3c_detection_triads.json` corpus defines 25 synthetic
 triplets. The gate runs the *actual* JSON `conditions` through
 `ScoutSuite.core.utils.recurse`, and the *actual* evidence policy through
 `evaluate_rule_evidence`.

@@ -129,6 +129,18 @@ class AWSProvider(BaseProvider):
             from ScoutSuite.providers.aws.resources.elbv2.p3b_correlation import correlate_p3b
             correlate_p3b(self.services, self.service_list)
 
+        # P3-D: correlate already-collected read-only AWS resource inventories.
+        # Missing collectors and partial API results never produce a verified PASS.
+        if 'elbv2' in self.service_list:
+            from ScoutSuite.providers.aws.resources.elbv2.p3d_health import annotate_alb_health
+            annotate_alb_health(self.services)
+        if 'ec2' in self.service_list:
+            from ScoutSuite.providers.aws.resources.iam.p3d_s3_grants import annotate_instance_s3_grants
+            annotate_instance_s3_grants(self.services, self.service_list)
+        if 'rds' in self.service_list:
+            from ScoutSuite.providers.aws.resources.rds.p3d_monitoring import correlate_rds_monitoring
+            correlate_rds_monitoring(self.services, self.service_list)
+
         if 's3' in self.service_list and 'iam' in self.service_list:
             self._match_iam_policies_and_buckets()
 
