@@ -142,7 +142,7 @@ def main(argv=None):
             snapshot = export_semantic_facts(source, key)
             _create_private(args.output, (json.dumps(
                 snapshot, sort_keys=True, separators=(",", ":"), allow_nan=False
-            ) + "\\n").encode("utf-8"))
+            ) + "\n").encode("utf-8"))
             print(json.dumps({"status": "semantic_facts_created",
                               "rules": len(snapshot["rules"]),
                               "key_id": snapshot["key_id"]}, sort_keys=True))
