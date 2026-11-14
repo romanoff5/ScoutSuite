@@ -1,0 +1,30 @@
+<!-- P3-D: standalone RDS cluster inventory details. Escaped, offline-only fields. -->
+<script id="services.rds.regions.id.clusters.partial" type="text/x-handlebars-template">
+    <div class="list-group-item active"><h4>{{name}}</h4></div>
+    <div class="list-group-item"><h4>RDS cluster</h4>
+      <p>ARN: <samp>{{DBClusterArn}}</samp></p>
+      <p>Identifier: <samp>{{DBClusterIdentifier}}</samp></p>
+      <p>Region: <samp>{{region}}</samp></p>
+      <p>Status: <samp>{{Status}}</samp>; Engine: <samp>{{Engine}}</samp></p>
+      <p>Deletion protection: <samp>{{DeletionProtection}}</samp></p>
+      {{#each DBClusterMembers}}<p>Member DB: <samp>{{this}}</samp></p>{{/each}}
+    </div>
+    <div class="list-group-item"><h4>RDS cluster monitoring</h4>
+      <p>Actionable local AWS/RDS metric alarm: <samp>{{rds_alarm_status}}</samp></p>
+      <p>Active local RDS event subscription: <samp>{{rds_event_subscription_status}}</samp></p>
+      {{#each rds_alarm_evidence}}
+      <p>Alarm: <samp>{{name}}</samp>, ARN <samp>{{arn}}</samp>,
+         action status <samp>{{classification}}</samp></p>{{/each}}
+      {{#each rds_event_subscription_evidence}}
+      <p>Event subscription: <samp>{{id}}</samp>, status <samp>{{status}}</samp>,
+         SNS topic <samp>{{sns_topic_arn}}</samp></p>{{/each}}
+      <p>External monitoring and delivery are not verified.</p>
+    </div>
+</script>
+<script>Handlebars.registerPartial("services.rds.regions.id.clusters",
+    $("#services\\.rds\\.regions\\.id\\.clusters\\.partial").html());</script>
+<script id="single_rds_cluster-template" type="text/x-handlebars-template">
+    {{> modal-template template='services.rds.regions.id.clusters'}}
+</script>
+<script>var single_rds_cluster_template =
+    Handlebars.compile($("#single_rds_cluster-template").html());</script>

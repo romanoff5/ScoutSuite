@@ -20,6 +20,26 @@
                 </ul>
             </ul>
         </div>
+        <!-- P3-D: AWS health reason codes; no claim about root cause. -->
+        <div class="list-group-item">
+            <h4>ALB target health check diagnostics</h4>
+            <p>Health status: <samp>{{p3d_target_health_status}}</samp></p>
+            <p>Response-code mismatch: <samp>{{p3d_health_mismatch_status}}</samp></p>
+            <p>Other unhealthy targets: <samp>{{p3d_unhealthy_status}}</samp></p>
+            {{#each target_groups}}
+            <p>Target group: <samp>{{arn}}</samp>; protocol: <samp>{{protocol}}</samp>;
+               port: <samp>{{port}}</samp>; health path: <samp>{{health_check.HealthCheckPath}}</samp>;
+               health port: <samp>{{health_check.HealthCheckPort}}</samp>;
+               health protocol: <samp>{{health_check.HealthCheckProtocol}}</samp>;
+               matcher HTTP codes: <samp>{{health_check.Matcher.HttpCode}}</samp></p>
+            {{/each}}
+            {{#each p3d_unhealthy_target_evidence}}
+            <p>Target <samp>{{target_id}}</samp>: port <samp>{{target_port}}</samp>,
+               reason <samp>{{reason}}</samp>; detail <samp>{{description}}</samp>;
+               group <samp>{{target_group_arn}}</samp></p>
+            {{/each}}
+            <p>These are AWS target states, not proof of a misconfigured path or actual application impact.</p>
+        </div>
         {{#if waf_protection_status}}
         <div class="list-group-item">
             <h4>WAF protection</h4>
