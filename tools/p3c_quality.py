@@ -18,10 +18,12 @@ RULE_ROOT = ROOT / 'ScoutSuite' / 'providers' / 'aws' / 'rules'
 COVERAGE_STATES = {'direct', 'partial', 'gap', 'out_of_scope'}
 # Fail closed on real-looking account IDs, ARNs, emails and private-source
 # placeholders without embedding customer names in a public repository.
+# Match actual email addresses and whole placeholder tokens; double escaping
+# raw-regex backslashes would silently disable these privacy checks.
 FORBIDDEN = re.compile(
     r'(?<![0-9])[0-9]{12}(?![0-9])|arn:(?:aws|aws-us-gov|aws-cn):|'
-    r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|'
-    r'\\b(?:client_name|customer_account_id|internal_host|private_domain)\\b', re.I)
+    r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|'
+    r'\b(?:client_name|customer_account_id|internal_host|private_domain)\b', re.I)
 SYNTHETIC_MINIMUM = 25
 
 

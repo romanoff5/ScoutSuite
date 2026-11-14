@@ -27,6 +27,7 @@ def annotate_alb_health(services):
                     continue
                 count, unexpected, suspicious = 0, False, []
                 failures = []
+                other_failures = []
                 for group in groups:
                     if not isinstance(group, dict):
                         unexpected = True
@@ -65,14 +66,18 @@ def annotate_alb_health(services):
                         failures.append(evidence)
                         if reason == 'Target.ResponseCodeMismatch':
                             suspicious.append(evidence)
+                        else:
+                            other_failures.append(evidence)
                 # Never convert a partially understood target census into PASS.
-                lb['p3d_unhealthy_target_evidence'] = failures
+                # Independent signals: one ALB can have both a response-code
+                # mismatch and another unhealthy target (for example Timeout).
+                lb['p3d_unhealthy_target_evidence'] = other_failures
                 if suspicious:
                     lb['p3d_health_mismatch_status'] = 'response_mismatch'
                     lb['p3d_health_mismatch_evidence'] = suspicious
                 elif not unexpected and count:
                     lb['p3d_health_mismatch_status'] = 'not_observed'
-                if failures and not suspicious:
+                if other_failures:
                     lb['p3d_unhealthy_status'] = 'other_unhealthy'
                 elif not unexpected and count:
                     lb['p3d_unhealthy_status'] = 'not_observed'
