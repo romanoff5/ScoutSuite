@@ -1,0 +1,21 @@
+{
+    "description": "WAF-Fronted ALB Has Directly Public Instance Target (Potential Bypass)",
+    "rationale": "A registered EC2 target on an internet-facing ALB protected by AWS WAF or a known CDN/WAF has a public network interface and security group permitting its actual target port from the Internet. This is potential exposure, not proven reachability through routes, NACLs, host firewall or an application listener.",
+    "remediation": "Restrict backend security groups to ALB security groups and remove unnecessary public addresses; verify network reachability independently.",
+    "references": [
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_DescribeTargetGroups.html",
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_DescribeListenerCertificates.html"
+    ],
+    "dashboard_name": "Load Balancers",
+    "path": "elbv2.regions.id.vpcs.id.lbs.id",
+    "conditions": [
+        "and",
+        [
+            "backend_bypass_status",
+            "equal",
+            "potential_bypass"
+        ]
+    ],
+    "id_suffix": "P3BBackendBypass",
+    "evidence_policy": "p3b-alb-backend-bypass-v1"
+}

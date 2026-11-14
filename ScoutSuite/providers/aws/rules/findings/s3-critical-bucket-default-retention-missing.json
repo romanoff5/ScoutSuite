@@ -1,0 +1,20 @@
+{
+    "description": "Critical Bucket Has S3 Object Lock but No Default Retention",
+    "rationale": "An explicitly marked critical bucket has Object Lock enabled but no bucket default retention. Individual object versions can still have retention; this rule checks defaults only.",
+    "remediation": "Apply GOVERNANCE or COMPLIANCE default retention per policy or document equivalent object-level controls.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html"
+    ],
+    "dashboard_name": "Buckets",
+    "path": "s3.buckets.id",
+    "conditions": [
+        "and",
+        [
+            "object_lock_default_retention_status",
+            "equal",
+            "missing"
+        ]
+    ],
+    "id_suffix": "P3BDefaultRetentionMissing",
+    "evidence_policy": "p3b-s3-object-lock-retention-v1"
+}

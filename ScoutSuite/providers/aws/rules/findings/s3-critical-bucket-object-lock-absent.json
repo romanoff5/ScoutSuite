@@ -1,0 +1,20 @@
+{
+    "description": "Explicitly Policy-Marked Critical Bucket Has No S3 Object Lock",
+    "rationale": "A bucket tagged ObjectLockRequired=true or security:object-lock-required=true is confirmed by the S3 API to lack an Object Lock configuration. This is a policy gap, not proof that existing object versions have no individual retention.",
+    "remediation": "Enable Object Lock with documented retention and validate object versions, governance permissions and recovery testing.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html"
+    ],
+    "dashboard_name": "Buckets",
+    "path": "s3.buckets.id",
+    "conditions": [
+        "and",
+        [
+            "object_lock_status",
+            "equal",
+            "absent"
+        ]
+    ],
+    "id_suffix": "P3BObjectLockAbsent",
+    "evidence_policy": "p3b-s3-object-lock-v1"
+}
