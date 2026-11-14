@@ -33,6 +33,120 @@
     'rds-proxy-require-tls-disabled': {
       service: 'rds', path: 'rds.regions.id.proxies.id',
       field: 'tls_status', target: 'disabled', allowed: ['enabled', 'disabled', 'unknown']
+    },
+    'iam-p4b-oidc-broad-subject-trust': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'p4b_oidc_scope_status', target: 'broad_subject',
+      allowed: ['broad_subject', 'scoped_subject', 'review_wildcard', 'not_applicable', 'unknown']
+    },
+    'iam-p4b-passrole-privileged-delegation': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'p4b_passrole_path_status', target: 'candidate',
+      allowed: ['candidate', 'not_applicable', 'unknown']
+    },
+    'iam-p4b-privileged-oidc-role': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'p4b_privileged_oidc_status', target: 'candidate',
+      allowed: ['candidate', 'review', 'not_applicable', 'unknown']
+    },
+    'iam-p4b2-group-contributed-passrole': {
+      service: 'iam', path: 'iam.groups.id',
+      field: 'p4b2_group_passrole_status', target: 'candidate',
+      allowed: ['candidate', 'not_applicable', 'unknown']
+    },
+    'iam-p4b2-oidc-audience-review': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'p4b2_oidc_audience_status', target: 'review',
+      allowed: ['review', 'scoped', 'not_applicable', 'unknown']
+    },
+    'iam-p4b2-oidc-subject-wildcard-review': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'p4b2_oidc_subject_status', target: 'review',
+      allowed: ['review', 'scoped', 'not_applicable', 'unknown']
+    },
+    'iam-p4b2-role-assumerole-privileged': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'p4b2_role_assumerole_status', target: 'candidate',
+      allowed: ['candidate', 'not_applicable', 'unknown']
+    },
+    'iam-p4b2-user-assumerole-privileged': {
+      service: 'iam', path: 'iam.users.id',
+      field: 'p4b2_user_assumerole_status', target: 'candidate',
+      allowed: ['candidate', 'not_applicable', 'unknown']
+    },
+    'iam-p4b2-user-passrole-to-privileged-role': {
+      service: 'iam', path: 'iam.users.id',
+      field: 'p4b2_user_passrole_status', target: 'candidate',
+      allowed: ['candidate', 'not_applicable', 'unknown']
+    },
+    'iam-role-service-trust-missing-source-scope': {
+      service: 'iam', path: 'iam.roles.id',
+      field: 'service_trust_scope_status', target: 'missing',
+      allowed: ['missing', 'scoped', 'not_applicable', 'unknown']
+    },
+    'ec2-public-instance-https-open-to-world': {
+      service: 'ec2', path: 'ec2.regions.id.vpcs.id.instances.id',
+      field: 'public_https_status', target: 'exposed',
+      allowed: ['exposed', 'not_exposed', 'not_applicable', 'unknown']
+    },
+    'ec2-running-instance-role-broad-s3-read-candidate': {
+      service: 'ec2', path: 'ec2.regions.id.vpcs.id.instances.id',
+      field: 's3_wildcard_read_status', target: 'broad_grant_candidate',
+      allowed: ['broad_grant_candidate', 'not_applicable', 'unknown']
+    },
+    'rds-proxy-no-registered-targets': {
+      service: 'rds', path: 'rds.regions.id.proxies.id',
+      field: 'target_health_status', target: 'no_targets',
+      allowed: ['no_targets', 'all_unavailable', 'degraded', 'healthy', 'transitioning', 'not_applicable', 'unknown']
+    },
+    'rds-proxy-all-targets-unavailable': {
+      service: 'rds', path: 'rds.regions.id.proxies.id',
+      field: 'target_health_status', target: 'all_unavailable',
+      allowed: ['no_targets', 'all_unavailable', 'degraded', 'healthy', 'transitioning', 'not_applicable', 'unknown']
+    },
+    'rds-proxy-partial-target-degradation': {
+      service: 'rds', path: 'rds.regions.id.proxies.id',
+      field: 'target_health_status', target: 'degraded',
+      allowed: ['no_targets', 'all_unavailable', 'degraded', 'healthy', 'transitioning', 'not_applicable', 'unknown']
+    },
+    'rds-db-instance-no-actionable-alarm': {
+      service: 'rds', path: 'rds.regions.id.vpcs.id.instances.id',
+      field: 'rds_alarm_status', target: 'missing',
+      allowed: ['missing', 'no_action', 'actionable', 'not_applicable', 'unknown'],
+      targets: ['missing', 'no_action']
+    },
+    'rds-db-cluster-no-actionable-alarm': {
+      service: 'rds', path: 'rds.regions.id.clusters.id',
+      field: 'rds_alarm_status', target: 'missing',
+      allowed: ['missing', 'no_action', 'actionable', 'not_applicable', 'unknown'],
+      targets: ['missing', 'no_action']
+    },
+    'rds-db-instance-event-subscription-missing': {
+      service: 'rds', path: 'rds.regions.id.vpcs.id.instances.id',
+      field: 'rds_event_subscription_status', target: 'missing',
+      allowed: ['missing', 'inactive', 'active', 'not_applicable', 'unknown'],
+      targets: ['missing', 'inactive']
+    },
+    'rds-db-cluster-event-subscription-missing': {
+      service: 'rds', path: 'rds.regions.id.clusters.id',
+      field: 'rds_event_subscription_status', target: 'missing',
+      allowed: ['missing', 'inactive', 'active', 'not_applicable', 'unknown'],
+      targets: ['missing', 'inactive']
+    },
+    's3-bucket-effective-public-exposure': {
+      service: 's3', path: 's3.buckets.id',
+      field: 'public_exposure_status', target: 'exposed',
+      allowed: ['exposed', 'no_bucket_level_exposure_detected', 'unknown']
+    },
+    's3-bucket-public-access-block-incomplete': {
+      service: 's3', path: 's3.buckets.id',
+      field: 'effective_bpa_review', target: 'missing',
+      allowed: ['missing', 'complete', 'unknown']
+    },
+    's3-critical-bucket-object-lock-absent': {
+      service: 's3', path: 's3.buckets.id',
+      field: 'object_lock_status', target: 'absent',
+      allowed: ['absent', 'enabled', 'not_applicable', 'unknown']
     }
   })
   const scans = []
@@ -82,6 +196,11 @@
         ? 'observed_complete' : 'incomplete' }
   }
 
+  function matches(definition, value) {
+    return value !== 'unknown' && (definition.targets
+      ? definition.targets.includes(value) : value === definition.target)
+  }
+
   function findFacts(data, definition) {
     const path = definition.path.split('.')
     const out = []
@@ -91,7 +210,7 @@
         const value = definition.field === 'this'
           ? node : isObject(node) ? node[definition.field] : undefined
         const safe = typeof value === 'string' && definition.allowed.includes(value) ? value : 'unknown'
-        out.push({ id: prefix.join('.'), value: safe, match: safe === definition.target })
+        out.push({ id: prefix.join('.'), value: safe, match: matches(definition, safe) })
         return
       }
       const [head, ...tail] = remaining
@@ -130,12 +249,12 @@
         if (!isObject(row) || !Array.isArray(row.facts)) continue
         const safe = row.facts.filter(f => isObject(f) && typeof f.token === 'string' &&
           /^hmac:[0-9a-f]{40}$/.test(f.token) && def.allowed.includes(f.value))
-        const flagged = safe.filter(f => f.value === def.target).map(f => f.token)
+        const flagged = safe.filter(f => matches(def, f.value)).map(f => f.token)
         const unknown = safe.filter(f => f.value === 'unknown').length
         results[rule] = { count: flagged.length, ids: flagged, unknown,
           status: scan.completeness === 'observed_complete' &&
             row.scope === 'observed' && !unknown && safe.length === row.facts.length ? 'unverified' : 'partial',
-          evidence: safe.map(f => ({ id: f.token, value: f.value, match: f.value === def.target })) }
+          evidence: safe.map(f => ({ id: f.token, value: f.value, match: matches(def, f.value) })) }
       }
     }
     return results
@@ -302,9 +421,9 @@
     }
     document.getElementById('scout-history-replay-note').textContent =
       b.type === 'facts'
-        ? 'P4-F2 facts preview (fixed 5-rule grammar); HMAC not authenticated. To cryptographically verify or execute installed Python predicates, use the offline replay tool.'
+        ? 'P5-C facts preview (up to 27 allowlisted rules); HMAC NOT authenticated. IAM relationships are candidates, not effective permissions. To verify signatures and reexecute installed predicates use the offline replay tool.'
         : b.type === 'report' && b.provider === 'aws'
-          ? 'P4-F2-compatible local enum re-evaluation on raw scan facts (five supported checks). Results are observations, not proof of security.'
+          ? 'P5-C local 27-rule enum preview on raw scan facts. This is not authenticated predicate replay or proof of reachability / effective IAM authorization.'
           : 'P4-F2 semantic facts are only available for AWS RESULTS or P4-F2 snapshots.'
   }
 
