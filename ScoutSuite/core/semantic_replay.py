@@ -195,7 +195,7 @@ def export_semantic_facts(results, key):
     data = _canonical(body)
     return {**body, "integrity": {
         "sha256": hashlib.sha256(data).hexdigest(),
-        "hmac_sha256": hmac.new(key, b"scoutsuite-p4f2-v1\\x00".replace(b"\\x00", b"\x00") + data,
+        "hmac_sha256": hmac.new(key, b"scoutsuite-p4f2-v1\x00" + data,
                                 hashlib.sha256).hexdigest(),
     }}
 
@@ -331,7 +331,8 @@ def replay_semantic_facts(snapshot, key):
                 matched.append(fact["token"])
         partial = (
             snapshot["source_collection_status"] != "observed_complete"
-            or record["scope"] != "observed" or unknown > 0)
+            or record["scope"] != "observed" or unknown > 0 or
+            record["source_assessment_status"] == "incomplete")
         output[rule_id] = {
             "status": "partial" if partial else "replayed",
             "original_definition_sha256": record["source_rule_sha256"],
