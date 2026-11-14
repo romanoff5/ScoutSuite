@@ -1,0 +1,22 @@
+{
+    "description": "Unused Default VPC Candidate with Attached Internet Gateway",
+    "rationale": "Default VPC has an IGW and a complete VPC-scoped ENI inventory with zero network interfaces. This does not prove historical disuse, empty route tables or no subnet resources. Review before deletion.",
+    "remediation": "Review default VPC use, dependencies, routes, network interfaces and owner approval before considering deletion.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "VPCs",
+    "path": "vpc.regions.id.vpcs.id",
+    "conditions": [
+        "and",
+        [
+            "default_vpc_gateway_status",
+            "equal",
+            "unused_candidate"
+        ]
+    ],
+    "id_suffix": "P4ADefaultVpc",
+    "evidence_policy": "p4a-default-vpc-igw-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "disallow_unused_default_vpc_with_igw"
+}

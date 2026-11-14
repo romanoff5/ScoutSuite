@@ -1,0 +1,16 @@
+<script id="services.iam.security_contacts.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>Security alternate contact</h4></div>
+  <div class="list-group-item">
+    <p>Registration state: <samp>{{security_contact_status}}</samp></p>
+    <p>Only a registration status is collected. Contact name, telephone and email are not saved.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.iam.security_contacts", $("#services\\.iam\\.security_contacts\\.partial").html());
+</script>
+<script id="single_iam_security_contacts-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.iam.security_contacts'}}
+</script>
+<script>
+  var single_iam_security_contacts_template = Handlebars.compile($("#single_iam_security_contacts-template").html());
+</script>

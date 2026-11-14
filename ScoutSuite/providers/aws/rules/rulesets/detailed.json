@@ -2031,6 +2031,54 @@
                 "enabled": true,
                 "level": "warning"
             }
+        ],
+        "vpc-default-with-igw-and-no-network-interfaces-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-security-alternate-contact-missing.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
+        "rds-instance-enhanced-monitoring-disabled-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "rds-instance-detailed-query-metrics-disabled-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "rds-instance-iam-database-auth-disabled-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "rds-instance-monitoring-auth-all-disabled-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "ssm-document-public-sharing-permitted-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "ec2-running-instance-detailed-monitoring-disabled-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
         ]
     }
 }

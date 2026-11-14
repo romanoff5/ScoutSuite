@@ -26,14 +26,14 @@ def test_p3c_report_census_and_quality_thresholds():
     census = result['report_cases']
     assert census['total'] == 66 and census['in_scope'] == 63
     assert census['coverage'] == {
-        'direct': 32, 'partial': 25, 'gap': 6, 'out_of_scope': 3}
+        'direct': 36, 'partial': 26, 'gap': 1, 'out_of_scope': 3}
     assert census['by_group']['A'] == {
-        'direct': 14, 'partial': 19, 'gap': 6}
+        'direct': 18, 'partial': 20, 'gap': 1}
     assert census['by_group']['B'] == {
         'direct': 18, 'partial': 6, 'out_of_scope': 3}
     metrics = result['synthetic_detection']
-    assert metrics['tp'] == 25 and metrics['tn'] == 24
-    assert metrics['unknown_cases'] == 25
+    assert metrics['tp'] == 30 and metrics['tn'] == 29
+    assert metrics['unknown_cases'] == 30
     assert metrics['unverified_negative'] == 1
     assert all(metrics.get(x, 0) == 0 for x in (
         'fp', 'fn', 'false_pass_on_unknown', 'unknown_flagged'))
@@ -58,7 +58,7 @@ def test_coverage_contract_rejects_missing_case_and_false_direct_rule():
 def test_coverage_contract_rejects_gap_mapping_and_sensitive_report_identifier():
     data = loaded('p3c_assessment_coverage.json')
     unexpected = copy.deepcopy(data)
-    row = next(x for x in unexpected['cases'] if x['id'] == 'A-18')
+    row = next(x for x in unexpected['cases'] if x['id'] == 'A-39')
     assert row['coverage'] == 'gap'
     row['rule_ids'] = ['elbv2-no-access-logs.json']
     errors, _ = quality.validate_coverage(unexpected, active_rules())
@@ -109,7 +109,7 @@ def test_report_format_is_explicit_about_limits(tmp_path):
     assert 'Not a live-assessment accuracy claim' in output
     assert 'Synthetic TN / FP' in output
     assert '## Gap control IDs' in output
-    assert 'A-18: unused_default_vpc_with_gateway' in output
+    assert 'A-39: aws_support_role_absent' in output
     j = tmp_path / 'p3c.json'
     m = tmp_path / 'p3c.md'
     j.write_text(json.dumps(report), encoding='utf-8')
@@ -126,7 +126,7 @@ def test_synthetic_fixture_contains_no_customer_raw_evidence():
         assert not quality.FORBIDDEN.search(raw)
     # Every synthetic triad points to a concrete rule and at most one anonymized case.
     fixtures = loaded('p3c_detection_triads.json')['triads']
-    assert len({x['id'] for x in fixtures}) == len(fixtures) == 25
+    assert len({x['id'] for x in fixtures}) == len(fixtures) == 30
 
 
 @pytest.mark.parametrize('secret', [

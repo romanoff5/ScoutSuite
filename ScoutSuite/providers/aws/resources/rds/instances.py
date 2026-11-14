@@ -1,6 +1,7 @@
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.resources.base import AWSResources
 from ScoutSuite.providers.utils import get_non_provider_id
+from ScoutSuite.providers.aws.resources.rds.p4a_controls import classify_rds_instance_controls
 
 
 class RDSInstances(AWSResources):
@@ -25,6 +26,10 @@ class RDSInstances(AWSResources):
                     'EnhancedMonitoringResourceArn', 'StorageEncrypted', 'CACertificateIdentifier', 'Tags']:
             instance[key] = raw_instance[key] if key in raw_instance else None
 
+        for key in ('MonitoringInterval', 'MonitoringRoleArn', 'PerformanceInsightsEnabled',
+                    'DatabaseInsightsMode', 'IAMDatabaseAuthenticationEnabled'):
+            instance[key] = raw_instance.get(key)
+        instance.update(classify_rds_instance_controls(raw_instance))
         cluster_id = raw_instance.get('DBClusterIdentifier')
         # Aurora / Multi-AZ DB cluster deletion protection lives on DBCluster.
         # A malformed membership field must never imply a standalone instance.

@@ -1,0 +1,22 @@
+{
+    "description": "Running EC2 Instance Uses Basic CloudWatch Monitoring (Review)",
+    "rationale": "An EC2 instance in RUNNING state has Monitoring.State=disabled, meaning basic rather than detailed monitoring. Stopped instances are not actionable. Detailed monitoring may be optional.",
+    "remediation": "Enable 1-minute detailed monitoring only for workloads where policy and alerting requirements justify additional metrics and cost.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "EC2 Instances",
+    "path": "ec2.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "detailed_monitoring_status",
+            "equal",
+            "basic"
+        ]
+    ],
+    "id_suffix": "P4AEC2DetailedMonitoring",
+    "evidence_policy": "p4a-ec2-detailed-monitoring-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_ec2_detailed_monitoring"
+}

@@ -1273,7 +1273,69 @@ def classify_p3d_rds_event_subscription(resource):
             'not_applicable' if status == 'not_applicable' else 'unknown')
 
 
+
+def _p4a_state(resource, field, bad, good, na=()):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    status = resource.get(field)
+    if status in bad:
+        return 'insecure'
+    if status in good:
+        return 'secure'
+    if status in na:
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_p4a_default_vpc(resource):
+    return _p4a_state(resource, 'default_vpc_gateway_status',
+                       ('unused_candidate',), ('in_use',), ('not_applicable',))
+
+
+def classify_p4a_security_contact(resource):
+    return _p4a_state(resource, 'security_contact_status',
+                       ('missing',), ('configured',))
+
+
+def classify_p4a_rds_enhanced_monitoring(resource):
+    return _p4a_state(resource, 'enhanced_monitoring_status',
+                       ('disabled',), ('enabled',), ('not_applicable',))
+
+
+def classify_p4a_rds_query_metrics(resource):
+    return _p4a_state(resource, 'detailed_query_metrics_status',
+                       ('disabled',), ('enabled',), ('not_applicable',))
+
+
+def classify_p4a_rds_iam_auth(resource):
+    return _p4a_state(resource, 'iam_db_auth_status',
+                       ('disabled',), ('enabled',), ('not_applicable',))
+
+
+def classify_p4a_rds_baseline(resource):
+    return _p4a_state(resource, 'monitoring_auth_baseline_status',
+                       ('all_disabled',), ('not_all_disabled',), ('not_applicable',))
+
+
+def classify_p4a_ssm_sharing_setting(resource):
+    return _p4a_state(resource, 'document_public_sharing_setting_status',
+                       ('enabled',), ('blocked',))
+
+
+def classify_p4a_ec2_detailed(resource):
+    return _p4a_state(resource, 'detailed_monitoring_status',
+                       ('basic',), ('detailed',), ('not_applicable',))
+
+
 CLASSIFIERS = {
+    'p4a-default-vpc-igw-v1': classify_p4a_default_vpc,
+    'p4a-security-contact-v1': classify_p4a_security_contact,
+    'p4a-rds-enhanced-monitoring-v1': classify_p4a_rds_enhanced_monitoring,
+    'p4a-rds-detailed-query-v1': classify_p4a_rds_query_metrics,
+    'p4a-rds-iam-db-auth-v1': classify_p4a_rds_iam_auth,
+    'p4a-rds-all-disabled-v1': classify_p4a_rds_baseline,
+    'p4a-ssm-public-sharing-setting-v1': classify_p4a_ssm_sharing_setting,
+    'p4a-ec2-detailed-monitoring-v1': classify_p4a_ec2_detailed,
     'p3d-alb-health-mismatch-v1': classify_p3d_alb_mismatch,
     'p3d-alb-other-unhealthy-v1': classify_p3d_other_unhealthy,
     'p3d-ec2-s3-broad-read-v1': classify_p3d_broad_s3_read,

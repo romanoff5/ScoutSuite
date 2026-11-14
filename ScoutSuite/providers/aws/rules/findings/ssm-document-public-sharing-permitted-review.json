@@ -1,0 +1,22 @@
+{
+    "description": "SSM Documents Public Sharing Permitted by Account/Region Setting",
+    "rationale": "GetServiceSetting returned Enable for /ssm/documents/console/public-sharing-permission. This means new public sharing is permitted; it does not prove any document is already public.",
+    "remediation": "If not required, configure the regional Systems Manager block-public-sharing setting to Disable and separately review existing public document shares.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "SSM Regions",
+    "path": "ssm.regions.id",
+    "conditions": [
+        "and",
+        [
+            "document_public_sharing_setting_status",
+            "equal",
+            "enabled"
+        ]
+    ],
+    "id_suffix": "P4ADocSharingCapability",
+    "evidence_policy": "p4a-ssm-public-sharing-setting-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_ssm_public_document_sharing_blocked"
+}

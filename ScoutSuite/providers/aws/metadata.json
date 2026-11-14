@@ -555,6 +555,10 @@
         "credential_reports": {
           "cols": 2,
           "path": "services.iam.credential_reports"
+        },
+        "security_contacts": {
+          "cols": 2,
+          "path": "services.iam.security_contacts"
         }
       },
       "summaries": {

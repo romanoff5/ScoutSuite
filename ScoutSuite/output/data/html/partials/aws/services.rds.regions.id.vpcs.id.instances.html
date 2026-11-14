@@ -20,6 +20,12 @@
                 <li class="list-group-item-text">Enhanced Monitoring:
                     <span id="rds.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.EnhancedMonitoringResourceArn">{{convert_bool_to_enabled EnhancedMonitoringResourceArn}}</span>
                 </li>
+                <li class="list-group-item-text">P4-A Enhanced Monitoring: <samp>{{enhanced_monitoring_status}}</samp></li>
+                <li class="list-group-item-text">Database Insights mode: <samp>{{DatabaseInsightsMode}}</samp></li>
+                <li class="list-group-item-text">P4-A detailed per-query metrics: <samp>{{detailed_query_metrics_status}}</samp></li>
+                <li class="list-group-item-text">P4-A IAM database authentication: <samp>{{iam_db_auth_status}}</samp></li>
+                <li class="list-group-item-text">P4-A composite review: <samp>{{monitoring_auth_baseline_status}}</samp></li>
+                <li class="list-group-item-text"><small>Review-only policies; cluster-managed settings may be N/A. Standard Database Insights can still provide monitoring.</small></li>
                 <li class="list-group-item-text">Encrypted Storage: <span id="rds.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.StorageEncrypted">{{convert_bool_to_enabled StorageEncrypted}}</span></li>
                 <li class="list-group-item-text">CA Certificate: <span id="rds.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.CACertificateIdentifier"><samp>{{CACertificateIdentifier}}</samp></span></li>
             </ul>

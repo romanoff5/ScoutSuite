@@ -10,6 +10,36 @@ from ScoutSuite.providers.utils import get_non_provider_id, run_concurrently, ge
 
 
 class IAMFacade(AWSBaseFacade):
+    async def get_security_alternate_contact_status(self, partition='aws'):
+        """Read-only account:GetAlternateContact, never store contact PII."""
+        from ScoutSuite.core.run_context import get_current_run_context
+        home = {'aws': 'us-east-1', 'aws-us-gov': 'us-gov-west-1',
+                'aws-cn': 'cn-north-1'}.get(partition)
+        if home is None:
+            return 'unknown'
+        client = AWSFacadeUtils.get_client('account', self.session, home)
+        if client is None:
+            return 'unknown'
+        try:
+            response = await run_concurrently(
+                lambda: client.get_alternate_contact(AlternateContactType='SECURITY'))
+            contact = response.get('AlternateContact') if isinstance(response, dict) else None
+            if not isinstance(contact, dict):
+                return 'unknown'
+            address = contact.get('EmailAddress')
+            return 'configured' if isinstance(address, str) and address.strip() else 'unknown'
+        except ClientError as exc:
+            code = exc.response.get('Error', {}).get('Code')
+            if code in ('ResourceNotFoundException', 'ResourceNotFound'):
+                return 'missing'
+            AWSFacadeUtils.record_listing_failure('iam', exc, 'GetSecurityAlternateContact')
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('iam', exc, 'GetSecurityAlternateContact')
+        context = get_current_run_context()
+        if context is not None:
+            context.record_collection_issue('partial', 'iam', 'SecurityContactUnverified')
+        return 'unknown'
+
     async def get_credential_reports(self):
         client = AWSFacadeUtils.get_client('iam', self.session)
         # When no credential report exists, we first need to initiate the creation of a new report by calling

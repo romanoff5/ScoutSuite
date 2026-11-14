@@ -554,3 +554,23 @@ class SSMPublicFacade(AWSBaseFacade):
         if result['status'] != 'complete':
             self.issue('partial', 'SSMDocumentShareCollectionIncomplete')
         return result
+
+    async def get_public_document_sharing_setting(self, region):
+        """Account/Region service setting, NOT an inventory of public documents."""
+        client = AWSFacadeUtils.get_client('ssm', self.session, region)
+        if client is None:
+            self.issue('partial', 'SSMDocumentPublicShareSettingClientUnavailable')
+            return 'unknown'
+        try:
+            response = await run_concurrently(lambda: client.get_service_setting(
+                SettingId='/ssm/documents/console/public-sharing-permission'))
+            item = response.get('ServiceSetting') if isinstance(response, dict) else None
+            value = item.get('SettingValue') if isinstance(item, dict) else None
+            if value == 'Enable':
+                return 'enabled'
+            if value == 'Disable':
+                return 'blocked'
+        except Exception as error:
+            AWSFacadeUtils.record_listing_failure('ssm', error, 'GetServiceSetting')
+        self.issue('partial', 'SSMDocumentPublicShareSettingUnknown')
+        return 'unknown'

@@ -1,0 +1,22 @@
+{
+    "description": "RDS Standalone Detailed Per-Query Metrics Disabled (Review)",
+    "rationale": "PerformanceInsightsEnabled=false with Standard Database Insights mode indicates detailed per-query metrics are not enabled; Standard Database Insights itself may still be available. This is not a claim that all database monitoring is absent.",
+    "remediation": "When needed, enable detailed per-query database and counter metrics or evaluate Database Insights Advanced mode and availability.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "detailed_query_metrics_status",
+            "equal",
+            "disabled"
+        ]
+    ],
+    "id_suffix": "P4ADetailedQueryMetrics",
+    "evidence_policy": "p4a-rds-detailed-query-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_rds_detailed_query_metrics"
+}

@@ -1,0 +1,22 @@
+{
+    "description": "RDS Standalone Monitoring and IAM Auth Baseline All Disabled (Review)",
+    "rationale": "An available standalone RDS instance explicitly has Enhanced Monitoring, detailed per-query metrics and supported-engine IAM DB auth disabled. This compound observation does not itself assign severity.",
+    "remediation": "Review all three controls against explicit operational policy and enable only those required for the workload.",
+    "references": [
+        "https://docs.aws.amazon.com/"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "and",
+        [
+            "monitoring_auth_baseline_status",
+            "equal",
+            "all_disabled"
+        ]
+    ],
+    "id_suffix": "P4ACompoundDatabase",
+    "evidence_policy": "p4a-rds-all-disabled-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_rds_observability_and_iam_auth"
+}

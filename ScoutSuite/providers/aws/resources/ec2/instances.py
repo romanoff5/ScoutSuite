@@ -3,6 +3,7 @@ from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.providers.aws.utils import get_name, get_keys, format_arn
 
 from ScoutSuite.core.rule_evidence import classify_imds_v2
+from ScoutSuite.providers.aws.resources.ec2.p4a_monitoring import classify_detailed_monitoring
 from ScoutSuite.providers.aws.resources.secret_detection import DETECTOR_VERSION, detect_in_text
 
 
@@ -28,7 +29,8 @@ class EC2Instances(AWSResources):
         instance['arn'] = format_arn(self.partition, self.service, self.region, raw_instance['OwnerId'], raw_instance['InstanceId'], self.resource_type)
         instance['reservation_id'] = raw_instance['ReservationId']
         instance['availability_zone'] = raw_instance.get('Placement', {}).get('AvailabilityZone')
-        instance['monitoring_enabled'] = raw_instance['Monitoring']['State'] == 'enabled'
+        instance['detailed_monitoring_status'] = classify_detailed_monitoring(raw_instance)
+        instance['monitoring_enabled'] = instance['detailed_monitoring_status'] == 'detailed'
         # RC9: raw user data is scanned in memory and never stored in the report.
         status, user_data = await self.facade.ec2.get_instance_user_data_evidence(self.region, id)
         instance.update(self._user_data_evidence(status, user_data))
