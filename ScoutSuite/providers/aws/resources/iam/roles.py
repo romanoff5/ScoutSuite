@@ -23,6 +23,14 @@ class Roles(AWSResources):
         role_dict['inline_policies'] = raw_role.get('inline_policies')
         role_dict['inline_policies_count'] = raw_role.get('inline_policies_count')
         role_dict['assume_role_policy'] = raw_role.get('assume_role_policy')
+        # Verified by GetRole/ListAttachedRolePolicies; ListRoles is insufficient.
+        role_dict['permissions_boundary'] = raw_role.get('permissions_boundary')
+        role_dict['role_boundary_collection_status'] = raw_role.get(
+            'role_boundary_collection_status', 'unknown')
+        role_dict['attached_managed_policy_arns'] = raw_role.get(
+            'attached_managed_policy_arns')
+        role_dict['attached_managed_policy_collection_status'] = raw_role.get(
+            'attached_managed_policy_collection_status', 'unknown')
         role_dict['service_trust_scope_status'] = review_trust(
             role_dict['assume_role_policy'], role_dict['arn'])
         if len(raw_role.get('tags', {}).get('Tags')) > 0:

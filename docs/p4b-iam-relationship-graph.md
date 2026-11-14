@@ -35,3 +35,18 @@ Before deploying findings as enforcement, validate against IAM Access Analyzer a
 ## Regression requirements
 
 All new rules must be tested through actual rule JSON traversal and tri-state evidence classification. Required negative tests: scoped GitHub OIDC, malformed/missing trust, explicit Deny, conditional privileges, permissions boundaries, missing managed policy documents and graph bound exhaustion.
+
+## P4-B evidence completeness hardening
+
+The source IAM `ListRoles` inventory is not sufficient to evaluate permissions
+boundaries. For each role, `GetRole` is now required to establish an explicit
+`role_boundary_collection_status`; a denied or malformed response is UNKNOWN.
+`ListAttachedRolePolicies` separately verifies the *exact* managed policy
+attachments (including the successful empty case). Requests are read-only, bounded
+at 20 pages / 500 policies per role, and failures never become empty lists. The
+graph joins returned ARNs to the already-collected managed policy documents;
+missing documents remain UNKNOWN. This increases IAM API requests per role.
+
+An incomplete role graph invalidates the P4-B OIDC and PassRole candidates as
+well as the overall graph status. CI covers boundary restrictions, empty and
+denied role attachments, missing managed documents and truncation.
