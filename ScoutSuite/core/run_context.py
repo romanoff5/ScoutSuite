@@ -64,6 +64,10 @@ class RunContext:
     _api_semaphore: Optional[asyncio.Semaphore] = field(default=None, init=False, repr=False)
     errors: list = field(default_factory=list, init=False, repr=False)
     collection_issues: list = field(default_factory=list, init=False, repr=False)
+    # Per-run, bounded AWS API and evidence telemetry. No SDK payloads are retained.
+    _api_observations: dict = field(default_factory=dict, init=False, repr=False)
+    _evidence_observations: dict = field(default_factory=dict, init=False, repr=False)
+    _telemetry_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     # RC9: per-run CDN/WAF origin range catalog (None means the bundled catalog).
     cdn_catalog: Optional[dict] = field(default=None, init=False, repr=False)
     _clients: dict = field(default_factory=dict, init=False, repr=False)
@@ -127,17 +131,84 @@ class RunContext:
         self._token = _active_context.set(self)
         return self
 
-    def record_collection_issue(self, status: str, scope: str, reason_code: str) -> None:
-        """Record sanitized, structured evidence of incomplete collection."""
+    def record_collection_issue(self, status: str, scope: str,
+                                reason_code: str, region: Optional[str] = None) -> None:
+        """Store sanitized issues; optional region retains exact API attribution.
+
+        Legacy collectors lack region attribution. Those issues must conservatively
+        downgrade *every* row for the affected service, never become PASS.
+        """
         import re
         if status not in ('denied', 'unsupported', 'failed', 'partial'):
             raise ValueError('Invalid collection issue status')
         for value in (scope, reason_code):
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,64}', value):
                 raise ValueError('Unsafe collection issue metadata')
+        if region is not None and (not isinstance(region, str)
+                                  or not re.fullmatch(r'[A-Za-z0-9-]{1,64}', region)):
+            raise ValueError('Unsafe collection region')
         issue = {'status': status, 'scope': scope, 'reason_code': reason_code}
-        if issue not in self.collection_issues:
-            self.collection_issues.append(issue)
+        if region is not None:
+            issue['region'] = region
+        with self._telemetry_lock:
+            if issue not in self.collection_issues:
+                self.collection_issues.append(issue)
+
+    def record_aws_api(self, service: str, region: str,
+                       operation: str, outcome: str) -> None:
+        """Thread-safe, payload-free Botocore final-response counters."""
+        import re
+        if (self.provider != 'aws'
+                or outcome not in ('success', 'denied', 'unsupported', 'failed')):
+            return
+        if not all(isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,64}', value)
+                   for value in (service, region, operation)):
+            return
+        key = (service, region)
+        with self._telemetry_lock:
+            record = self._api_observations.setdefault(key, {
+                'success': 0, 'denied': 0, 'unsupported': 0,
+                'failed': 0, 'operations': {}
+            })
+            record[outcome] += 1
+            ops = record['operations']
+            # Aggregate only model operation names, never requests, IDs or bodies.
+            if operation in ops or len(ops) < 256:
+                item = ops.setdefault(operation, {'success': 0, 'denied': 0,
+                                                  'unsupported': 0, 'failed': 0})
+                item[outcome] += 1
+
+    def record_evidence_observation(self, service: str, region: str,
+                                    path: str, outcome: str) -> None:
+        """Ephemeral distinct rule path census, persisted as counts only."""
+        if self.provider != 'aws' or outcome not in (
+                'secure', 'insecure', 'unknown', 'not_applicable'):
+            return
+        if not all(isinstance(x, str) and x for x in (service, region, path)):
+            return
+        key = (service, region)
+        with self._telemetry_lock:
+            record = self._evidence_observations.setdefault(
+                key, {'checked': set(), 'unknown': set(), 'not_applicable': set()})
+            if outcome in ('secure', 'insecure'):
+                record['checked'].add(path)
+            elif outcome == 'unknown':
+                record['unknown'].add(path)
+            else:
+                record['not_applicable'].add(path)
+
+    def aws_telemetry_snapshot(self) -> dict:
+        """Return JSON-safe counts keyed by (service, region), without raw IDs."""
+        with self._telemetry_lock:
+            return {
+                'api': {key: {
+                    name: ({op: dict(stats) for op, stats in value.items()} if name == 'operations' else value)
+                    for name, value in record.items()
+                } for key, record in self._api_observations.items()},
+                'evidence': {key: {
+                    name: len(value) for name, value in record.items()
+                } for key, record in self._evidence_observations.items()},
+            }
 
     def collection_summary(self, checked_items: int = 0) -> dict:
         """Additive report metadata; zero checks never imply verified compliance."""
