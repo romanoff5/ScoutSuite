@@ -1,6 +1,9 @@
 """P3-C: fail-closed, customer-free quality gate over real JSON rule contracts."""
 import copy
 import json
+
+import pytest
+
 from pathlib import Path
 
 from tools import p3c_quality as quality
@@ -124,3 +127,25 @@ def test_synthetic_fixture_contains_no_customer_raw_evidence():
     # Every synthetic triad points to a concrete rule and at most one anonymized case.
     fixtures = loaded('p3c_detection_triads.json')['triads']
     assert len({x['id'] for x in fixtures}) == len(fixtures) == 25
+
+
+@pytest.mark.parametrize('secret', [
+    'incident-contact@example.test',
+    'client_name',
+    'customer_account_id',
+    'internal_host',
+    'private_domain',
+    'arn:aws:iam::123456789012:role/example',
+    '123456789012',
+])
+def test_public_corpus_rejects_email_placeholder_and_cloud_identifiers(secret):
+    """The privacy gate must not silently miss email or placeholder values."""
+    assert quality.FORBIDDEN.search(secret)
+    coverage = loaded('p3c_assessment_coverage.json')
+    coverage['cases'][0]['limitation'] = 'Leak: ' + secret
+    errors, _ = quality.validate_coverage(coverage, active_rules())
+    assert any('Customer identifier' in error for error in errors)
+    crosswalk = loaded('p3c_external_crosswalk.json')
+    crosswalk['crosswalk'][0]['qualification'] = 'Leak: ' + secret
+    errors, _ = quality.validate_crosswalk(crosswalk, active_rules())
+    assert any('Customer identifier' in error for error in errors)

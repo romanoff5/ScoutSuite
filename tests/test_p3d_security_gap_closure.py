@@ -291,3 +291,35 @@ def test_rds_subscription_collector_pagination_and_access_denied_are_not_empty()
     with patch.object(AWSFacadeUtils, 'get_client', return_value=None):
         status, rows = asyncio.run(facade.get_event_subscriptions(REGION))
     assert status == 'unknown' and rows == []
+
+
+def test_alb_mixed_mismatch_and_timeout_both_findings_survive():
+    """One mismatch must not suppress a separate timeout on the same ALB."""
+    services, lb = alb_inventory()
+    targets = lb['target_groups'][0]['registered_targets']
+    targets.append({
+        'id': 'i-timeout', 'port': 8080, 'health_state': 'unhealthy',
+        'health_reason': 'Target.Timeout',
+        'health_description': 'Health check timed out',
+    })
+    annotate_alb_health(services)
+    assert lb['p3d_health_mismatch_status'] == 'response_mismatch'
+    assert lb['p3d_unhealthy_status'] == 'other_unhealthy'
+    assert [x['target_id'] for x in lb['p3d_health_mismatch_evidence']] == ['i-123']
+    assert [x['target_id'] for x in lb['p3d_unhealthy_target_evidence']] == ['i-timeout']
+    assert lb['p3d_target_health_status'] == 'unhealthy'
+    for filename in ('elbv2-alb-health-check-response-mismatch.json',
+                     'elbv2-alb-other-unhealthy-targets.json'):
+        flagged, summary = actual(filename, services)
+        assert len(flagged) == 1
+        assert summary['insecure'] == 1
+
+
+def test_alb_only_response_mismatch_does_not_invent_other_unhealthy():
+    services, lb = alb_inventory()
+    annotate_alb_health(services)
+    assert lb['p3d_unhealthy_target_evidence'] == []
+    assert lb['p3d_unhealthy_status'] == 'not_observed'
+    flagged, summary = actual('elbv2-alb-other-unhealthy-targets.json', services)
+    assert flagged == []
+    assert summary['insecure'] == 0
