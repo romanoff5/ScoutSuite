@@ -228,6 +228,9 @@ code {
 
 .finding-badge-good:before { color: #3fb950; }
 .finding-badge-warning:before { color: #f2b705; }
+.finding-badge-review:before { color: #a0a7b3; }
+.finding-review, .service-status-review { color: #a0a7b3; }
+.finding-title-review { border-left-color: #a0a7b3; }
 .finding-badge-danger:before { color: #ff5c5c; }
 .finding-badge-unknown:before { color: #6b727d; }
 

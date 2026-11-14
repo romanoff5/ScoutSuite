@@ -146,10 +146,20 @@ class BaseProvider:
                     last_run['summary'][service]['rules_count'] += 1
                     last_run['summary'][service]['checked_items'] += finding['checked_items']
                     last_run['summary'][service]['flagged_items'] += finding['flagged_items']
+                    if finding.get('level') == 'review':
+                        last_run['summary'][service].setdefault('review_items', 0)
+                        last_run['summary'][service]['review_items'] += finding['flagged_items']
+                        if finding.get('checked_items', 0) > 0:
+                            last_run['summary'][service].setdefault('review_rules', 0)
+                            last_run['summary'][service]['review_rules'] += 1
                     if finding.get('assessment_status') == 'incomplete':
                         last_run['summary'][service]['incomplete_rules'] += 1
                     items = finding.get('items', [])
-                    if last_run['summary'][service]['max_level'] != 'danger' and len(items) > 0:
+                    # REVIEW is not a medium/high severity and must not win
+                    # over a real warning or danger finding in the service badge.
+                    if (finding.get('level') in ('danger', 'warning')
+                            and last_run['summary'][service]['max_level'] != 'danger'
+                            and len(items) > 0):
                         last_run['summary'][service]['max_level'] = finding['level']
             # Total number of resources
             excluded = getattr(self, 'NON_INVENTORY_COUNT_KEYS', ('regions_count',))
@@ -174,10 +184,12 @@ class BaseProvider:
         Hub, Macie) have region-level rules, so their absence is checked and flagged
         rather than shown as "not in use".
         """
-        if summary['flagged_items'] > 0:
+        if summary['flagged_items'] > summary.get('review_items', 0):
             return 'issues'
         if summary['incomplete_rules'] > 0 or summary['collection_issues'] > 0:
             return 'incomplete'
+        if summary.get('review_rules', 0):
+            return 'review_required'
         if summary['checked_items'] > 0:
             return 'passed'
         # A fully collected empty inventory is "not in use" whether or not the
