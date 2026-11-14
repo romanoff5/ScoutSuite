@@ -1,0 +1,680 @@
+{
+  "schema_version": 1,
+  "visibility": "synthetic-public",
+  "source_sets": {
+    "A": {
+      "cases": 39,
+      "meaning": "anonymized infrastructure assessment"
+    },
+    "B": {
+      "cases": 27,
+      "meaning": "anonymized cloud/application assessment"
+    }
+  },
+  "methodology": "Manual report-derived control abstractions: no customer names, accounts, raw evidence, asset IDs, or report text. direct means an existing rule addresses the stated configuration in principle, not detection verified on a live account; partial means incomplete semantic coverage; gap means no adequate rule; out_of_scope means non-AWS-configuration test. This registry is not a scanner result and does not assert false-positive rates.",
+  "cases": [
+    {
+      "id": "A-01",
+      "domain": "logging",
+      "control": "durable_account_audit_logging",
+      "coverage": "partial",
+      "rule_ids": [
+        "cloudtrail-not-configured.json",
+        "m10s-org-cloudtrail-config-gap.json"
+      ],
+      "limitation": "Account-local trail evidence is not equivalent to complete organisation, Lake or external SIEM assurance."
+    },
+    {
+      "id": "A-02",
+      "domain": "backup",
+      "control": "database_recoverability_compound",
+      "coverage": "partial",
+      "rule_ids": [
+        "rds-cluster-deletion-protection-disabled.json",
+        "rds-instance-short-backup-retention-period.json",
+        "rds-cluster-without-aws-backup-resource-record.json"
+      ],
+      "limitation": "Independent recovery copies, actual RPO and historical destructive operations require extra evidence."
+    },
+    {
+      "id": "A-03",
+      "domain": "detection",
+      "control": "threat_detection_services_disabled",
+      "coverage": "partial",
+      "rule_ids": [
+        "guardduty-not-enabled.json",
+        "securityhub-region-not-subscribed.json"
+      ],
+      "limitation": "No equivalent Detective service-state detector in this mapping."
+    },
+    {
+      "id": "A-04",
+      "domain": "logging",
+      "control": "configuration_recorder_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "config-recorder-not-configured.json"
+      ],
+      "limitation": "Regional recorder state only."
+    },
+    {
+      "id": "A-05",
+      "domain": "logging",
+      "control": "multi_service_activity_logs_absent",
+      "coverage": "partial",
+      "rule_ids": [
+        "elbv2-no-access-logs.json",
+        "vpc-subnet-without-flow-log.json",
+        "cloudtrail-not-configured.json"
+      ],
+      "limitation": "Does not establish database and DNS logging as a single control."
+    },
+    {
+      "id": "A-06",
+      "domain": "detection",
+      "control": "security_event_alerting_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "cloudwatch-security-metric-alerting-missing.json"
+      ],
+      "limitation": "Does not prove absence of centrally delivered external alerts."
+    },
+    {
+      "id": "A-07",
+      "domain": "detection",
+      "control": "ec2_vulnerability_patch_telemetry_absent",
+      "coverage": "partial",
+      "rule_ids": [
+        "inspector2-account-disabled.json",
+        "ssm-running-ec2-unmanaged.json"
+      ],
+      "limitation": "Scanning entitlement and SSM agent status do not independently prove host patch posture."
+    },
+    {
+      "id": "A-08",
+      "domain": "network",
+      "control": "ec2_public_backend_443",
+      "coverage": "partial",
+      "rule_ids": [
+        "ec2-public-instance-https-open-to-world.json",
+        "elbv2-waf-backend-public-bypass-candidate.json"
+      ],
+      "limitation": "Ingress and correlated target path do not prove real internet reachability."
+    },
+    {
+      "id": "A-09",
+      "domain": "network",
+      "control": "alb_public_without_aws_waf",
+      "coverage": "direct",
+      "rule_ids": [
+        "elbv2-internet-facing-alb-without-waf.json"
+      ],
+      "limitation": "External CDN/WAF controls may qualify the result."
+    },
+    {
+      "id": "A-10",
+      "domain": "network",
+      "control": "sg_subnet_scope_all_ports",
+      "coverage": "partial",
+      "rule_ids": [
+        "ec2-security-group-opens-all-ports.json",
+        "ec2-security-group-opens-port-range.json"
+      ],
+      "limitation": "Subnet-wide source and precise target semantics are not fully correlated."
+    },
+    {
+      "id": "A-11",
+      "domain": "identity",
+      "control": "root_mfa_and_centralised_admin",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-root-account-no-mfa.json",
+        "iam-root-account-no-hardware-mfa.json"
+      ],
+      "limitation": "No proof of organisation-level central root access controls."
+    },
+    {
+      "id": "A-12",
+      "domain": "encryption",
+      "control": "ebs_volume_and_snapshot_plaintext",
+      "coverage": "direct",
+      "rule_ids": [
+        "ec2-ebs-volume-not-encrypted.json",
+        "ec2-ebs-snapshot-not-encrypted.json"
+      ],
+      "limitation": "Only visible EBS volumes and snapshots."
+    },
+    {
+      "id": "A-13",
+      "domain": "backup",
+      "control": "ec2_recovery_gap",
+      "coverage": "partial",
+      "rule_ids": [
+        "ec2-instance-without-aws-backup-resource-record.json"
+      ],
+      "limitation": "Native snapshots and external backups are not necessarily captured."
+    },
+    {
+      "id": "A-14",
+      "domain": "reliability",
+      "control": "alb_unhealthy_targets_healthcheck_mismatch",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "P3-B collects targets but no rule fully evaluates health-check mismatch."
+    },
+    {
+      "id": "A-15",
+      "domain": "tls",
+      "control": "imported_certificate_expiry_and_hostname",
+      "coverage": "partial",
+      "rule_ids": [
+        "acm-certificate-with-close-expiration-date.json",
+        "acm-imported-certificate-renewal-review.json",
+        "elbv2-https-hostname-not-in-listener-certificate.json"
+      ],
+      "limitation": "Planned/unobserved DNS hostnames cannot be independently correlated."
+    },
+    {
+      "id": "A-16",
+      "domain": "identity",
+      "control": "ec2_ssh_key_reuse_and_public_admin",
+      "coverage": "partial",
+      "rule_ids": [
+        "ec2-running-instances-share-ssh-key-name.json",
+        "ec2-security-group-opens-known-port-to-all.json"
+      ],
+      "limitation": "Key name reuse is not proof of private-key compromise, reachability remains untested."
+    },
+    {
+      "id": "A-17",
+      "domain": "network",
+      "control": "public_all_protocol_egress",
+      "coverage": "direct",
+      "rule_ids": [
+        "ec2-security-group-all-egress-to-world.json"
+      ],
+      "limitation": "Configuration-only and limited to applicable active groups."
+    },
+    {
+      "id": "A-18",
+      "domain": "network",
+      "control": "unused_default_vpc_with_gateway",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "A default VPC with internet gateway is not equivalent to an unused security group."
+    },
+    {
+      "id": "A-19",
+      "domain": "identity",
+      "control": "instance_role_broad_bucket_read",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "No dedicated semantic evaluation of effective S3 wildcard read privilege on an instance role."
+    },
+    {
+      "id": "A-20",
+      "domain": "detection",
+      "control": "access_analyzer_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "accessanalyzer-not-configured.json"
+      ],
+      "limitation": "Scoped account and Region only."
+    },
+    {
+      "id": "A-21",
+      "domain": "governance",
+      "control": "account_security_contact_absent",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "No direct alternate-account security contact registration rule."
+    },
+    {
+      "id": "A-22",
+      "domain": "tls",
+      "control": "database_proxy_tls_optional",
+      "coverage": "direct",
+      "rule_ids": [
+        "rds-proxy-require-tls-disabled.json"
+      ],
+      "limitation": "Proxy client TLS requirement only."
+    },
+    {
+      "id": "A-23",
+      "domain": "secrets",
+      "control": "secret_rotation_and_unused_entries",
+      "coverage": "direct",
+      "rule_ids": [
+        "secretsmanager-secret-rotation-disabled.json",
+        "secretsmanager-secret-unused.json"
+      ],
+      "limitation": "Credential validity and real usage are separate issues."
+    },
+    {
+      "id": "A-24",
+      "domain": "encryption",
+      "control": "kms_key_automatic_rotation_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "kms-cmk-rotation-disabled.json"
+      ],
+      "limitation": "Depends on key type and supported rotation mechanics."
+    },
+    {
+      "id": "A-25",
+      "domain": "storage",
+      "control": "s3_transport_logging_public_block",
+      "coverage": "direct",
+      "rule_ids": [
+        "s3-bucket-allowing-cleartext.json",
+        "s3-bucket-no-logging.json",
+        "s3-bucket-public-access-block-incomplete.json"
+      ],
+      "limitation": "Three individually reported configuration controls."
+    },
+    {
+      "id": "A-26",
+      "domain": "network",
+      "control": "alb_deletion_protection_header_validation",
+      "coverage": "partial",
+      "rule_ids": [
+        "elbv2-no-deletion-protection.json",
+        "elbv2-http-request-smuggling.json"
+      ],
+      "limitation": "Request-smuggling mitigation and drop-invalid-header semantics may differ."
+    },
+    {
+      "id": "A-27",
+      "domain": "identity",
+      "control": "ec2_account_imdsv2_defaults_not_required",
+      "coverage": "direct",
+      "rule_ids": [
+        "ec2-account-imdsv2-not-required-default.json"
+      ],
+      "limitation": "Account defaults are distinct from per-instance overrides."
+    },
+    {
+      "id": "A-28",
+      "domain": "detection",
+      "control": "data_classification_service_disabled",
+      "coverage": "direct",
+      "rule_ids": [
+        "macie-session-not-enabled.json"
+      ],
+      "limitation": "Classification activity has separate checks."
+    },
+    {
+      "id": "A-29",
+      "domain": "network",
+      "control": "nacl_permissive_all_subnets",
+      "coverage": "partial",
+      "rule_ids": [
+        "vpc-custom-network-acls-allow-all.json",
+        "vpc-default-network-acls-allow-all.json"
+      ],
+      "limitation": "Association and effective subnet path must be resolved separately."
+    },
+    {
+      "id": "A-30",
+      "domain": "identity",
+      "control": "external_standing_admin_role",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-managed-policy-allows-full-privileges.json",
+        "iam-role-service-trust-missing-source-scope.json"
+      ],
+      "limitation": "External trust principal and control of administrative role need relationship analysis."
+    },
+    {
+      "id": "A-31",
+      "domain": "identity",
+      "control": "proxy_role_kms_policy_and_trust_scope",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-role-service-trust-missing-source-scope.json",
+        "iam-inline-policy-for-role.json"
+      ],
+      "limitation": "No evaluator of effective KMS key-specific condition/grant policy."
+    },
+    {
+      "id": "A-32",
+      "domain": "identity",
+      "control": "password_policy_without_iam_users",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-password-policy-minimum-length.json"
+      ],
+      "limitation": "Non-applicability when IAM users are absent must be interpreted."
+    },
+    {
+      "id": "A-33",
+      "domain": "database",
+      "control": "database_enhanced_monitoring_insights_iam_auth",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "No composite control covering all three monitoring/authentication settings."
+    },
+    {
+      "id": "A-34",
+      "domain": "documents",
+      "control": "ssm_public_sharing_capability_not_docs",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "Document-public-sharing capability is not identical to an actually public document."
+    },
+    {
+      "id": "A-35",
+      "domain": "analytics",
+      "control": "athena_result_encryption_enforcement",
+      "coverage": "partial",
+      "rule_ids": [
+        "athena-workgroup-settings-not-enforced.json",
+        "athena-workgroup-results-kms-not-enforced.json"
+      ],
+      "limitation": "SSE-S3 encryption is not plaintext; KMS-specific enforcement differs."
+    },
+    {
+      "id": "A-36",
+      "domain": "monitoring",
+      "control": "ec2_detailed_monitoring_disabled",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "No exact instance detailed-monitoring finding in default catalog."
+    },
+    {
+      "id": "A-37",
+      "domain": "network",
+      "control": "unused_security_group",
+      "coverage": "direct",
+      "rule_ids": [
+        "ec2-unused-security-group.json"
+      ],
+      "limitation": "Only visible SG attachment relationships."
+    },
+    {
+      "id": "A-38",
+      "domain": "encryption",
+      "control": "glue_catalog_kms_not_configured",
+      "coverage": "direct",
+      "rule_ids": [
+        "glue-catalog-kms-not-configured.json"
+      ],
+      "limitation": "AWS-managed encryption remains a baseline."
+    },
+    {
+      "id": "A-39",
+      "domain": "identity",
+      "control": "aws_support_role_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "iam-no-support-role.json"
+      ],
+      "limitation": "IAM support-access recommendation depends on operating model."
+    },
+    {
+      "id": "B-01",
+      "domain": "dependency",
+      "control": "outdated_application_dependencies",
+      "coverage": "out_of_scope",
+      "rule_ids": [],
+      "limitation": "SCA and deployed dependency analysis are outside AWS configuration scans."
+    },
+    {
+      "id": "B-02",
+      "domain": "application",
+      "control": "login_content_security_policy",
+      "coverage": "out_of_scope",
+      "rule_ids": [],
+      "limitation": "Live HTTP and application response policy are outside read-only cloud config."
+    },
+    {
+      "id": "B-03",
+      "domain": "application",
+      "control": "admin_input_causes_server_error",
+      "coverage": "out_of_scope",
+      "rule_ids": [],
+      "limitation": "Application input validation requires application testing."
+    },
+    {
+      "id": "B-04",
+      "domain": "identity",
+      "control": "service_role_source_condition_missing",
+      "coverage": "direct",
+      "rule_ids": [
+        "iam-role-service-trust-missing-source-scope.json"
+      ],
+      "limitation": "Not every AWS service principal supports SourceArn; review supported trust condition."
+    },
+    {
+      "id": "B-05",
+      "domain": "logging",
+      "control": "regional_cloudtrail_history_absent",
+      "coverage": "partial",
+      "rule_ids": [
+        "cloudtrail-not-configured.json"
+      ],
+      "limitation": "A trail in another account/Region or external logging can change the assurance outcome."
+    },
+    {
+      "id": "B-06",
+      "domain": "detection",
+      "control": "regional_threat_detector_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "guardduty-not-enabled.json"
+      ],
+      "limitation": "Requires complete detector census."
+    },
+    {
+      "id": "B-07",
+      "domain": "identity",
+      "control": "deployment_oidc_admin_privilege",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-managed-policy-allows-full-privileges.json",
+        "iam-role-service-trust-missing-source-scope.json"
+      ],
+      "limitation": "Deployment OIDC trust and exact role-to-policy join need validation."
+    },
+    {
+      "id": "B-08",
+      "domain": "identity",
+      "control": "standing_deployment_access_key",
+      "coverage": "direct",
+      "rule_ids": [
+        "iam-user-active-persistent-access-key-review.json"
+      ],
+      "limitation": "Review criterion differs from evidence of key theft or misuse."
+    },
+    {
+      "id": "B-09",
+      "domain": "logging",
+      "control": "regional_config_recorder_missing",
+      "coverage": "direct",
+      "rule_ids": [
+        "config-recorder-not-configured.json"
+      ],
+      "limitation": "Regional state only."
+    },
+    {
+      "id": "B-10",
+      "domain": "detection",
+      "control": "cloudwatch_security_metric_alarm_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "cloudwatch-security-metric-alerting-missing.json"
+      ],
+      "limitation": "External monitoring/notifications not automatically inspected."
+    },
+    {
+      "id": "B-11",
+      "domain": "containers",
+      "control": "ecs_running_task_writable_root",
+      "coverage": "direct",
+      "rule_ids": [
+        "ecs-task-definition-writable-root.json"
+      ],
+      "limitation": "Task definition inventory may not prove deployment parity."
+    },
+    {
+      "id": "B-12",
+      "domain": "storage",
+      "control": "s3_policy_no_tls_requirement",
+      "coverage": "direct",
+      "rule_ids": [
+        "s3-bucket-allowing-cleartext.json"
+      ],
+      "limitation": "Requires complete bucket policy evidence."
+    },
+    {
+      "id": "B-13",
+      "domain": "containers",
+      "control": "ecr_basic_scanning_without_enhanced",
+      "coverage": "direct",
+      "rule_ids": [
+        "ecr-registry-not-enhanced-scanning.json"
+      ],
+      "limitation": "Registry-level scanning configuration and account exemptions matter."
+    },
+    {
+      "id": "B-14",
+      "domain": "storage",
+      "control": "s3_account_and_bucket_public_block",
+      "coverage": "direct",
+      "rule_ids": [
+        "s3-bucket-public-access-block-incomplete.json"
+      ],
+      "limitation": "Effective block requires combining account and bucket settings."
+    },
+    {
+      "id": "B-15",
+      "domain": "monitoring",
+      "control": "database_specific_alarm_subscription_missing",
+      "coverage": "gap",
+      "rule_ids": [],
+      "limitation": "Generic CloudWatch security metric filters do not prove RDS event/alarm coverage."
+    },
+    {
+      "id": "B-16",
+      "domain": "network",
+      "control": "waf_no_rate_limiting_rule",
+      "coverage": "direct",
+      "rule_ids": [
+        "wafv2-web-acl-no-explicit-rate-based-rule.json"
+      ],
+      "limitation": "Only explicit rate-based rules; other controls may mitigate abuse."
+    },
+    {
+      "id": "B-17",
+      "domain": "identity",
+      "control": "root_virtual_mfa_not_hardware",
+      "coverage": "direct",
+      "rule_ids": [
+        "iam-root-account-no-hardware-mfa.json"
+      ],
+      "limitation": "Device-class-based policy review rather than MFA absent."
+    },
+    {
+      "id": "B-18",
+      "domain": "identity",
+      "control": "root_used_for_routine_admin",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-root-account-used-recently.json",
+        "cloudtrail-root-management-write-recent.json"
+      ],
+      "limitation": "Event history window and precise activity classification must match."
+    },
+    {
+      "id": "B-19",
+      "domain": "secrets",
+      "control": "application_secret_rotation_not_enabled",
+      "coverage": "direct",
+      "rule_ids": [
+        "secretsmanager-secret-rotation-disabled.json"
+      ],
+      "limitation": "Customer-managed external rotation might exist."
+    },
+    {
+      "id": "B-20",
+      "domain": "detection",
+      "control": "regional_security_hub_absent",
+      "coverage": "direct",
+      "rule_ids": [
+        "securityhub-region-not-subscribed.json"
+      ],
+      "limitation": "External delegated administrator can affect compliance conclusions."
+    },
+    {
+      "id": "B-21",
+      "domain": "logging",
+      "control": "log_group_unbounded_retention",
+      "coverage": "direct",
+      "rule_ids": [
+        "cloudwatch-log-group-unlimited-retention.json"
+      ],
+      "limitation": "Unlimited retention may be approved by policy."
+    },
+    {
+      "id": "B-22",
+      "domain": "encryption",
+      "control": "ebs_default_encryption_disabled_no_volumes",
+      "coverage": "direct",
+      "rule_ids": [
+        "ec2-ebs-default-encryption-disabled.json"
+      ],
+      "limitation": "Configuration risk, not observed unencrypted volume."
+    },
+    {
+      "id": "B-23",
+      "domain": "encryption",
+      "control": "cloudwatch_log_groups_no_customer_kms",
+      "coverage": "direct",
+      "rule_ids": [
+        "cloudwatch-log-group-no-customer-kms.json"
+      ],
+      "limitation": "AWS-managed encryption still protects logs."
+    },
+    {
+      "id": "B-24",
+      "domain": "detection",
+      "control": "access_analyzer_not_visible",
+      "coverage": "direct",
+      "rule_ids": [
+        "accessanalyzer-not-configured.json"
+      ],
+      "limitation": "Organisation-level or delegated coverage might apply."
+    },
+    {
+      "id": "B-25",
+      "domain": "identity",
+      "control": "purpose_scoped_smtp_key_persistent",
+      "coverage": "partial",
+      "rule_ids": [
+        "iam-user-active-persistent-access-key-review.json"
+      ],
+      "limitation": "A purposeful integration key is not automatically an excessive privilege."
+    },
+    {
+      "id": "B-26",
+      "domain": "backup",
+      "control": "database_backup_assurance_unverified",
+      "coverage": "partial",
+      "rule_ids": [
+        "rds-instance-without-aws-backup-resource-record.json",
+        "rds-cluster-without-aws-backup-resource-record.json"
+      ],
+      "limitation": "External/native backup evidence and restore tests require separate confirmation."
+    },
+    {
+      "id": "B-27",
+      "domain": "storage",
+      "control": "s3_version_mfa_delete_disabled",
+      "coverage": "direct",
+      "rule_ids": [
+        "s3-bucket-no-mfa-delete.json"
+      ],
+      "limitation": "MFA Delete controls only supported versioning behavior and not Object Lock."
+    }
+  ]
+}
