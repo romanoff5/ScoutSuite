@@ -308,6 +308,7 @@
       "cloudtrail-root-management-write-recent.json",
       "cloudwatch-alarm-without-actions.json",
       "cloudwatch-log-group-no-customer-kms.json",
+      "cloudwatch-log-group-retention-exceeds-policy.json",
       "cloudwatch-log-group-unlimited-retention.json",
       "cloudwatch-metric-alarm-actions-disabled.json",
       "cloudwatch-security-metric-alerting-missing.json",

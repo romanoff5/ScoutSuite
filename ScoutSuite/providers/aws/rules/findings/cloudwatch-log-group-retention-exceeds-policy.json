@@ -1,0 +1,35 @@
+{
+    "description": "CloudWatch Log Group Retention Exceeds Approved Organization Policy",
+    "rationale": "Only an explicitly selected compliance policy supplies the maximum days. A log group retaining data indefinitely or for longer than the approved maximum requires remediation or an accepted exception; this does not imply plaintext logs or an inherent AWS vulnerability.",
+    "remediation": "Apply the policy maximum or document an exception considering legal hold, evidence preservation, audit requirements and retention obligations.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html"
+    ],
+    "dashboard_name": "Log Groups",
+    "path": "cloudwatch.regions.id.log_groups.id",
+    "conditions": [
+        "or",
+        [
+            "retention_status",
+            "equal",
+            "unlimited"
+        ],
+        [
+            "and",
+            [
+                "retention_status",
+                "equal",
+                "configured"
+            ],
+            [
+                "retention_days",
+                "moreThan",
+                "_ARG_0_"
+            ]
+        ]
+    ],
+    "id_suffix": "PolicyRetentionMax",
+    "evidence_policy": "aws-policy-log-retention-max-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "max_cloudwatch_retention_days"
+}

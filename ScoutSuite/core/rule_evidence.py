@@ -1380,12 +1380,39 @@ CLASSIFIERS = {
 }
 
 
+def classify_policy_log_retention(resource, maximum_days):
+    """Compare observed retention to an explicit organizational maximum."""
+    if not isinstance(resource, dict):
+        return 'unknown'
+    state = resource.get('retention_status')
+    if state == 'unlimited':
+        return 'insecure'
+    if state != 'configured':
+        return 'unknown'
+    days = resource.get('retention_days')
+    if type(days) is not int or days <= 0:
+        return 'unknown'
+    return 'insecure' if days > maximum_days else 'secure'
+
+
 def evaluate_rule_evidence(rule, services):
     """Evaluate optional status metadata without changing flagged item IDs."""
     policy = getattr(rule, 'evidence_policy', None)
     if policy is None:
         return None
-    if policy in SCOPED_POLICIES:
+    if policy == 'aws-policy-log-retention-max-v1':
+        if getattr(rule, 'filename', None) != 'cloudwatch-log-group-retention-exceeds-policy.json':
+            raise ValueError('Unexpected retention policy filename')
+        args = getattr(rule, 'args', [])
+        if (not isinstance(args, list) or len(args) != 1
+                or not isinstance(args[0], str) or not args[0].isdecimal()):
+            raise ValueError('Explicit numeric retention threshold required')
+        maximum = int(args[0])
+        if not 1 <= maximum <= 3650:
+            raise ValueError('Retention threshold out of range')
+        def classifier(resource):
+            return classify_policy_log_retention(resource, maximum)
+    elif policy in SCOPED_POLICIES:
         binding = SCOPED_POLICIES[policy].get(getattr(rule, 'filename', None))
         if binding is None:
             raise ValueError('Unexpected scoped rule evidence filename')

@@ -16,5 +16,7 @@
         ]
     ],
     "id_suffix": "P2KMSResults",
-    "evidence_policy": "p2-athena-workgroup-kms-v1"
+    "evidence_policy": "p2-athena-workgroup-kms-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_athena_result_kms"
 }

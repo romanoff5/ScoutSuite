@@ -16,5 +16,7 @@
         ]
     ],
     "id_suffix": "P2UnlimitedRetention",
-    "evidence_policy": "p2-cloudwatch-log-retention-v1"
+    "evidence_policy": "p2-cloudwatch-log-retention-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_finite_cloudwatch_retention"
 }

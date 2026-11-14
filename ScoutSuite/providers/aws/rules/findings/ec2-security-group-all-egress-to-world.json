@@ -16,5 +16,7 @@
         ]
     ],
     "id_suffix": "P2WorldEgress",
-    "evidence_policy": "p2-ec2-sg-egress-v1"
+    "evidence_policy": "p2-ec2-sg-egress-v1",
+    "finding_category": "policy_dependent",
+    "policy_requirement": "require_restricted_ec2_egress"
 }
