@@ -1,6 +1,5 @@
 """P4-B2 synthetic IAM relationship graph, negative states and real rule traversal."""
 import asyncio
-import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace

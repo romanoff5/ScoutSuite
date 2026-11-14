@@ -4,11 +4,9 @@ Read-only, deterministic and bounded. Graph edges are authorization candidates,
 never confirmed IAM effective permissions (SCP/RCP/session/resource policies,
 account constraints, organization boundaries and service execution not simulated).
 """
-import fnmatch
-
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
     _admin_hint, _edge_id, _matches_action, _oidc_scope, _permission,
-    _role_documents, _service_trust, _statements, _trust_entries, _values,
+    _role_documents, _service_trust, _trust_entries, _values,
     SERVICE_PATHS,
 )
 
