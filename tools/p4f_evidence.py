@@ -14,6 +14,9 @@ import stat
 import sys
 from pathlib import Path
 
+# Permit invocation from repository root without pip installation. No network.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from ScoutSuite.core.evidence_snapshot import (
     KEY_BYTES, MAX_SOURCE_BYTES, SnapshotError,
     diff_evidence_snapshots, export_evidence_snapshot, verify_evidence_snapshot,

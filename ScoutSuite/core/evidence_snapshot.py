@@ -12,6 +12,7 @@ import hmac
 import json
 import re
 from pathlib import Path
+from functools import lru_cache
 
 from ScoutSuite import __version__ as SCOUT_VERSION
 
@@ -69,6 +70,19 @@ def _identity(key, account, service, rule, raw, label):
     return "hmac:" + hmac.new(key, text, hashlib.sha256).hexdigest()[:40]
 
 
+@lru_cache(maxsize=1)
+def _installed_services():
+    """Service names are known package metadata, never untrusted report labels."""
+    file = Path(__file__).resolve().parents[1] / "providers" / "aws" / "metadata.json"
+    try:
+        metadata = json.loads(file.read_text(encoding="utf-8"))
+        return frozenset(name for group in metadata.values() if isinstance(group, dict)
+                         for name, record in group.items()
+                         if name != "summaries" and isinstance(record, dict))
+    except (OSError, ValueError, TypeError):
+        raise SnapshotError("AWS service metadata unavailable")
+
+
 def _account_scope(payload):
     account = payload.get("account_id", "")
     if not isinstance(account, str) or len(account) > 128:
@@ -92,7 +106,7 @@ def _rule_definition_digest(rule):
         return None
 
 
-def _issue_projection(collection):
+def _issue_projection(collection, account, key):
     if not isinstance(collection, dict):
         return {"status": "unknown", "complete": False, "issues": []}
     complete = collection.get("complete") is True
@@ -111,13 +125,16 @@ def _issue_projection(collection):
         reason = issue.get("reason_code")
         status = issue.get("status")
         region = issue.get("region")
-        if (status not in _ISSUE_STATUS or
-                not isinstance(scope, str) or not _NAME.fullmatch(scope) or
-                not isinstance(reason, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", reason)):
+        if (status not in _ISSUE_STATUS or scope not in _installed_services() | {"assessment"}
+                or not isinstance(reason, str) or not 1 <= len(reason) <= 2048):
             complete = False
             continue
-        row = {"scope": scope, "status": status, "reason_code": reason}
-        if isinstance(region, str) and re.fullmatch(r"[a-z0-9-]{1,40}", region):
+        # Never copy an arbitrary exception-derived reason_code or Region string.
+        # Keep the reason comparable by HMAC only, even if it contains identifiers.
+        row = {"scope": scope, "status": status,
+               "reason_token": _identity(key, account, scope, "collection", reason, "issue")}
+        if isinstance(region, str) and re.fullmatch(
+                r"(?:us|eu|ap|sa|ca|af|me|il|mx|cn)-(?:north|south|east|west|central|northeast|northwest|southeast|southwest)-[0-9]{1,2}", region):
             row["region"] = region
         safe.append(row)
     safe.sort(key=_canonical)
@@ -199,6 +216,8 @@ def export_evidence_snapshot(results, key):
     total = 0
     for service, data in sorted(services.items()):
         _name(service)
+        if service not in _installed_services():
+            raise SnapshotError("Unrecognized AWS service name")
         if data is None:
             continue
         if not isinstance(data, dict):
@@ -208,11 +227,16 @@ def export_evidence_snapshot(results, key):
             raise SnapshotError("Invalid findings inventory")
         if registered:
             rows = {}
-            for rule, record in sorted(registered.items()):
-                _name(rule)
+            for raw_rule, record in sorted(registered.items()):
+                _name(raw_rule)
                 total += 1
                 if total > MAX_RULES:
                     raise SnapshotError("Too many rules for snapshot")
+                # Unknown/custom rule keys may themselves contain sensitive
+                # customer naming. Pseudonymize rather than publish them.
+                rule = (raw_rule if _rule_definition_digest(raw_rule) is not None else
+                        "unregistered-" + _identity(key, account, service, "custom",
+                                                    raw_rule, "rule")[5:])
                 rows[rule] = _finding_projection(record, account, service, rule, key)
             findings[service] = rows
 
@@ -224,7 +248,7 @@ def export_evidence_snapshot(results, key):
         "key_id": hmac.new(key, b"scoutsuite-p4f-key-id", hashlib.sha256).hexdigest()[:20],
         "source": "evaluated_results_only",
         "replay_contract": "observation_aggregation_not_rule_reevaluation",
-        "collection": _issue_projection(results.get("collection_status")),
+        "collection": _issue_projection(results.get("collection_status"), account, key),
         "findings": findings,
     }
     serialized = _canonical(body)
@@ -268,12 +292,29 @@ def verify_evidence_snapshot(snapshot, key, *, check_rule_drift=True):
     expected = hmac.new(key, b"scoutsuite-p4f-v1\x00" + encoded, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(str(integrity["hmac_sha256"]), expected):
         raise SnapshotError("Snapshot signature mismatch")
+    collection = snapshot.get("collection")
+    if not isinstance(collection, dict) or set(collection) != {"status", "complete", "issues"}:
+        raise SnapshotError("Invalid collection envelope")
+    if collection["status"] not in ("observed_complete", "incomplete") or type(collection["complete"]) is not bool:
+        raise SnapshotError("Invalid collection status")
+    issues = collection["issues"]
+    if not isinstance(issues, list) or len(issues) > MAX_ISSUES:
+        raise SnapshotError("Invalid issue inventory")
+    for issue in issues:
+        if not isinstance(issue, dict) or not {"scope", "status", "reason_token"} <= set(issue):
+            raise SnapshotError("Invalid issue observation")
+        if issue["scope"] not in _installed_services() | {"assessment"} or issue["status"] not in _ISSUE_STATUS:
+            raise SnapshotError("Invalid issue scope")
+        if not isinstance(issue["reason_token"], str) or not re.fullmatch(r"hmac:[0-9a-f]{40}", issue["reason_token"]):
+            raise SnapshotError("Invalid issue token")
     findings = snapshot.get("findings")
     if not isinstance(findings, dict):
         raise SnapshotError("Invalid finding envelope")
     total, unknown, changed, missing = 0, 0, [], []
     for service, rules in sorted(findings.items()):
         _name(service)
+        if service not in _installed_services():
+            raise SnapshotError("Unrecognized service scope")
         if not isinstance(rules, dict):
             raise SnapshotError("Invalid service findings")
         for rule, row in sorted(rules.items()):
@@ -325,6 +366,11 @@ def verify_evidence_snapshot(snapshot, key, *, check_rule_drift=True):
             if row["assessment_status"] not in _STATUS or row["evidence_status"] not in _STATUS:
                 raise SnapshotError("Invalid evidence status")
             recorded = row["rule_definition_sha256"]
+            if row["rule_verification"] not in (
+                    "definition_available", "definition_unavailable"):
+                raise SnapshotError("Invalid rule verification status")
+            if (recorded is None) != (row["rule_verification"] == "definition_unavailable"):
+                raise SnapshotError("Inconsistent rule availability")
             if recorded is not None and not (
                     isinstance(recorded, str) and re.fullmatch(r"[0-9a-f]{64}", recorded)):
                 raise SnapshotError("Invalid rule digest")

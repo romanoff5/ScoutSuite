@@ -4,7 +4,7 @@
 
 P4-F exports **finding observations**, not a raw AWS API capture. This is intentional: Scout RESULTS can contain DNS names, user data, policy documents, identifiers, and secret-bearing configuration values. Applying a generic recursive regex replacement to AWS data would not reliably remove all secrets and could change rule semantics.
 
-The portable snapshot is built by an **explicit allowlist** of: validated service/rule keys, enum-only evidence states, integer counters, sanitized collection issue codes, local rule-definition SHA-256, and keyed HMAC tokens of observed resource paths. It does not serialize raw AWS account IDs, ARNs, usernames, DNS names, AWS API response bodies, IAM policies, customer resource attributes, error messages or the HMAC key.
+The portable snapshot is built by an **explicit allowlist** of: validated service/rule keys, enum-only evidence states, integer counters, HMAC-tokenized collection issue codes, local rule-definition SHA-256, and keyed HMAC tokens of observed resource paths. It does not serialize raw AWS account IDs, ARNs, usernames, DNS names, AWS API response bodies, IAM policies, customer resource attributes, error messages or the HMAC key.
 
 The key is a locally stored **32-byte random secret**, created with restrictive permissions. The snapshot includes only a non-reversible key identifier and an HMAC-SHA-256 authenticity tag. Using the **same key** across exports provides stable pseudonym tokens for comparing snapshots; using different keys deliberately prevents linking identities. Never commit the key or original RESULTS files.
 
@@ -39,7 +39,7 @@ Exit statuses: `0` verified observations / successful export / successful diff; 
 - `rule_definition_sha256`: local JSON rule-definition hash, or `null` if unavailable.
 - `flagged_identity_tokens/unknown_identity_tokens`: domain-separated HMACs scoped by (account, service, rule, path).
 - `evidence_counts`: per-rule observed secure/insecure/unknown/not_applicable counts; absent policy evidence is `unavailable`, never PASS.
-- `collection`: sanitized issue codes, not raw SDK errors.
+- `collection`: issue scope/status plus HMAC of reason (never raw SDK errors).
 - `integrity`: canonical body digest and key-dependent HMAC authentication.
 - `verification_scope`: explicitly `observed_finding_evidence_only`; effective authorization and compliance are never claimed verified.
 
@@ -55,3 +55,5 @@ Re-exporting the same report and key produces byte-for-byte equivalent canonical
 6. Existing RESULTS files still contain sensitive source inventory; only share the P4-F projection after independent privacy review when required by contract.
 
 For **rule-logic regression**, continue to run source-to-rule fixtures and metamorphic tests on wholly synthetic AWS payloads. P4-F adds a private-safe reproducibility and drift envelope around those outcomes; it does not replace the fixture suite.
+
+Only names present in installed AWS service metadata are emitted. Unknown/custom rule names are HMAC-pseudonymized and flagged `definition_unavailable`, not exported verbatim. This prevents user-created naming conventions from silently leaking identifiers.
