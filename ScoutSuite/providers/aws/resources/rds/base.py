@@ -22,6 +22,13 @@ class RDS(Regions):
     async def fetch_all(self, regions=None, excluded_regions=None, partition_name='aws', **kwargs):
         await super().fetch_all(regions, excluded_regions, partition_name)
 
+        # P3-D: independent regional event-subscription inventory. A denied
+        # DescribeEventSubscriptions must not be counted as no monitoring.
+        for region in self['regions']:
+            status, subscriptions = await self.facade.rds.get_event_subscriptions(region)
+            self['regions'][region]['event_subscriptions_inventory_status'] = status
+            self['regions'][region]['event_subscriptions'] = subscriptions
+
         for region in self['regions']:
             self['regions'][region]['proxies_inventory_status'] = getattr(
                 self.facade.rds, 'proxy_inventory_status', {}).get(region, 'unknown')
