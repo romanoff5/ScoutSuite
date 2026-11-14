@@ -103,6 +103,9 @@ class ProcessingEngine:
                                     else 'POLICY_CHECK')
                                 finding['policy_threshold'] = policy_values[requirement]
                             else:
+                                # A custom legacy ruleset cannot silently promote
+                                # policy-dependent observations to warning/danger.
+                                finding['level'] = 'review'
                                 finding['finding_disposition'] = 'REVIEW'
                                 if finding.get('assessment_status') != 'incomplete':
                                     finding['assessment_status'] = 'review'
