@@ -256,6 +256,24 @@ def test_iam_trust_account_arn_boundary(value, expected):
     assert review_trust(policy, role) == expected
 
 
+
+@pytest.mark.parametrize("arn,expected", [
+    ("arn:aws:codebuild:eu-central-1:000000000000:project/p5c-test", "scoped"),
+    ("arn:aws:codebuild:eu-central-1:000000000000:project/*", "scoped"),
+    ("arn:aws:codebuild:eu-central-1:111111111111:project/p5c-test", "unknown"),
+    ("arn:aws:codebuild:eu-central-1:*:project/p5c-test", "missing"),
+    ("arn:aws:codebuild:eu-central-1::project/p5c-test", "unknown"),
+])
+def test_iam_source_arn_account_boundary(arn, expected):
+    policy = {"PolicyDocument": {"Statement": [{
+        "Effect": "Allow", "Action": "sts:AssumeRole",
+        "Principal": {"Service": "codebuild.amazonaws.com"},
+        "Condition": {"ArnLike": {"aws:SourceArn": arn}},
+    }]}}
+    role_arn = "arn:aws:iam::000000000000:role/p5c-test"
+    assert review_trust(policy, role_arn) == expected
+
+
 def test_effective_s3_bpa_does_not_promote_unknown_to_secure():
     required = ("BlockPublicAcls", "IgnorePublicAcls",
                 "BlockPublicPolicy", "RestrictPublicBuckets")
