@@ -108,7 +108,7 @@ def _rule_definition_digest(rule):
 
 def _issue_projection(collection, account, key):
     if not isinstance(collection, dict):
-        return {"status": "unknown", "complete": False, "issues": []}
+        return {"status": "incomplete", "complete": False, "issues": []}
     complete = collection.get("complete") is True
     issues = collection.get("issues")
     if not isinstance(issues, list):
