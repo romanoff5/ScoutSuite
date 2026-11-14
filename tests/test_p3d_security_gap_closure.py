@@ -262,7 +262,7 @@ def test_rds_disabled_alarm_or_subscription_is_not_actionable():
 def test_rds_metric_expression_uncertainty_is_not_a_pass():
     services, instance, _ = _db_inventory(alarm=False, subscription=False)
     services['cloudwatch']['regions'][REGION]['alarms']['expr'] = {
-        'name': 'metric-math', 'Metrics': [{'Expression': 'SEARCH(\\'{AWS/RDS} CPUUtilization\\', Average, 60)'}],
+        'name': 'metric-math', 'Metrics': [{'Expression': "SEARCH('{AWS/RDS} CPUUtilization', Average, 60)"}],
         'ActionsEnabled': True, 'AlarmActions': ['arn:synthetic:notify']}
     correlate_rds_monitoring(services, ('rds', 'cloudwatch'))
     assert instance['rds_alarm_status'] == 'unknown'

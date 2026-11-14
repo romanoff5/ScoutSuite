@@ -134,6 +134,7 @@ def correlate_rds_monitoring(services, selected):
         subscriptions = region.get('event_subscriptions')
         subscriptions_status = region.get('event_subscriptions_inventory_status')
         cluster_members = set()
+        cluster_ids = set()
         for cluster in (region.get('clusters') or {}).values():
             if not isinstance(cluster, dict):
                 continue
@@ -141,6 +142,8 @@ def correlate_rds_monitoring(services, selected):
             if isinstance(members, list):
                 cluster_members.update(x for x in members if isinstance(x, str))
             identifier = cluster.get('DBClusterIdentifier')
+            if isinstance(identifier, str) and identifier:
+                cluster_ids.add(identifier)
             if not isinstance(identifier, str) or not identifier:
                 cluster['rds_alarm_status'] = 'unknown'
                 cluster['rds_event_subscription_status'] = 'unknown'
@@ -160,7 +163,8 @@ def correlate_rds_monitoring(services, selected):
                     continue
                 # Aurora cluster-level monitoring is evaluated at the cluster
                 # resource, avoiding spurious duplicate instance findings.
-                if identifier in cluster_members:
+                if (identifier in cluster_members or
+                        instance.get('DBClusterIdentifier') in cluster_ids):
                     instance['rds_alarm_status'] = 'not_applicable'
                     instance['rds_event_subscription_status'] = 'not_applicable'
                     continue
