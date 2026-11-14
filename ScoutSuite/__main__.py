@@ -724,11 +724,19 @@ async def _run_impl(context: RunContext,
 
         incomplete_services = {
             row['service'] for row in matrix['rows']
-            if row['status'] != 'OBSERVED_COMPLETE'
+            if row['status'] not in ('OBSERVED_COMPLETE', 'SKIPPED')
+        }
+        skipped_services_in_matrix = {
+            row['service'] for row in matrix['rows']
+            if row['status'] == 'SKIPPED'
         }
         # One unknown Region invalidates a clean *service-wide* dashboard
         # claim; preserve all observed findings and per-Region detail.
         for service, details in cloud_provider.last_run.get('summary', {}).items():
+            if service in skipped_services_in_matrix:
+                details['coverage_status'] = 'skipped'
+                details['status'] = 'not_assessed'
+                continue
             rows = [row for row in matrix['rows'] if row['service'] == service]
             details['coverage_status'] = (
                 'incomplete' if service in incomplete_services else

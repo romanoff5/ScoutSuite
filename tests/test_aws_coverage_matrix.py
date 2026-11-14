@@ -186,3 +186,33 @@ def test_context_isolation_across_assessments():
     first.record_aws_api('ec2', 'eu-central-1', 'DescribeInstances', 'denied')
     assert not second.aws_telemetry_snapshot()['api']
     assert not second.collection_issues
+
+
+def test_unselected_rules_appear_as_explicit_skips():
+    ctx = RunContext(provider='aws')
+    ctx.record_aws_api('ec2', 'eu-central-1', 'DescribeInstances', 'success')
+    ctx.record_evidence_observation('ec2', 'eu-central-1',
+                                    'ec2.regions.eu-central-1.instances.i1', 'secure')
+    data = {'ec2': {'regions': {'eu-central-1': {'instances_count': 1}}}}
+    matrix = build_aws_coverage_matrix(
+        ['ec2'], data, ctx, enabled_rule_counts={'ec2': 5, 'rds': 8})
+    assert _row(matrix, 'ec2', 'eu-central-1')['status'] == 'OBSERVED_COMPLETE'
+    skip = _row(matrix, 'rds', 'not_scanned')
+    assert skip['status'] == 'SKIPPED'
+    assert skip['skipped_checks'] == 8
+    assert matrix['status'] == 'partial'
+
+
+def test_explicit_collector_partial_page_overrides_good_api_responses():
+    ctx = RunContext(provider='aws')
+    ctx.record_aws_api('cloudwatch', 'eu-central-1', 'DescribeAlarms', 'success')
+    ctx.record_evidence_observation(
+        'cloudwatch', 'eu-central-1',
+        'cloudwatch.regions.eu-central-1.alarms.a1', 'secure')
+    service = {'cloudwatch': {'regions': {'eu-central-1': {
+        'alarms_count': 1, 'metric_alarms_collection_status': 'partial'}}}}
+    row = _row(build_aws_coverage_matrix(['cloudwatch'], service, ctx),
+               'cloudwatch', 'eu-central-1')
+    assert row['status'] == 'PARTIAL'
+    assert row['collector_gaps'] == ['metric_alarms_collection_status:partial']
+    assert row['zero_findings_interpretation'] == 'NOT_VERIFIED_CLEAN'

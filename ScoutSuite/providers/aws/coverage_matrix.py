@@ -39,6 +39,32 @@ def _reported_inventory_count(region):
     return sum(counts) if counts else None
 
 
+def _collector_gaps(region_data):
+    """Explicit collector status fields, including bounded partial-page evidence."""
+    if not isinstance(region_data, dict):
+        return []
+    bad = frozenset(('partial', 'denied', 'failed', 'unknown',
+                     'unavailable', 'not_collected',
+                     'deferred_no_current_backup_inventory'))
+    gaps = set()
+    for field, value in region_data.items():
+        if not isinstance(field, str):
+            continue
+        if field == 'collection' or field.endswith('inventory_status'):
+            pass
+        elif 'collection_status' not in field:
+            continue
+        if isinstance(value, str) and value in bad:
+            gaps.add(field + ':' + value)
+        elif isinstance(value, dict):
+            for subfield, state in value.items():
+                if not isinstance(subfield, str):
+                    continue
+                if state is False or (isinstance(state, str) and state in bad):
+                    gaps.add(field + '.' + subfield)
+    return sorted(gaps)[:64]
+
+
 def _regions(service_data, requested_regions):
     if not isinstance(service_data, dict):
         return ['undetermined']
@@ -112,7 +138,7 @@ def build_aws_coverage_matrix(service_list, services, context,
     rows = []
     selected = sorted(set(service_list))
     # Explicitly skipped services remain visible, without fabricated API calls.
-    for service in sorted(set(selected) | set(skipped_services)):
+    for service in sorted(set(selected) | set(skipped_services) | set(enabled_rule_counts)):
         skipped = service not in selected
         data = services.get(service) if isinstance(services, dict) else None
         regions = ['not_scanned'] if skipped else _regions(data, requested_regions)
@@ -130,12 +156,13 @@ def build_aws_coverage_matrix(service_list, services, context,
                            and isinstance(data.get('regions'), dict)
                            else data)
             inventory = None if skipped else _reported_inventory_count(region_data)
+            collector_gaps = [] if skipped else _collector_gaps(region_data)
             observed = outcomes['success'] + outcomes['absent']
             errors = outcomes['denied'] + outcomes['failed'] + outcomes['unsupported']
             unscoped = any(issue.get('region') is None for issue in matching)
             if skipped:
                 state = 'SKIPPED'
-            elif matching or errors or evid['unknown']:
+            elif matching or errors or evid['unknown'] or collector_gaps:
                 if (outcomes['denied'] or any(
                         issue.get('status') == 'denied' for issue in matching)
                         ) and not observed and not outcomes['failed'] and not evid['checked']:
@@ -165,6 +192,7 @@ def build_aws_coverage_matrix(service_list, services, context,
                 'api_operations': {k: outcomes['operations'][k]
                                    for k in sorted(outcomes['operations'])},
                 'collection_issues': matching,
+                'collector_gaps': collector_gaps,
                 'issues_without_region': unscoped,
                 'zero_findings_interpretation': (
                     'NOT_VERIFIED_CLEAN' if flagged == 0 and state != 'OBSERVED_COMPLETE'
