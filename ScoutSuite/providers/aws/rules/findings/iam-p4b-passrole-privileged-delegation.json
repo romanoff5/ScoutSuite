@@ -1,0 +1,21 @@
+{
+    "description": "Potential PassRole Path to an Administrator-Like Service Role",
+    "rationale": "Identity policies on one IAM role appear to allow both iam:PassRole for a different administrator-like IAM role and ec2:RunInstances or lambda:CreateFunction with the target role's service trust. This is an unverified privilege-delegation candidate, not proven effective permission or a demonstrated exploit. SCPs, permissions boundaries, resource policies, session context and operational access are not simulated.",
+    "remediation": "Review source-to-target IAM policy permissions, trust, permissions boundaries, applicable organization policies, role hierarchy and access to resulting workloads. Limit iam:PassRole ARNs and iam:PassedToService; grant only necessary service creation privileges.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_passrole.html",
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b_passrole_path_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P4BPassRoleDelegation",
+    "evidence_policy": "iam-p4b-passrole-v1"
+}

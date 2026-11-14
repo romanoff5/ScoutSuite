@@ -2086,6 +2086,24 @@
                 "enabled": true,
                 "level": "review"
             }
+        ],
+        "iam-p4b-passrole-privileged-delegation.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b-oidc-broad-subject-trust.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b-privileged-oidc-role.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
         ]
     }
 }
