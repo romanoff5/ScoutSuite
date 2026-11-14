@@ -109,7 +109,7 @@ def _rule_definition_digest(rule):
 def _issue_projection(collection, account, key):
     if not isinstance(collection, dict):
         return {"status": "incomplete", "complete": False, "issues": []}
-    complete = collection.get("complete") is True
+    complete = collection.get("complete") is True and collection.get("status") == "success"
     issues = collection.get("issues")
     if not isinstance(issues, list):
         complete = False
@@ -385,6 +385,8 @@ def verify_evidence_snapshot(snapshot, key, *, check_rule_drift=True):
         state = "rule_definition_drift"
     elif missing:
         state = "rule_definition_unavailable"
+    elif not collection["complete"] or unknown:
+        state = "incomplete_observations"
     # Snapshot verification *never* means current security config is safe.
     return {"replay_status": state, "snapshot_verified": True,
             "rules_observed": total, "rules_with_unknown_evidence": unknown,
