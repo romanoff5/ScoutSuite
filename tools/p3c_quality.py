@@ -16,8 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / 'tests' / 'data'
 RULE_ROOT = ROOT / 'ScoutSuite' / 'providers' / 'aws' / 'rules'
 COVERAGE_STATES = {'direct', 'partial', 'gap', 'out_of_scope'}
+# Fail closed on real-looking account IDs, ARNs, emails and private-source
+# placeholders without embedding customer names in a public repository.
 FORBIDDEN = re.compile(
-    r'ridgepay|foodpunk|640012953110|446709109073|ovantex\\.com|praevention', re.I)
+    r'(?<![0-9])[0-9]{12}(?![0-9])|arn:(?:aws|aws-us-gov|aws-cn):|'
+    r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|'
+    r'\\b(?:client_name|customer_account_id|internal_host|private_domain)\\b', re.I)
 SYNTHETIC_MINIMUM = 15
 
 

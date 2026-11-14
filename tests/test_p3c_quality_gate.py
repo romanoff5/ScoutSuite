@@ -62,7 +62,7 @@ def test_coverage_contract_rejects_gap_mapping_and_sensitive_report_identifier()
     assert any('Gap / outside-scope' in error for error in errors)
 
     leaked = copy.deepcopy(data)
-    leaked['cases'][0]['limitation'] = 'Never publish RidgePay reports.'
+    leaked['cases'][0]['limitation'] = 'Observed account 123456789012 was assessed.'
     errors, _ = quality.validate_coverage(leaked, active_rules())
     assert any('Customer identifier' in error for error in errors)
 
@@ -113,7 +113,7 @@ def test_report_format_is_explicit_about_limits(tmp_path):
     m.write_text(output, encoding='utf-8')
     assert json.loads(j.read_text())['pass'] is True
     assert m.read_text().startswith('# P3-C offline quality gate')
-    assert 'RidgePay' not in output and 'Foodpunk' not in output
+    assert not quality.FORBIDDEN.search(output)
 
 
 def test_synthetic_fixture_contains_no_customer_raw_evidence():
