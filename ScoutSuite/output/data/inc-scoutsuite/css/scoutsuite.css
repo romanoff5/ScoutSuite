@@ -549,3 +549,11 @@ footer a:hover {
     color: #e83e8c;
     word-break: break-word;
 }
+/* P4-F2 local history viewer: normal reports and displayed resource IDs unchanged. */
+.scout-history { width: 100%; }
+#scout-history-panel[hidden] { display: none !important; }
+#scout-history-panel { overflow: visible; }
+.scout-history-table { max-height: 23rem; overflow: auto; }
+.scout-history-cell { font-size: 12px; overflow-wrap: anywhere; vertical-align: top; }
+.scout-history-evidence { font-size: 11px; overflow-wrap: anywhere; }
+#scout-history-panel label { font-size: 12px; }

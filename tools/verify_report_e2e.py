@@ -282,6 +282,71 @@ def run_browser_checks(report, profile):
         check(page.evaluate('window.__scoutXss') is None, 'hostile RC9 field executed')
         check(page.locator('img[src="x"]').count() == 0, 'hostile RC9 field injected markup')
 
+        # P4-F2 UI: keyless in-memory versions, real identifiers, no JS execution.
+        page.goto(url)
+        page.wait_for_selector('#scout-history-toggle')
+        page.click('#scout-history-toggle')
+        check(page.is_visible('#scout-history-panel'), 'P4-F2 scan history panel does not open')
+        check('1 versions loaded' in page.locator('#scout-history-summary').inner_text(),
+              'Current report not included in history')
+        prior = {
+            'provider_code': 'aws', 'account_id': '000000000000',
+            'report_schema_version': 1, 'collection_status': {'complete': True},
+            'services': {'ec2': {
+                'regions': {'eu-central-1': {'vpcs': {'vpc-test': {
+                    'instances': {'i-history-test': {'imds_v2_status': 'optional'}}}}}},
+                'findings': {'ec2-instance-imdsv1-enabled': {
+                    'items': ['ec2.regions.eu-central-1.vpcs.vpc-test.instances.i-history-test.imds_v2_status'],
+                    'flagged_items': 1, 'assessment_status': 'evaluated'}}}}
+        }
+        current = json.loads(json.dumps(prior))
+        current['services']['ec2']['regions']['eu-central-1']['vpcs']['vpc-test'][
+            'instances']['i-history-test']['imds_v2_status'] = 'required'
+        current['services']['ec2']['findings']['ec2-instance-imdsv1-enabled'].update(
+            items=[], flagged_items=0)
+        hostile = '<img src=x onerror="window.__scoutHistoryXss=1">'
+        current['services']['ec2']['findings'][hostile] = {
+            'items': [hostile], 'flagged_items': 1, 'assessment_status': 'evaluated'}
+        import_payload = [
+            {'name': 'before.js', 'mimeType': 'text/javascript',
+             'buffer': ('scoutsuite_results = ' + json.dumps(prior) + ';').encode('utf-8')},
+            {'name': 'after.json', 'mimeType': 'application/json',
+             'buffer': json.dumps(current).encode('utf-8')}
+        ]
+        page.locator('#scout-history-files').set_input_files(import_payload)
+        page.wait_for_function("document.getElementById('scout-history-before').options.length === 3")
+        page.select_option('#scout-history-before', '1')
+        page.select_option('#scout-history-after', '2')
+        check('Resolved observed: 1' in page.locator('#scout-history-summary').inner_text(),
+              'History did not resolve real resource path across scan versions')
+        check('i-history-test' in page.locator('#scout-history-rows').inner_text(),
+              'History hid a real resource ID from unredacted reports')
+        check('5' in page.locator('#scout-history-semantic').inner_text() or
+              page.locator('#scout-history-semantic tr').count() == 5,
+              'P4-F2 semantic preview is not integrated')
+        check(page.evaluate('window.__scoutHistoryXss') is None,
+              'History imported text executed script')
+        check(page.locator('img[src="x"]').count() == 0,
+              'History imported text injected active markup')
+        signed = {
+            'format': 'scoutsuite-semantic-facts', 'schema_version': 1,
+            'key_id': 'synthetic-key-id', 'source_collection_status': 'observed_complete',
+            'integrity': {'sha256': 'unverified', 'hmac_sha256': 'unverified'},
+            'rules': {'ec2-instance-imdsv1-enabled': {
+                'scope': 'observed', 'facts': [{'token': 'hmac:' + 'a' * 40,
+                                                'value': 'optional'}]}}
+        }
+        page.locator('#scout-history-files').set_input_files({
+            'name': 'previous.p4f2.snapshot.json', 'mimeType': 'application/json',
+            'buffer': json.dumps(signed).encode('utf-8')})
+        page.wait_for_function("document.getElementById('scout-history-before').options.length === 4")
+        page.select_option('#scout-history-after', '3')
+        check('NOT authenticated' in page.locator('#scout-history-warning').inner_text(),
+              'Signed snapshot preview incorrectly implied HMAC verification')
+        page.click('#scout-history-reset')
+        check(page.locator('#scout-history-before option').count() == 1,
+              'History clearing does not remove imported data')
+
         context.close()
     check(not external, 'external requests: %s' % external)
     check(not console, 'console/page errors: %s' % console)
