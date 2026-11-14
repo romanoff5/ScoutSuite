@@ -309,7 +309,7 @@ def run_browser_checks(report, profile):
             'items': [hostile], 'flagged_items': 1, 'assessment_status': 'evaluated'}
         import_payload = [
             {'name': 'before.js', 'mimeType': 'text/javascript',
-             'buffer': ('scoutsuite_results =\\n' + json.dumps(prior) + ';').encode('utf-8')},
+             'buffer': ('scoutsuite_results = ' + json.dumps(prior) + ';').encode('utf-8')},
             {'name': 'after.json', 'mimeType': 'application/json',
              'buffer': json.dumps(current).encode('utf-8')}
         ]
