@@ -99,3 +99,39 @@ or broader asset completeness is established.
 The legacy `replay` command remains P4-F v1 observation replay; the
 new `facts-replay` command is P4-F2 predicate execution. Both are
 strictly offline and require the same local key.
+
+## P4-F2 in the Scout Suite HTML user interface (keyless local history)
+
+Open the generated Scout HTML report and select **Scans & Snapshots** below the
+account heading. The current report is preloaded. Use **Add versions from
+local files** to select multiple prior `RESULTS.js` / `RESULTS.json` files, or
+a P4-F / P4-F2 `.snapshot.json`, then pick **Baseline version** and
+**Compare against**. You can view changes by rule and a five-rule P4-F2
+semantic status preview without creating or supplying an HMAC key.
+
+- **Normal results:** exact account ID and real finding/resource paths are
+  retained and shown in the UI; no change is made to standard saved reports.
+  Resource-level **New/Resolved** conclusions require the same account and
+  complete collection on both sides. Otherwise the UI explicitly says
+  **Not verified** and preserves observed counts.
+- **Signed snapshots:** pseudonymous tokens and fact counts can be inspected
+  without keys, but **the HMAC cannot be verified** in the keyless UI. To
+  authenticate or re-execute current installed Python rule predicates, use
+  the separate `facts-replay` command with its local key. Keyless viewing
+  must never be described as authenticated replay.
+- **Local-only:** user-selected files are parsed as inert JSON (a recognized
+  `scoutsuite_results = {...};` assignment is stripped *as text*, never
+  evaluated). There are no uploads, API requests, persistent browser
+  storage or background access. Imported versions are forgotten on reload.
+  Browsers intentionally cannot enumerate arbitrary files from a local
+  directory; select the historical files you want to compare.
+- **Scope:** JSON/JS RESULTS and P4-F snapshots are supported for file import.
+  Raw `.db` SQLite files cannot be opened in the browser picker: the regular
+  SQLite report remains available through the existing local read-only
+  server, and can compare with imported JSON reports. Large file imports
+  are bounded to 64 MiB per file and 24 loaded versions.
+- **Semantics:** the keyless UI's five-rule preview uses an equivalent
+  strictly allowlisted status/equals grammar, pinned to installed rule
+  definitions by CI. It is not the native Python `recurse` engine nor
+  complete AWS evidence re-evaluation. Reports remain the authoritative
+  source of original evidence and resource identities.
