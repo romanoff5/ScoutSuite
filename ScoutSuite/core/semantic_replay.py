@@ -116,6 +116,10 @@ def _walk(root, path):
             recurse_source(node[head], tail, prefix + [head])
         else:
             missing = True
+            if not tail and head != "id":
+                # A known resource with an absent terminal scalar is UNKNOWN,
+                # not silently omitted from checked/unknown totals.
+                observed.append((".".join(prefix + [head]), None))
 
     recurse_source(root, segments, [])
     return observed, missing
