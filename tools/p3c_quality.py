@@ -162,7 +162,7 @@ def validate_triads(document, case_index, enabled_rules):
             _check(row is not None and rule_name in row.get('rule_ids', []),
                    'Triad not mapped to the stated report-control abstract ' + ident, errors)
         field = triad.get('field')
-        _check(isinstance(field, str) and bool(re.fullmatch(r'[a-z_]+', field)),
+        _check(isinstance(field, str) and bool(re.fullmatch(r'[a-z][a-z0-9_]*', field)),
                'Invalid triad field ' + ident, errors)
         base = triad.get('base')
         states, expected = triad.get('states'), triad.get('expected')
