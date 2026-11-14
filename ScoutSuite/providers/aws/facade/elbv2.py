@@ -102,3 +102,94 @@ class ELBv2Facade(AWSBaseFacade):
     async def get_listeners(self, region: str, load_balancer_arn: str):
         return await AWSFacadeUtils.get_all_pages(
             'elbv2', region, self.session, 'describe_listeners', 'Listeners', LoadBalancerArn=load_balancer_arn)
+
+    async def get_target_group_inventory(self, region, load_balancer_arn):
+        """Registered instance/IP targets of the LB; UNKNOWN on denied or truncated API."""
+        client = AWSFacadeUtils.get_client('elbv2', self.session, region)
+        if client is None:
+            return 'unknown', []
+        try:
+            def collect():
+                groups, marker, seen = [], None, set()
+                for _ in range(20):
+                    args = {'LoadBalancerArn': load_balancer_arn, 'PageSize': 100}
+                    if marker:
+                        args['Marker'] = marker
+                    response = client.describe_target_groups(**args)
+                    page = response.get('TargetGroups') if isinstance(response, dict) else None
+                    if not isinstance(page, list) or any(not isinstance(g, dict) for g in page):
+                        raise ValueError('MalformedTargetGroups')
+                    groups.extend(page)
+                    token = response.get('NextMarker')
+                    if not token:
+                        break
+                    if not isinstance(token, str) or token in seen:
+                        raise ValueError('InvalidTargetGroupsPagination')
+                    seen.add(token)
+                    marker = token
+                else:
+                    raise ValueError('TargetGroupPageLimit')
+                if len(groups) > 1000:
+                    raise ValueError('TargetGroupCountLimit')
+                out = []
+                for group in groups:
+                    arn = group.get('TargetGroupArn')
+                    if not isinstance(arn, str) or not arn:
+                        raise ValueError('MalformedTargetGroupArn')
+                    detail = client.describe_target_health(TargetGroupArn=arn)
+                    rows = detail.get('TargetHealthDescriptions') if isinstance(detail, dict) else None
+                    if not isinstance(rows, list) or len(rows) > 10000:
+                        raise ValueError('MalformedTargetHealth')
+                    for row in rows:
+                        if not isinstance(row, dict) or not isinstance(row.get('Target'), dict):
+                            raise ValueError('MalformedTargetDescription')
+                    out.append({'arn': arn, 'target_type': group.get('TargetType'),
+                                'port': group.get('Port'), 'registered_targets': [
+                                    {'id': row['Target'].get('Id'),
+                                     'port': row['Target'].get('Port'),
+                                     'health_state': (row.get('TargetHealth') or {}).get('State')}
+                                    for row in rows]})
+                return out
+            result = await run_concurrently(collect)
+            return 'complete', result
+        except Exception as error:
+            AWSFacadeUtils.record_listing_failure('elbv2', error, 'DescribeTargetGroupsOrHealth')
+            print_exception('Unable to verify ELBv2 target groups: ' + type(error).__name__)
+            return 'unknown', []
+
+    async def get_listener_certificate_inventory(self, region, listener_arn):
+        """All HTTPS listener certificates, including non-default SNI attachments."""
+        client = AWSFacadeUtils.get_client('elbv2', self.session, region)
+        if client is None:
+            return 'unknown', []
+        try:
+            def collect():
+                arns, marker, seen = [], None, set()
+                for _ in range(20):
+                    args = {'ListenerArn': listener_arn, 'PageSize': 100}
+                    if marker:
+                        args['Marker'] = marker
+                    result = client.describe_listener_certificates(**args)
+                    rows = result.get('Certificates') if isinstance(result, dict) else None
+                    if not isinstance(rows, list):
+                        raise ValueError('MalformedListenerCertificates')
+                    for item in rows:
+                        arn = item.get('CertificateArn') if isinstance(item, dict) else None
+                        if not isinstance(arn, str) or not arn:
+                            raise ValueError('MalformedListenerCertificateArn')
+                        if arn not in arns:
+                            arns.append(arn)
+                    token = result.get('NextMarker')
+                    if not token:
+                        return arns
+                    if not isinstance(token, str) or token in seen:
+                        raise ValueError('InvalidListenerCertificatePagination')
+                    seen.add(token)
+                    marker = token
+                raise ValueError('ListenerCertificatePageLimit')
+            data = await run_concurrently(collect)
+            return 'complete', data
+        except Exception as error:
+            AWSFacadeUtils.record_listing_failure('elbv2', error, 'DescribeListenerCertificates')
+            print_exception('Unable to verify listener certificates: ' + type(error).__name__)
+            return 'unknown', []
