@@ -65,6 +65,11 @@ class S3Facade(AWSBaseFacade):
                  self._get_and_set_s3_bucket_policy_status],
                 buckets)
 
+            # P3-B: tags are already collected; query Object Lock only for
+            # explicitly policy-marked critical buckets, never for every bucket.
+            await get_and_set_concurrently(
+                [self._get_and_set_s3_bucket_object_lock], buckets)
+
             # Non-async post-processing
             for bucket in buckets:
                 self._set_s3_bucket_secure_transport(bucket)
@@ -254,22 +259,105 @@ class S3Facade(AWSBaseFacade):
             print_exception('Malformed or unavailable S3 bucket policy')
 
     async def _get_and_set_s3_bucket_tags(self, bucket: {}):
-        client = AWSFacadeUtils.get_client('s3', self.session, bucket['region'])
+        # A denied GetBucketTagging is not evidence of an untagged bucket.
+        bucket['tags'] = None
+        bucket['tag_collection_status'] = 'unknown'
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        if client is None:
+            self._record_context_issue('BucketTagsClientUnavailable')
+            return
         try:
-            bucket_tagset = await run_concurrently(lambda: client.get_bucket_tagging(Bucket=bucket['Name']))
-            bucket['tags'] = {x['Key']: x['Value'] for x in bucket_tagset['TagSet']}
-        except ClientError as e:
-            if e.response['Error']['Code'] != 'NoSuchTagSet':
-                if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                    print_warning('Failed to get bucket tags for {}: {}'.format(bucket['Name'], e))
-                else:
-                    print_exception('Failed to get bucket tags for {}: {}'.format(bucket['Name'], e))
-        except Exception as e:
-            if 'NoSuchBucket' in str(e) or 'InvalidToken' in str(e):
-                print_warning('Failed to get bucket tags for {}: {}'.format(bucket['Name'], e))
+            response = await run_concurrently(
+                lambda: client.get_bucket_tagging(Bucket=bucket['Name']))
+            rows = response.get('TagSet') if isinstance(response, dict) else None
+            if not isinstance(rows, list) or any(
+                    not isinstance(t, dict) or not isinstance(t.get('Key'), str)
+                    or not isinstance(t.get('Value'), str) for t in rows):
+                raise ValueError('MalformedBucketTags')
+            bucket['tags'] = {tag['Key']: tag['Value'] for tag in rows}
+            bucket['tag_collection_status'] = 'complete'
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code')
+            if code == 'NoSuchTagSet':
+                bucket['tags'] = {}
+                bucket['tag_collection_status'] = 'complete'
             else:
-                print_exception('Failed to get bucket tags for {}: {}'.format(bucket['Name'], e))
-            bucket['tags'] = {}
+                self._record_context_issue('BucketTagsUnavailable')
+                print_exception('Cannot verify S3 bucket tags (' + str(code) + ')')
+        except Exception as error:
+            self._record_context_issue('BucketTagsUnavailable')
+            print_exception('Cannot verify S3 bucket tags: ' + type(error).__name__)
+
+    @staticmethod
+    def _object_lock_requirement(bucket):
+        if bucket.get('tag_collection_status') != 'complete':
+            return 'unknown'
+        tags = bucket.get('tags')
+        if not isinstance(tags, dict):
+            return 'unknown'
+        # Explicit opt-in only. Do not guess criticality from bucket names.
+        for key in ('ObjectLockRequired', 'security:object-lock-required'):
+            value = tags.get(key)
+            if isinstance(value, str) and value.strip().lower() in ('true', '1', 'yes'):
+                return 'required'
+        return 'not_applicable'
+
+    async def _get_and_set_s3_bucket_object_lock(self, bucket: {}):
+        bucket['object_lock_requirement'] = self._object_lock_requirement(bucket)
+        bucket['object_lock_status'] = 'unknown'
+        bucket['object_lock_default_retention_status'] = 'unknown'
+        bucket['object_lock_default_mode'] = None
+        bucket['object_lock_default_days'] = None
+        if bucket['object_lock_requirement'] == 'not_applicable':
+            bucket['object_lock_status'] = 'not_applicable'
+            bucket['object_lock_default_retention_status'] = 'not_applicable'
+            return
+        if bucket['object_lock_requirement'] != 'required':
+            return
+        client = AWSFacadeUtils.get_client('s3', self.session, bucket.get('region'))
+        if client is None:
+            self._record_context_issue('ObjectLockClientUnavailable')
+            return
+        try:
+            response = await run_concurrently(
+                lambda: client.get_object_lock_configuration(Bucket=bucket['Name']))
+            config = response.get('ObjectLockConfiguration') if isinstance(response, dict) else None
+            if not isinstance(config, dict):
+                raise ValueError('MalformedObjectLockConfiguration')
+            if config.get('ObjectLockEnabled') != 'Enabled':
+                raise ValueError('UnexpectedObjectLockEnabled')
+            bucket['object_lock_status'] = 'enabled'
+            rule = config.get('Rule')
+            if rule is None:
+                bucket['object_lock_default_retention_status'] = 'missing'
+                return
+            retention = rule.get('DefaultRetention') if isinstance(rule, dict) else None
+            if retention is None and isinstance(rule, dict):
+                bucket['object_lock_default_retention_status'] = 'missing'
+                return
+            if not isinstance(retention, dict):
+                raise ValueError('MalformedObjectLockRetention')
+            mode = retention.get('Mode')
+            periods = [retention.get('Days'), retention.get('Years')]
+            if mode not in ('GOVERNANCE', 'COMPLIANCE') or sum(
+                    type(x) is int and x > 0 for x in periods) != 1:
+                raise ValueError('MalformedObjectLockRetention')
+            bucket['object_lock_default_mode'] = mode
+            bucket['object_lock_default_days'] = (
+                retention.get('Days') or retention.get('Years') * 365)
+            bucket['object_lock_default_retention_status'] = 'configured'
+        except ClientError as error:
+            code = error.response.get('Error', {}).get('Code')
+            if code in ('ObjectLockConfigurationNotFoundError',
+                        'NoSuchObjectLockConfiguration'):
+                bucket['object_lock_status'] = 'absent'
+                bucket['object_lock_default_retention_status'] = 'not_applicable'
+            else:
+                self._record_context_issue('ObjectLockUnavailable')
+                print_exception('Cannot verify S3 Object Lock (' + str(code) + ')')
+        except Exception as error:
+            self._record_context_issue('ObjectLockUnavailable')
+            print_exception('Cannot verify S3 Object Lock: ' + type(error).__name__)
 
     @staticmethod
     def _record_context_issue(reason):
