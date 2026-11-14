@@ -1,0 +1,321 @@
+{
+  "schema_version": 1,
+  "provenance": "All identifiers, policies and states are synthetic. Triads exercise the actual in-repository JSON rule and evidence classifier; collectors and production reachability are not simulated.",
+  "triads": [
+    {
+      "id": "S01",
+      "rule_id": "ec2-public-instance-https-open-to-world.json",
+      "report_case": "A-08",
+      "field": "public_https_status",
+      "base": {},
+      "states": {
+        "positive": "exposed",
+        "negative": "not_exposed",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S02",
+      "rule_id": "acm-certificate-with-close-expiration-date.json",
+      "report_case": "A-15",
+      "field": "expiry_status",
+      "base": {
+        "InUseBy": [
+          "synthetic-attached-alb"
+        ]
+      },
+      "states": {
+        "positive": "expiring_soon",
+        "negative": "valid",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S03",
+      "rule_id": "cloudwatch-security-metric-alerting-missing.json",
+      "report_case": "A-06",
+      "field": "security_metric_alerting_status",
+      "base": {
+        "metric_filters_collection_status": "complete",
+        "metric_alarms_collection_status": "complete"
+      },
+      "states": {
+        "positive": "missing",
+        "negative": "linked",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "unknown",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S04",
+      "rule_id": "rds-proxy-require-tls-disabled.json",
+      "report_case": "A-22",
+      "field": "tls_status",
+      "base": {},
+      "states": {
+        "positive": "disabled",
+        "negative": "enforced",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S05",
+      "rule_id": "ec2-account-imdsv2-not-required-default.json",
+      "report_case": "A-27",
+      "field": "account_imds_default_status",
+      "base": {},
+      "states": {
+        "positive": "not_required",
+        "negative": "required_default",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S06",
+      "rule_id": "glue-catalog-kms-not-configured.json",
+      "report_case": "A-38",
+      "field": "catalog_encryption_status",
+      "base": {},
+      "states": {
+        "positive": "kms_not_configured",
+        "negative": "kms_configured",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S07",
+      "rule_id": "cloudwatch-log-group-unlimited-retention.json",
+      "report_case": "B-21",
+      "field": "retention_status",
+      "base": {},
+      "states": {
+        "positive": "unlimited",
+        "negative": "configured",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S08",
+      "rule_id": "ecs-task-definition-writable-root.json",
+      "report_case": "B-11",
+      "field": "writable_root_filesystem_status",
+      "base": {
+        "writable_root_filesystem_observation_complete": true
+      },
+      "states": {
+        "positive": "writable",
+        "negative": "read_only",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S09",
+      "rule_id": "wafv2-web-acl-no-explicit-rate-based-rule.json",
+      "report_case": "B-16",
+      "field": "explicit_rate_based_rule_status",
+      "base": {},
+      "states": {
+        "positive": "not_present",
+        "negative": "present",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S10",
+      "rule_id": "securityhub-region-not-subscribed.json",
+      "report_case": "B-20",
+      "field": "hub_subscription_status",
+      "base": {},
+      "states": {
+        "positive": "not_subscribed",
+        "negative": "enabled",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S11",
+      "rule_id": "elbv2-waf-backend-public-bypass-candidate.json",
+      "report_case": "A-08",
+      "field": "backend_bypass_status",
+      "base": {},
+      "states": {
+        "positive": "potential_bypass",
+        "negative": "no_direct_backend_path",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S12",
+      "rule_id": "elbv2-https-hostname-not-in-listener-certificate.json",
+      "report_case": "A-15",
+      "field": "https_hostname_coverage_status",
+      "base": {},
+      "states": {
+        "positive": "mismatch",
+        "negative": "covered",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S13",
+      "rule_id": "s3-critical-bucket-object-lock-absent.json",
+      "report_case": null,
+      "field": "object_lock_status",
+      "base": {},
+      "states": {
+        "positive": "absent",
+        "negative": "enabled",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S14",
+      "rule_id": "s3-critical-bucket-default-retention-missing.json",
+      "report_case": null,
+      "field": "object_lock_default_retention_status",
+      "base": {},
+      "states": {
+        "positive": "missing",
+        "negative": "configured",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S15",
+      "rule_id": "rds-proxy-no-registered-targets.json",
+      "report_case": null,
+      "field": "target_health_status",
+      "base": {},
+      "states": {
+        "positive": "no_targets",
+        "negative": "healthy",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S16",
+      "rule_id": "ssm-document-publicly-shared.json",
+      "report_case": null,
+      "field": "public_sharing_status",
+      "base": {},
+      "states": {
+        "positive": "public",
+        "negative": "private",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S17",
+      "rule_id": "backup-restore-testing-latest-job-failed.json",
+      "report_case": null,
+      "field": "latest_restore_job_status",
+      "base": {},
+      "states": {
+        "positive": "failed",
+        "negative": "completed",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    },
+    {
+      "id": "S18",
+      "rule_id": "cloudwatch-log-group-no-customer-kms.json",
+      "report_case": "B-23",
+      "field": "customer_kms_status",
+      "base": {},
+      "states": {
+        "positive": "aws_managed",
+        "negative": "customer_kms",
+        "incomplete": "unknown"
+      },
+      "expected": {
+        "positive": "insecure",
+        "negative": "secure",
+        "incomplete": "unknown"
+      }
+    }
+  ]
+}

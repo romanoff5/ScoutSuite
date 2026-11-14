@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "aws_security_hub": "Official AWS Security Hub CSPM service control documentation",
+    "prowler_repository": "prowler-cloud/prowler",
+    "prowler_pinned_commit": "d695be20de980c3b8d572d0893234e27e6ee58c4",
+    "checked_on": "2026-11-14"
+  },
+  "rules": "Crosswalk entries are semantic pointers, NOT parity certificates. related and partial are never counted as equivalent detection. IDs and URLs are external references only; no source code or customer data is embedded.",
+  "crosswalk": [
+    {
+      "provider": "aws_security_hub",
+      "external_id": "CloudTrail.1",
+      "rule_id": "cloudtrail-not-configured.json",
+      "relation": "partial",
+      "qualification": "Security Hub requires multi-Region trail with read/write management events; absent local trail does not prove the entire control state.",
+      "source_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/cloudtrail-controls.html"
+    },
+    {
+      "provider": "aws_security_hub",
+      "external_id": "GuardDuty.1",
+      "rule_id": "guardduty-not-enabled.json",
+      "relation": "related",
+      "qualification": "Security Hub evaluates GuardDuty enablement, while Scout splits missing and disabled detector states.",
+      "source_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/guardduty-controls.html"
+    },
+    {
+      "provider": "aws_security_hub",
+      "external_id": "EC2.7",
+      "rule_id": "ec2-ebs-default-encryption-disabled.json",
+      "relation": "related",
+      "qualification": "Same account default encryption setting, but scope, exception and evidence semantics still require comparison.",
+      "source_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html"
+    },
+    {
+      "provider": "aws_security_hub",
+      "external_id": "EC2.3",
+      "rule_id": "ec2-ebs-volume-not-encrypted.json",
+      "relation": "partial",
+      "qualification": "Security Hub checks attached volumes; Scout volume inventory may cover other attachment states.",
+      "source_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html"
+    },
+    {
+      "provider": "aws_security_hub",
+      "external_id": "S3.5",
+      "rule_id": "s3-bucket-allowing-cleartext.json",
+      "relation": "related",
+      "qualification": "Both examine bucket-policy TLS enforcement; AWS general-purpose bucket scope should be considered.",
+      "source_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/s3-controls.html"
+    },
+    {
+      "provider": "aws_security_hub",
+      "external_id": "S3.15",
+      "rule_id": "s3-critical-bucket-object-lock-absent.json",
+      "relation": "partial",
+      "qualification": "Security Hub baseline covers general-purpose buckets; P3-B only explicitly tagged policy-critical buckets.",
+      "source_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/s3-controls.html"
+    },
+    {
+      "provider": "prowler",
+      "external_id": "cloudtrail_multi_region_enabled",
+      "rule_id": "cloudtrail-not-configured.json",
+      "relation": "partial",
+      "qualification": "Prowler checks per-Region trail logging coverage, including multi-Region relationships.",
+      "source_url": "https://github.com/prowler-cloud/prowler/blob/d695be20de980c3b8d572d0893234e27e6ee58c4/prowler/providers/aws/services/cloudtrail/cloudtrail_multi_region_enabled/cloudtrail_multi_region_enabled.metadata.json"
+    },
+    {
+      "provider": "prowler",
+      "external_id": "guardduty_is_enabled",
+      "rule_id": "guardduty-not-enabled.json",
+      "relation": "partial",
+      "qualification": "Prowler checks both missing detectors and suspended ones; Scout treats those as separate conditions.",
+      "source_url": "https://github.com/prowler-cloud/prowler/blob/d695be20de980c3b8d572d0893234e27e6ee58c4/prowler/providers/aws/services/guardduty/guardduty_is_enabled/guardduty_is_enabled.metadata.json"
+    },
+    {
+      "provider": "prowler",
+      "external_id": "s3_bucket_secure_transport_policy",
+      "rule_id": "s3-bucket-allowing-cleartext.json",
+      "relation": "related",
+      "qualification": "Both examine explicit aws:SecureTransport=false deny policy semantics.",
+      "source_url": "https://github.com/prowler-cloud/prowler/blob/d695be20de980c3b8d572d0893234e27e6ee58c4/prowler/providers/aws/services/s3/s3_bucket_secure_transport_policy/s3_bucket_secure_transport_policy.metadata.json"
+    },
+    {
+      "provider": "prowler",
+      "external_id": "ec2_instance_imdsv2_enabled",
+      "rule_id": "ec2-instance-imdsv1-enabled.json",
+      "relation": "partial",
+      "qualification": "Prowler treats disabled metadata endpoints as secure; compare per-instance interpretation.",
+      "source_url": "https://github.com/prowler-cloud/prowler/blob/d695be20de980c3b8d572d0893234e27e6ee58c4/prowler/providers/aws/services/ec2/ec2_instance_imdsv2_enabled/ec2_instance_imdsv2_enabled.metadata.json"
+    }
+  ]
+}
