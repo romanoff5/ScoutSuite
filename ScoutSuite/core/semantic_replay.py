@@ -60,7 +60,88 @@ ADAPTERS = {
         "rds", "rds.regions.id.proxies.id",
         "tls_status",
         frozenset(("enabled", "disabled", "unknown"))),
+
+    # P5-C: typed status facts only. IAM paths are *candidates*, not proof
+    # that the principal can exercise effective permissions.
+    "iam-p4b-oidc-broad-subject-trust": Adapter(
+        "iam", "iam.roles.id", "p4b_oidc_scope_status",
+        frozenset(("broad_subject", "scoped_subject", "review_wildcard",
+                   "not_applicable", "unknown"))),
+    "iam-p4b-passrole-privileged-delegation": Adapter(
+        "iam", "iam.roles.id", "p4b_passrole_path_status",
+        frozenset(("candidate", "not_applicable", "unknown"))),
+    "iam-p4b-privileged-oidc-role": Adapter(
+        "iam", "iam.roles.id", "p4b_privileged_oidc_status",
+        frozenset(("candidate", "review", "not_applicable", "unknown"))),
+    "iam-p4b2-group-contributed-passrole": Adapter(
+        "iam", "iam.groups.id", "p4b2_group_passrole_status",
+        frozenset(("candidate", "not_applicable", "unknown"))),
+    "iam-p4b2-oidc-audience-review": Adapter(
+        "iam", "iam.roles.id", "p4b2_oidc_audience_status",
+        frozenset(("review", "scoped", "not_applicable", "unknown"))),
+    "iam-p4b2-oidc-subject-wildcard-review": Adapter(
+        "iam", "iam.roles.id", "p4b2_oidc_subject_status",
+        frozenset(("review", "scoped", "not_applicable", "unknown"))),
+    "iam-p4b2-role-assumerole-privileged": Adapter(
+        "iam", "iam.roles.id", "p4b2_role_assumerole_status",
+        frozenset(("candidate", "not_applicable", "unknown"))),
+    "iam-p4b2-user-assumerole-privileged": Adapter(
+        "iam", "iam.users.id", "p4b2_user_assumerole_status",
+        frozenset(("candidate", "not_applicable", "unknown"))),
+    "iam-p4b2-user-passrole-to-privileged-role": Adapter(
+        "iam", "iam.users.id", "p4b2_user_passrole_status",
+        frozenset(("candidate", "not_applicable", "unknown"))),
+    "iam-role-service-trust-missing-source-scope": Adapter(
+        "iam", "iam.roles.id", "service_trust_scope_status",
+        frozenset(("missing", "scoped", "not_applicable", "unknown"))),
+    "ec2-public-instance-https-open-to-world": Adapter(
+        "ec2", "ec2.regions.id.vpcs.id.instances.id", "public_https_status",
+        frozenset(("exposed", "not_exposed", "not_applicable", "unknown"))),
+    "ec2-running-instance-role-broad-s3-read-candidate": Adapter(
+        "ec2", "ec2.regions.id.vpcs.id.instances.id", "s3_wildcard_read_status",
+        frozenset(("broad_grant_candidate", "not_applicable", "unknown"))),
+    "rds-proxy-no-registered-targets": Adapter(
+        "rds", "rds.regions.id.proxies.id", "target_health_status",
+        frozenset(("no_targets", "all_unavailable", "degraded", "healthy",
+                   "transitioning", "not_applicable", "unknown"))),
+    "rds-proxy-all-targets-unavailable": Adapter(
+        "rds", "rds.regions.id.proxies.id", "target_health_status",
+        frozenset(("no_targets", "all_unavailable", "degraded", "healthy",
+                   "transitioning", "not_applicable", "unknown"))),
+    "rds-proxy-partial-target-degradation": Adapter(
+        "rds", "rds.regions.id.proxies.id", "target_health_status",
+        frozenset(("no_targets", "all_unavailable", "degraded", "healthy",
+                   "transitioning", "not_applicable", "unknown"))),
+    "rds-db-instance-no-actionable-alarm": Adapter(
+        "rds", "rds.regions.id.vpcs.id.instances.id", "rds_alarm_status",
+        frozenset(("missing", "no_action", "actionable", "not_applicable", "unknown"))),
+    "rds-db-cluster-no-actionable-alarm": Adapter(
+        "rds", "rds.regions.id.clusters.id", "rds_alarm_status",
+        frozenset(("missing", "no_action", "actionable", "not_applicable", "unknown"))),
+    "rds-db-instance-event-subscription-missing": Adapter(
+        "rds", "rds.regions.id.vpcs.id.instances.id", "rds_event_subscription_status",
+        frozenset(("missing", "inactive", "active", "not_applicable", "unknown"))),
+    "rds-db-cluster-event-subscription-missing": Adapter(
+        "rds", "rds.regions.id.clusters.id", "rds_event_subscription_status",
+        frozenset(("missing", "inactive", "active", "not_applicable", "unknown"))),
+    "s3-bucket-effective-public-exposure": Adapter(
+        "s3", "s3.buckets.id", "public_exposure_status",
+        frozenset(("exposed", "no_bucket_level_exposure_detected", "unknown"))),
+    "s3-bucket-public-access-block-incomplete": Adapter(
+        "s3", "s3.buckets.id", "effective_bpa_review",
+        frozenset(("missing", "complete", "unknown"))),
+    "s3-critical-bucket-object-lock-absent": Adapter(
+        "s3", "s3.buckets.id", "object_lock_status",
+        frozenset(("absent", "enabled", "not_applicable", "unknown"))),
 }
+
+# A P4-F2 v1 snapshot contains exactly these five rules. Keeping this exact
+# inventory valid enables historical replay after upgrading to P5-C.
+LEGACY_ADAPTERS = frozenset((
+    "ec2-instance-imdsv1-enabled", "ec2-account-imdsv2-not-required-default",
+    "cloudwatch-log-group-unlimited-retention",
+    "cloudwatch-log-group-no-customer-kms", "rds-proxy-require-tls-disabled",
+))
 
 
 def _expected_rule(rule_id):
@@ -235,7 +316,8 @@ def _validated_body(snapshot, key):
         value = integrity.get(name)
         if not isinstance(value, str) or not hmac.compare_digest(value, expected):
             raise SnapshotError("Semantic snapshot integrity mismatch")
-    if not isinstance(snapshot["rules"], dict) or set(snapshot["rules"]) != set(ADAPTERS):
+    if (not isinstance(snapshot["rules"], dict) or
+            set(snapshot["rules"]) not in (set(ADAPTERS), set(LEGACY_ADAPTERS))):
         raise SnapshotError("Semantic rule inventory mismatch")
     for rule_id, record in snapshot["rules"].items():
         adapter = ADAPTERS[rule_id]
@@ -270,15 +352,22 @@ def _safe_condition(definition, adapter):
     if definition.get("path") != adapter.path:
         return None
     conditions = definition.get("conditions")
-    if not isinstance(conditions, list) or len(conditions) != 2 or conditions[0] != "and":
+    # Only a single equality comparison or a bounded OR of two equalities.
+    # Reject arbitrary expressions, source lookups, includes, and conditions
+    # that could treat an unknown value as a verified negative.
+    if (not isinstance(conditions, list) or len(conditions) not in (2, 3)
+            or conditions[0] not in ("and", "or")):
         return None
-    check = conditions[1]
-    if (not isinstance(check, list) or len(check) != 3 or
-            check[0] != adapter.field or
-            check[1] not in ("equal", "notEqual") or
-            type(check[2]) is not str or check[2] not in adapter.allowed
-            or check[2] == "unknown"):
+    if ((conditions[0] == "and" and len(conditions) != 2) or
+            (conditions[0] == "or" and len(conditions) != 3)):
         return None
+    for check in conditions[1:]:
+        if (not isinstance(check, list) or len(check) != 3 or
+                check[0] != adapter.field or
+                check[1] not in ("equal", "notEqual") or
+                type(check[2]) is not str or check[2] not in adapter.allowed
+                or check[2] == "unknown"):
+            return None
     return conditions
 
 
@@ -303,7 +392,8 @@ def replay_semantic_facts(snapshot, key):
     """Actually rerun allowlisted current JSON predicates; never call AWS."""
     _validated_body(snapshot, key)
     output = {}
-    for rule_id, adapter in sorted(ADAPTERS.items()):
+    for rule_id in sorted(snapshot["rules"]):
+        adapter = ADAPTERS[rule_id]
         record = snapshot["rules"][rule_id]
         definition, digest = _expected_rule(rule_id)
         grammar = _safe_condition(definition, adapter) if definition else None
