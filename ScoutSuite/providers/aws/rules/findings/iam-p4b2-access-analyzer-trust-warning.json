@@ -1,0 +1,21 @@
+{
+    "description": "IAM Access Analyzer Reports Security Warning for OIDC Trust Policy (Review)",
+    "rationale": "Access Analyzer ValidatePolicy returned a SECURITY_WARNING issue code for the role trust document. This is a policy-lint advisory, not IAM policy simulation or verification of effective access.",
+    "remediation": "Review Access Analyzer issue codes, correct permissive/unsafe trust policy patterns and independently validate effective authorization.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_access_analyzer_status",
+            "equal",
+            "security_warning"
+        ]
+    ],
+    "id_suffix": "P4B2AnalyzerWarning",
+    "evidence_policy": "iam-p4b2-analyzer-warning-v1"
+}

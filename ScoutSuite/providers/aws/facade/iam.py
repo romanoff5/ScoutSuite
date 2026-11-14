@@ -468,42 +468,57 @@ class IAMFacade(AWSBaseFacade):
             print_exception('Failed to get IAM group {}: {}'.format(group['GroupName'], e))
 
     async def _get_and_set_inline_policies(self, resource, iam_resource_type):
+        """Complete IAM inline policy census, with explicit failure status.
+
+        A denied or truncated IAM List*Policies/Get*Policy must never be
+        mistaken for a verified empty identity policy set.
+        """
         client = AWSFacadeUtils.get_client('iam', self.session)
-        list_policy_method = getattr(client, 'list_' + iam_resource_type + '_policies')
+        resource['inline_policy_collection_status'] = 'unknown'
+        resource['inline_policies'] = {}
+        if client is None:
+            return
         resource_name = resource[iam_resource_type.title() + 'Name']
         args = {iam_resource_type.title() + 'Name': resource_name}
-
-        resource['inline_policies'] = {}
-
+        list_policy_method = getattr(client, 'list_' + iam_resource_type + '_policies')
+        get_policy_method = getattr(client, 'get_' + iam_resource_type + '_policy')
         try:
-            policy_names = await run_concurrently(lambda: list_policy_method(**args)['PolicyNames'])
-            if len(policy_names) == 0:
-                resource['inline_policies_count'] = 0
-        except Exception as e:
-            print_exception(f'Failed to list IAM policy: {e}')
-        else:
-            get_policy_method = getattr(client, 'get_' + iam_resource_type + '_policy')
-            try:
-                tasks = {
-                    asyncio.ensure_future(
-                        run_concurrently(lambda policy_name=policy_name:
-                                         get_policy_method(**dict(args, PolicyName=policy_name)))
-                    ) for policy_name in policy_names
-                }
-            except Exception as e:
-                print_exception(f'Failed to get policy methods: {e}')
-            else:
-                for task in asyncio.as_completed(tasks):
-                    policy = await task
-                    policy_name = policy['PolicyName']
-                    policy_id = get_non_provider_id(policy_name)
-                    policy_document = policy['PolicyDocument']
-
-                    resource['inline_policies'][policy_id] = {}
-                    resource['inline_policies'][policy_id]['PolicyDocument'] = self._normalize_statements(
-                        policy_document)
-                    resource['inline_policies'][policy_id]['name'] = policy_name
-                resource['inline_policies_count'] = len(resource['inline_policies'])
+            def enumerate_names():
+                names, marker = set(), None
+                for _ in range(20):
+                    kwargs = dict(args)
+                    if marker is not None:
+                        kwargs['Marker'] = marker
+                    page = list_policy_method(**kwargs)
+                    rows = page.get('PolicyNames') if isinstance(page, dict) else None
+                    if not isinstance(rows, list) or any(not isinstance(n, str) for n in rows):
+                        raise ValueError('IAMInlinePolicyMalformedPage')
+                    names.update(rows)
+                    if len(names) > 500:
+                        raise ValueError('IAMInlinePolicyItemCap')
+                    if not page.get('IsTruncated', False):
+                        return sorted(names)
+                    marker = page.get('Marker')
+                    if not isinstance(marker, str) or not marker:
+                        raise ValueError('IAMInlinePolicyMissingMarker')
+                raise ValueError('IAMInlinePolicyPageCap')
+            names = await run_concurrently(enumerate_names)
+            for name in names:
+                document = await run_concurrently(
+                    lambda name=name: get_policy_method(
+                        **dict(args, PolicyName=name)))
+                if not isinstance(document, dict) or not isinstance(
+                        document.get('PolicyDocument'), dict):
+                    raise ValueError('IAMInlinePolicyMalformedDocument')
+                policy_id = get_non_provider_id(name)
+                resource['inline_policies'][policy_id] = {
+                    'PolicyDocument': self._normalize_statements(
+                        document['PolicyDocument']), 'name': name}
+            resource['inline_policies_count'] = len(resource['inline_policies'])
+            resource['inline_policy_collection_status'] = 'complete'
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('iam', exc,
+                                                   'IAMInlinePolicyInventory')
 
     def _normalize_statements(self, policy_document):
         if policy_document:

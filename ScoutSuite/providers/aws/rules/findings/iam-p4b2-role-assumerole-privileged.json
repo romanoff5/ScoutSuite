@@ -1,0 +1,21 @@
+{
+    "description": "IAM Role Can Potentially Assume Administrator-Like Role",
+    "rationale": "A role has a candidate identity Allow to assume another admin-like role, whose trust explicitly references that principal or its account root, without recognized trust conditions. This is an unverified candidate.",
+    "remediation": "Review source and target trust, role chaining, boundaries, SCP/RCP and session policies before declaring privilege escalation.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_role_assumerole_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P4B2RoleAssumeRole",
+    "evidence_policy": "iam-p4b2-role-assumerole-v1"
+}

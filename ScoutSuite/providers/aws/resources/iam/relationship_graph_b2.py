@@ -30,6 +30,8 @@ def _entity_documents(entity, policies, kind):
     if not isinstance(entity, dict):
         return [], True
     role_like = {
+        'inline_policy_collection_status': entity.get(
+            'inline_policy_collection_status', 'unknown'),
         'inline_policies': entity.get('inline_policies'),
         'attached_managed_policy_collection_status': entity.get('p4b2_managed_status', 'unknown'),
         'attached_managed_policy_arns': entity.get('p4b2_managed_arns'),
@@ -152,6 +154,8 @@ def _oidc_audience_and_subject(role):
 
 def _role_documents_complete(role, policies):
     docs, incomplete = _role_documents(role, policies)
+    if role.get('inline_policy_collection_status') not in (None, 'complete'):
+        incomplete = True
     if (role.get('role_boundary_collection_status') not in (None, 'complete')
             or role.get('permissions_boundary')):
         incomplete = True

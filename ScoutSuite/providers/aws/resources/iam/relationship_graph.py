@@ -90,6 +90,8 @@ def _role_documents(role, policies_by_id):
     docs = []
     incomplete = False
     inline = role.get('inline_policies')
+    if role.get('inline_policy_collection_status') not in (None, 'complete'):
+        incomplete = True
     if not isinstance(inline, dict):
         incomplete = True
     else:

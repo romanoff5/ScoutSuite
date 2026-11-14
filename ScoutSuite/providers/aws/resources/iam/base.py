@@ -6,6 +6,7 @@ from ScoutSuite.providers.aws.resources.iam.users import Users
 from ScoutSuite.providers.aws.resources.iam.roles import Roles
 from ScoutSuite.providers.aws.resources.iam.passwordpolicy import PasswordPolicy
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import build_relationship_graph
+from ScoutSuite.providers.aws.resources.iam.relationship_graph_b2 import extend_relationship_graph_b2
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.core.console import print_exception
 
@@ -89,6 +90,47 @@ class IAM(AWSCompositeResources):
                     role['p4b_passrole_path_status'] = 'unknown'
                     role['p4b_oidc_scope_status'] = 'unknown'
                     role['p4b_privileged_oidc_status'] = 'unknown'
+
+        # P4-B2 is an offline graph transformation over verified IAM census.
+        # Access Analyzer is an optional, bounded policy-lint advisory call.
+        try:
+            graph = extend_relationship_graph_b2(
+                self['relationship_graph'], self.get('roles'), self.get('users'),
+                self.get('groups'), self.get('policies'))
+            self['relationship_graph'] = graph
+            if graph.get('status') == 'complete':
+                role_by_arn = {r['arn']: r for r in self.get('roles', {}).values()
+                               if isinstance(r, dict) and isinstance(r.get('arn'), str)}
+                validator = getattr(self.facade.iam, 'validate_p4b2_role_trusts', None)
+                if validator is not None:
+                    answers = await validator(role_by_arn, getattr(
+                        self.facade, 'partition', 'aws'))
+                    if isinstance(answers, dict):
+                        for arn, result in answers.items():
+                            role = role_by_arn.get(arn)
+                            if role is not None and isinstance(result, dict):
+                                status = result.get('status')
+                                if status in ('validated', 'security_warning',
+                                              'error', 'unknown'):
+                                    role['p4b2_access_analyzer_status'] = status
+                                    role['p4b2_access_analyzer_issue_codes'] = (
+                                        result.get('issue_codes', [])[:12])
+        except Exception as exc:
+            print_exception(f'P4-B2 relationship evidence incomplete: {type(exc).__name__}')
+            self['relationship_graph']['status'] = 'unknown'
+            for role in self.get('roles', {}).values():
+                if isinstance(role, dict):
+                    role['p4b2_role_assumerole_status'] = 'unknown'
+                    role['p4b2_oidc_audience_status'] = 'unknown'
+                    role['p4b2_oidc_subject_status'] = 'unknown'
+                    role['p4b2_access_analyzer_status'] = 'unknown'
+            for user in self.get('users', {}).values():
+                if isinstance(user, dict):
+                    user['p4b2_user_passrole_status'] = 'unknown'
+                    user['p4b2_user_assumerole_status'] = 'unknown'
+            for group in self.get('groups', {}).values():
+                if isinstance(group, dict):
+                    group['p4b2_group_passrole_status'] = 'unknown'
 
     def _parse_inline_policies_permissions(self, resource_type):
         for resource_id in self[resource_type]:

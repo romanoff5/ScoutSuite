@@ -8,6 +8,12 @@
       <h4 class="list-group-item-heading">Information</h4>
       <div class="list-group-item-text item-margin">Arn: <span id="iam.users.{{@key}}.arn"><samp>{{value_or_none arn}}</samp></span></div>
       <div class="list-group-item-text item-margin">Creation date: {{format_date CreateDate}}</div>
+      <div class="list-group-item-text item-margin">P4-B2 verified group membership: <samp>{{p4b2_membership_status}}</samp></div>
+      <div class="list-group-item-text item-margin">P4-B2 user boundary evidence: <samp>{{p4b2_boundary_status}}</samp></div>
+      <div class="list-group-item-text item-margin">P4-B2 managed policy census: <samp>{{p4b2_managed_status}}</samp></div>
+      <div class="list-group-item-text item-margin">P4-B2 user PassRole path: <samp>{{p4b2_user_passrole_status}}</samp></div>
+      <div class="list-group-item-text item-margin">P4-B2 user AssumeRole path: <samp>{{p4b2_user_assumerole_status}}</samp></div>
+      <p><small>P4-B2 only identifies potential identity-policy delegation. No effective permission simulation.</small></p>
     </div>
     <div class="list-group-item">
       <h4 class="list-group-item-heading">Authentication methods</h4>
