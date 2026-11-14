@@ -169,12 +169,78 @@ class IAMFacade(AWSBaseFacade):
             role['assume_role_policy'] = {}
             role['assume_role_policy']['PolicyDocument'] = role.pop(
                 'AssumeRolePolicyDocument')
+        # P4-B needs explicit per-role completeness. ListRoles omits the
+        # permissions boundary and policy attachment inventory; denied reads
+        # must not silently become "no boundary" or "no managed policies".
         await get_and_set_concurrently(
             [functools.partial(self._get_and_set_inline_policies, iam_resource_type='role'),
              self._get_and_set_role_profiles,
-             self._get_and_set_role_tags], roles)
+             self._get_and_set_role_tags,
+             self._get_and_set_p4b_role_details,
+             self._get_and_set_p4b_attached_policies], roles)
 
         return roles
+
+
+    async def _get_and_set_p4b_role_details(self, role):
+        """Read GetRole for boundary (not returned by ListRoles); fail closed."""
+        role['role_boundary_collection_status'] = 'unknown'
+        role['permissions_boundary'] = None
+        client = AWSFacadeUtils.get_client('iam', self.session)
+        if client is None:
+            return
+        try:
+            response = await run_concurrently(
+                lambda: client.get_role(RoleName=role['RoleName']))
+            details = response.get('Role') if isinstance(response, dict) else None
+            if not isinstance(details, dict) or details.get('Arn') != role.get('Arn'):
+                raise ValueError('P4BMalformedGetRole')
+            boundary = details.get('PermissionsBoundary')
+            if boundary is not None and (
+                    not isinstance(boundary, dict) or
+                    not isinstance(boundary.get('PermissionsBoundaryArn'), str) or
+                    not boundary['PermissionsBoundaryArn']):
+                raise ValueError('P4BMalformedPermissionsBoundary')
+            role['permissions_boundary'] = boundary
+            role['role_boundary_collection_status'] = 'complete'
+        except Exception as error:
+            AWSFacadeUtils.record_listing_failure('iam', error, 'P4BGetRole')
+
+    async def _get_and_set_p4b_attached_policies(self, role):
+        """Bounded exact role attachment census; no missing=empty ambiguity."""
+        role['attached_managed_policy_collection_status'] = 'unknown'
+        role['attached_managed_policy_arns'] = []
+        client = AWSFacadeUtils.get_client('iam', self.session)
+        if client is None:
+            return
+        try:
+            def fetch():
+                result, names = [], set()
+                pages = client.get_paginator('list_attached_role_policies').paginate(
+                    RoleName=role['RoleName'])
+                for index, page in enumerate(pages):
+                    if index >= 20:
+                        raise ValueError('P4BAttachedPoliciesPageCap')
+                    rows = page.get('AttachedPolicies') if isinstance(page, dict) else None
+                    if not isinstance(rows, list):
+                        raise ValueError('P4BAttachedPoliciesMalformedPage')
+                    for item in rows:
+                        arn = item.get('PolicyArn') if isinstance(item, dict) else None
+                        if not isinstance(arn, str) or ':policy/' not in arn:
+                            raise ValueError('P4BAttachedPoliciesMalformedArn')
+                        if arn in names:
+                            raise ValueError('P4BAttachedPoliciesDuplicateArn')
+                        names.add(arn)
+                        result.append(arn)
+                        if len(result) > 500:
+                            raise ValueError('P4BAttachedPoliciesResourceCap')
+                return sorted(result)
+            policies = await run_concurrently(fetch)
+            role['attached_managed_policy_arns'] = policies
+            role['attached_managed_policy_collection_status'] = 'complete'
+        except Exception as error:
+            AWSFacadeUtils.record_listing_failure('iam', error,
+                                                   'P4BListAttachedRolePolicies')
 
     async def _get_and_set_role_tags(self, role: {}):
         client = AWSFacadeUtils.get_client('iam', self.session)

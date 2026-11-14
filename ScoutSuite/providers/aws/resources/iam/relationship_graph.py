@@ -100,12 +100,23 @@ def _role_documents(role, policies_by_id):
                 incomplete = True
             else:
                 docs.append(('inline:' + str(key), statements))
-    managed = role.get('policies')
-    if not isinstance(managed, list):
-        # A missing managed attachment list is NOT an empty managed attachment list.
+    attached_status = role.get('attached_managed_policy_collection_status')
+    if attached_status is not None:
+        # In real scans, use the independently verified exact role attachment
+        # inventory. Legacy role["policies"] is filled by the policy-centric
+        # collector, which cannot distinguish denied from empty attachments.
+        if attached_status != 'complete':
+            incomplete = True
+            managed = []
+        else:
+            managed = role.get('attached_managed_policy_arns')
+    else:
+        # Preserve synthetic/older replay fixtures; absence is UNKNOWN.
+        managed = role.get('policies')
+    if not isinstance(managed, list) or any(not isinstance(k, str) for k in managed):
         incomplete = True
     else:
-        for key in sorted(managed):
+        for key in sorted(set(managed)):
             policy = policies_by_id.get(key)
             statements = _statements(policy.get('PolicyDocument')) if isinstance(policy, dict) else None
             if statements is None:
@@ -117,6 +128,8 @@ def _role_documents(role, policies_by_id):
 
 def _admin_hint(role, docs, incomplete):
     """Admin-looking identity grant; never assert effective administrator privileges."""
+    if role.get('role_boundary_collection_status') not in (None, 'complete'):
+        return 'unknown'
     if role.get('permissions_boundary'):
         return 'unknown'
     admin = False
@@ -270,6 +283,12 @@ def build_relationship_graph(roles, policies):
         graph['status'] = 'partial'
     listed = sorted((role for role in roles.values() if isinstance(role, dict)),
                     key=lambda role: str(role.get('arn', '')))[:MAX_ROLES]
+    # Both IAM role attachment ARNs and legacy policy IDs resolve here.
+    # An attachment with no collected policy document remains UNKNOWN.
+    policy_lookup = dict(policies)
+    for policy in policies.values():
+        if isinstance(policy, dict) and isinstance(policy.get('arn'), str):
+            policy_lookup[policy['arn']] = policy
     role_index = {}
     policy_data = {}
     oidc_entries = {}
@@ -283,7 +302,7 @@ def build_relationship_graph(roles, policies):
             graph['status'] = 'partial'
             continue
         role_index[arn] = role
-        docs, incomplete = _role_documents(role, policies)
+        docs, incomplete = _role_documents(role, policy_lookup)
         policy_data[arn] = (docs, incomplete)
         role['p4b_admin_policy_status'] = _admin_hint(role, docs, incomplete)
         scope, entries = _oidc_trust(role)
@@ -321,7 +340,8 @@ def build_relationship_graph(roles, policies):
             source['p4b_passrole_path_status'] = 'not_applicable'
             continue  # Not privilege escalation for an already admin-like source.
         docs, incomplete = policy_data[source_arn]
-        if source.get('permissions_boundary'):
+        if (source.get('role_boundary_collection_status') not in (None, 'complete')
+                or source.get('permissions_boundary')):
             source['p4b_passrole_path_status'] = 'unknown'
             continue
         if any(row.get('Effect') == 'Deny' or 'NotAction' in row or
@@ -361,4 +381,6 @@ def build_relationship_graph(roles, policies):
         for role in roles.values():
             if isinstance(role, dict):
                 role['p4b_passrole_path_status'] = 'unknown'
+                role['p4b_oidc_scope_status'] = 'unknown'
+                role['p4b_privileged_oidc_status'] = 'unknown'
     return graph
