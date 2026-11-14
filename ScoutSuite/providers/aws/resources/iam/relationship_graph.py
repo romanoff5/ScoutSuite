@@ -358,6 +358,7 @@ def build_relationship_graph(roles, policies):
                 or source.get('permissions_boundary')):
             source['p4b_passrole_path_status'] = 'unknown'
             continue
+        creation_cache = {}
         for target in admins:
             target_arn = target['arn']
             if target_arn == source_arn:
@@ -371,8 +372,12 @@ def build_relationship_graph(roles, policies):
                     continue
                 passing = identity_permission(
                     docs, 'iam:PassRole', target_arn, service_principal)
-                capable = creation_permission(docs, service_action, source_arn)
-                if passing != 'yes' or capable != 'yes':
+                if passing != 'yes':
+                    continue
+                if service_action not in creation_cache:
+                    creation_cache[service_action] = creation_permission(
+                        docs, service_action, source_arn)
+                if creation_cache[service_action] != 'yes':
                     continue
                 source['p4b_passrole_path_status'] = 'candidate'
                 source['p4b_passrole_target_arns'].append(target_arn)
