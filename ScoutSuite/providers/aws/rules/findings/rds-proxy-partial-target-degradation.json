@@ -1,0 +1,20 @@
+{
+    "description": "RDS Proxy Has Both Available and Unavailable Targets",
+    "rationale": "The complete target inventory includes AVAILABLE and UNAVAILABLE targets; this may reduce backend capacity or resilience.",
+    "remediation": "Review unhealthy target reasons, proxy metrics and failover capacity.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBProxyTargets.html"
+    ],
+    "dashboard_name": "RDS Proxies",
+    "path": "rds.regions.id.proxies.id",
+    "conditions": [
+        "and",
+        [
+            "target_health_status",
+            "equal",
+            "degraded"
+        ]
+    ],
+    "id_suffix": "rdsproxypartialtargetdegradation",
+    "evidence_policy": "rds-proxy-targets-degraded-v1"
+}

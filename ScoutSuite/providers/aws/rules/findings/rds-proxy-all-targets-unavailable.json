@@ -1,0 +1,20 @@
+{
+    "description": "All Observed RDS Proxy Targets Are Unavailable",
+    "rationale": "The complete target census of an available RDS Proxy reports UNAVAILABLE for every target. This is a connection-health risk, not observed user impact.",
+    "remediation": "Inspect target health reasons and restore credentials, networking or database availability.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBProxyTargets.html"
+    ],
+    "dashboard_name": "RDS Proxies",
+    "path": "rds.regions.id.proxies.id",
+    "conditions": [
+        "and",
+        [
+            "target_health_status",
+            "equal",
+            "all_unavailable"
+        ]
+    ],
+    "id_suffix": "rdsproxyalltargetsunavailable",
+    "evidence_policy": "rds-proxy-targets-unavailable-v1"
+}
