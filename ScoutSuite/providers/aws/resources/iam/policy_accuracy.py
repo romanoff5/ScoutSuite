@@ -150,7 +150,7 @@ def _regions(docs, action, service):
 def _suffixes(docs, action, service, kind):
     """Derive resource names from scoped Allow ARNs, avoiding Resource='*' FN."""
     defaults = (('P5ACandidate', 'P5AAlternate') if kind == 'function'
-                else (EC2_IDS[kind],))
+                else (EC2_IDS[kind], EC2_IDS[kind].replace('0', '1')))
     suffixes = list(defaults)
     separator = ':' if service == 'lambda' else '/'
     prefix = kind + separator
