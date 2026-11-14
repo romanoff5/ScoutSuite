@@ -17,6 +17,8 @@ from pathlib import Path
 # Permit invocation from repository root without pip installation. No network.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from ScoutSuite.core.semantic_replay import export_semantic_facts, replay_semantic_facts
+
 from ScoutSuite.core.evidence_snapshot import (
     KEY_BYTES, MAX_SOURCE_BYTES, SnapshotError,
     diff_evidence_snapshots, export_evidence_snapshot, verify_evidence_snapshot,
@@ -107,6 +109,16 @@ def main(argv=None):
     diff.add_argument("--after", required=True)
     diff.add_argument("--key-file", required=True)
 
+    facts_export = commands.add_parser(
+        "facts-export", help="Export allowlisted AWS semantic facts; never raw identifiers")
+    facts_export.add_argument("--report", required=True)
+    facts_export.add_argument("--key-file", required=True)
+    facts_export.add_argument("--output", required=True)
+    facts_replay = commands.add_parser(
+        "facts-replay", help="Reexecute supported current JSON rule predicates offline")
+    facts_replay.add_argument("--snapshot", required=True)
+    facts_replay.add_argument("--key-file", required=True)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "init-key":
@@ -125,6 +137,22 @@ def main(argv=None):
                               "schema_version": snapshot["schema_version"],
                               "key_id": snapshot["key_id"]}, sort_keys=True))
             return 0
+        if args.command == "facts-export":
+            source = _load_json(args.report, "results")
+            snapshot = export_semantic_facts(source, key)
+            _create_private(args.output, (json.dumps(
+                snapshot, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ) + "\n").encode("utf-8"))
+            print(json.dumps({"status": "semantic_facts_created",
+                              "rules": len(snapshot["rules"]),
+                              "key_id": snapshot["key_id"]}, sort_keys=True))
+            return 0
+        if args.command == "facts-replay":
+            results = replay_semantic_facts(
+                _load_json(args.snapshot, "snapshot"), key)
+            print(json.dumps(results, sort_keys=True))
+            return 0 if all(row["status"] == "replayed"
+                            for row in results["rules"].values()) else 2
         if args.command == "replay":
             outcome = verify_evidence_snapshot(_load_json(args.snapshot, "snapshot"), key)
             print(json.dumps(outcome, sort_keys=True))
