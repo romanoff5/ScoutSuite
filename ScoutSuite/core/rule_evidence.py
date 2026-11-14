@@ -1090,6 +1090,66 @@ def classify_p2_ssm_public(resource):
     return _classify_p2(resource, 'public_sharing_status', ('public',), ('private',))
 
 
+
+# P3-A classifiers: bounded AWS observations, not penetration-test proof,
+# full Kubernetes RBAC enumeration or verified backup recovery objectives.
+def _p3a_status(resource, field, bad, good=(), na=()):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    value = resource.get(field)
+    if value in bad:
+        return 'insecure'
+    if value in good:
+        return 'secure'
+    if value in na:
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_p3a_rds_empty(resource):
+    return _p3a_status(resource, 'target_health_status', ('no_targets',),
+                       ('healthy', 'degraded', 'all_unavailable', 'transitioning'),
+                       ('not_applicable',))
+
+
+def classify_p3a_rds_unavailable(resource):
+    return _p3a_status(resource, 'target_health_status', ('all_unavailable',),
+                       ('healthy', 'degraded', 'no_targets', 'transitioning'),
+                       ('not_applicable',))
+
+
+def classify_p3a_rds_degraded(resource):
+    return _p3a_status(resource, 'target_health_status', ('degraded',),
+                       ('healthy', 'all_unavailable', 'no_targets', 'transitioning'),
+                       ('not_applicable',))
+
+
+def classify_p3a_eks_cluster_admin(resource):
+    return _p3a_status(resource, 'admin_grant_status', ('cluster_admin',),
+                       (), ('not_detected', 'admin'))
+
+
+def classify_p3a_eks_admin(resource):
+    return _p3a_status(resource, 'admin_grant_status', ('admin',),
+                       (), ('not_detected', 'cluster_admin'))
+
+
+def classify_p3a_backup_failed(resource):
+    return _p3a_status(resource, 'latest_restore_job_status', ('failed',),
+                       ('completed',))
+
+
+def classify_p3a_backup_validation(resource):
+    return _p3a_status(resource, 'latest_validation_status', ('failed',),
+                       ('successful',))
+
+
+def classify_p3a_backup_freshness(resource):
+    return _p3a_status(resource, 'restore_testing_schedule_status',
+                       ('stale', 'never_executed_stale'), ('recent',),
+                       ('not_yet_due',))
+
+
 # These published policies cover multiple rules, so bind each to its exact
 # filename/path/observed field instead of guessing from unrelated resource flags.
 SCOPED_POLICIES = {
@@ -1148,6 +1208,14 @@ def _classify_scoped_review(resource, field):
 
 
 CLASSIFIERS = {
+    'rds-proxy-targets-empty-v1': classify_p3a_rds_empty,
+    'rds-proxy-targets-unavailable-v1': classify_p3a_rds_unavailable,
+    'rds-proxy-targets-degraded-v1': classify_p3a_rds_degraded,
+    'eks-api-cluster-admin-v1': classify_p3a_eks_cluster_admin,
+    'eks-api-wide-admin-v1': classify_p3a_eks_admin,
+    'backup-latest-restore-failure-v1': classify_p3a_backup_failed,
+    'backup-latest-validation-failure-v1': classify_p3a_backup_validation,
+    'backup-restore-testing-freshness-v1': classify_p3a_backup_freshness,
     'p2-cloudwatch-log-retention-v1': classify_p2_log_retention,
     'p2-cloudwatch-customer-kms-v1': classify_p2_log_kms,
     'p2-cloudwatch-alarm-actions-v1': classify_p2_alarm_actions,
