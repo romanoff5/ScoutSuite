@@ -79,6 +79,7 @@ def test_same_key_and_different_dict_order_produce_identical_signed_snapshot():
     snap = export_evidence_snapshot(first, KEY)
     assert snap == export_evidence_snapshot(second, KEY)
     assert verify_evidence_snapshot(snap, KEY)["snapshot_verified"] is True
+    assert verify_evidence_snapshot(snap, KEY)["replay_status"] == "incomplete_observations"
 
 
 def test_changed_key_changes_tokens_and_cannot_verify_old_snapshot():
@@ -118,6 +119,7 @@ def test_missing_evidence_is_not_pass_and_missing_collection_is_incomplete():
     assert row["evidence_counts"] is None
     assert result["collection"]["complete"] is False
     assert verify_evidence_snapshot(result, KEY)["rules_with_unknown_evidence"] == 1
+    assert verify_evidence_snapshot(result, KEY)["replay_status"] == "incomplete_observations"
 
 
 def test_false_evaluated_claim_with_unknown_data_fails_closed():
@@ -203,7 +205,7 @@ def test_cli_init_key_export_replay_and_diff_are_offline_and_private(tmp_path, c
     assert mod.main(["export", "--report", str(result_file),
                      "--output", str(snapshot_file), "--key-file", str(key)]) == 3
     assert mod.main(["replay", "--snapshot", str(snapshot_file),
-                     "--key-file", str(key)]) == 0
+                     "--key-file", str(key)]) == 2
     assert mod.main(["diff", "--before", str(snapshot_file), "--after", str(snapshot_file),
                      "--key-file", str(key)]) == 0
     exposed = capsys.readouterr()
@@ -227,3 +229,18 @@ def test_cli_rejects_raw_js_code_and_never_executes_it(tmp_path, capsys):
                      "--key-file", str(secret),
                      "--output", str(tmp_path / "out.json")]) == 3
     assert "private-code" not in capsys.readouterr().err
+
+def test_only_complete_collection_and_complete_evidence_returns_fully_verified_observations():
+    source = report(flagged=True, unknown=False)
+    snap = export_evidence_snapshot(source, KEY)
+    outcome = verify_evidence_snapshot(snap, KEY)
+    assert outcome["replay_status"] == "verified_observations"
+    assert outcome["rule_conditions_reexecuted"] is False
+
+
+def test_contradictory_source_collection_status_cannot_be_promoted_to_complete():
+    source = report(flagged=True, unknown=False)
+    source["collection_status"]["status"] = "partial"
+    snapshot = export_evidence_snapshot(source, KEY)
+    assert snapshot["collection"]["complete"] is False
+    assert verify_evidence_snapshot(snapshot, KEY)["replay_status"] == "incomplete_observations"
