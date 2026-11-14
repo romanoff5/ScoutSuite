@@ -1,0 +1,20 @@
+{
+    "description": "OIDC-Trusted IAM Role Carries Administrator-Like Policy (Review)",
+    "rationale": "An IAM role has an OIDC federated trust relationship and an identity-based Allow statement consistent with broad administrative privileges. The graph cannot prove the federated subject can assume it or that all actions are effective; inspect trust, SCPs, boundaries, explicit Deny and deployment controls.",
+    "remediation": "Limit federated workloads to separate, least-privilege roles and require strict OIDC trust claims for organization/repository/branch or Kubernetes service account. Validate effective permissions independently.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc_secure-by-default.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b_privileged_oidc_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P4BPrivilegedOIDC",
+    "evidence_policy": "iam-p4b-privileged-oidc-v1"
+}

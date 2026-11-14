@@ -1327,7 +1327,35 @@ def classify_p4a_ec2_detailed(resource):
                        ('basic',), ('detailed',), ('not_applicable',))
 
 
+
+def classify_p4b_passrole_candidate(resource):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    return 'insecure' if resource.get('p4b_passrole_path_status') == 'candidate' else (
+        'not_applicable' if resource.get('p4b_passrole_path_status') == 'not_applicable'
+        else 'unknown')
+
+
+def classify_p4b_broad_oidc(resource):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    return 'insecure' if resource.get('p4b_oidc_scope_status') == 'broad_subject' else (
+        'not_applicable' if resource.get('p4b_oidc_scope_status') in
+        ('scoped_subject', 'not_applicable') else 'unknown')
+
+
+def classify_p4b_privileged_oidc(resource):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    return 'insecure' if resource.get('p4b_privileged_oidc_status') == 'candidate' else (
+        'not_applicable' if resource.get('p4b_privileged_oidc_status') == 'not_applicable'
+        else 'unknown')
+
+
 CLASSIFIERS = {
+    'iam-p4b-passrole-v1': classify_p4b_passrole_candidate,
+    'iam-p4b-oidc-subject-v1': classify_p4b_broad_oidc,
+    'iam-p4b-privileged-oidc-v1': classify_p4b_privileged_oidc,
     'p4a-default-vpc-igw-v1': classify_p4a_default_vpc,
     'p4a-security-contact-v1': classify_p4a_security_contact,
     'p4a-rds-enhanced-monitoring-v1': classify_p4a_rds_enhanced_monitoring,

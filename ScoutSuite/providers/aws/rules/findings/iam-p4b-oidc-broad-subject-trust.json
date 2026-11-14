@@ -1,0 +1,20 @@
+{
+    "description": "OIDC Trust Allows an Overly Broad Subject Scope (Review)",
+    "rationale": "A role trust policy appears to allow a federated OIDC principal with a broad StringLike sub scope or no subject restriction. This is a potential authorization-scope weakness. Some OIDC providers, including GitHub, reject missing or all-wildcard sub restrictions at policy creation; ambiguous policies are UNKNOWN.",
+    "remediation": "Constrain OIDC trust to expected organization, repository, branch, environment, namespace or service account, and verify audience and provider-specific condition keys. For GitHub use repository-scoped sub conditions and protected environments.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b_oidc_scope_status",
+            "equal",
+            "broad_subject"
+        ]
+    ],
+    "id_suffix": "P4BBroadOIDC",
+    "evidence_policy": "iam-p4b-oidc-subject-v1"
+}
