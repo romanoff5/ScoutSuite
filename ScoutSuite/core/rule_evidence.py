@@ -1436,8 +1436,15 @@ def evaluate_rule_evidence(rule, services):
         status = 'incomplete'
         context = get_current_run_context()
         if context is not None:
-            context.record_collection_issue('partial', rule.path.split('.')[0],
-                                            'RuleEvidenceUnknown')
+            scope = rule.path.split('.')[0]
+            # Attribute unknown evidence to its actual region. Legacy
+            # collection errors without a region remain conservatively broad.
+            for path in unknown_paths:
+                parts = path.split('.')
+                region = (parts[2] if len(parts) > 2 and parts[1] == 'regions'
+                          else 'global')
+                context.record_collection_issue(
+                    'partial', scope, 'RuleEvidenceUnknown', region=region)
     elif not total:
         status = 'not_applicable'  # No applicable resources, not a compliance pass.
     elif counts['secure'] + counts['insecure'] == 0:

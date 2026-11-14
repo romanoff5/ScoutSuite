@@ -148,7 +148,7 @@ class AWSFacadeUtils:
                 if context is not None and context.provider == 'aws':
                     events = getattr(getattr(client, 'meta', None), 'events', None)
                     if events is not None:
-                        location = region or getattr(client.meta, 'region_name', None) or 'global'
+                        location = region or 'global'
 
                         def observe(http_response=None, parsed=None, event_name=None, **_kw):
                             try:
@@ -172,6 +172,8 @@ class AWSFacadeUtils:
                                     outcome = 'denied'
                                 elif code in UNSUPPORTED_CODES:
                                     outcome = 'unsupported'
+                                elif code is not None:
+                                    outcome = 'failed'
                                 elif isinstance(status_code, int) and status_code >= 400:
                                     outcome = 'failed'
                                 elif isinstance(status_code, int) and status_code < 400:
