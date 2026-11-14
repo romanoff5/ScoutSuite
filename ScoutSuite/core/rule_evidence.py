@@ -1352,7 +1352,54 @@ def classify_p4b_privileged_oidc(resource):
         else 'unknown')
 
 
+
+def _p4b2_review(resource, field, candidate='candidate', not_applicable=()):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    value = resource.get(field)
+    return ('insecure' if value == candidate else
+            'not_applicable' if value in not_applicable else 'unknown')
+
+
+def classify_p4b2_user_passrole(resource):
+    return _p4b2_review(resource, 'p4b2_user_passrole_status')
+
+
+def classify_p4b2_user_assumerole(resource):
+    return _p4b2_review(resource, 'p4b2_user_assumerole_status')
+
+
+def classify_p4b2_role_assumerole(resource):
+    return _p4b2_review(resource, 'p4b2_role_assumerole_status')
+
+
+def classify_p4b2_group_passrole(resource):
+    return _p4b2_review(resource, 'p4b2_group_passrole_status')
+
+
+def classify_p4b2_oidc_audience(resource):
+    return _p4b2_review(resource, 'p4b2_oidc_audience_status',
+                        'review', ('scoped', 'not_applicable'))
+
+
+def classify_p4b2_oidc_subject(resource):
+    return _p4b2_review(resource, 'p4b2_oidc_subject_status',
+                        'review', ('scoped', 'not_applicable'))
+
+
+def classify_p4b2_analyzer_warning(resource):
+    return _p4b2_review(resource, 'p4b2_access_analyzer_status',
+                        'security_warning')
+
+
 CLASSIFIERS = {
+    'iam-p4b2-user-passrole-v1': classify_p4b2_user_passrole,
+    'iam-p4b2-user-assumerole-v1': classify_p4b2_user_assumerole,
+    'iam-p4b2-role-assumerole-v1': classify_p4b2_role_assumerole,
+    'iam-p4b2-group-passrole-v1': classify_p4b2_group_passrole,
+    'iam-p4b2-oidc-audience-v1': classify_p4b2_oidc_audience,
+    'iam-p4b2-oidc-subject-v1': classify_p4b2_oidc_subject,
+    'iam-p4b2-analyzer-warning-v1': classify_p4b2_analyzer_warning,
     'iam-p4b-passrole-v1': classify_p4b_passrole_candidate,
     'iam-p4b-oidc-subject-v1': classify_p4b_broad_oidc,
     'iam-p4b-privileged-oidc-v1': classify_p4b_privileged_oidc,

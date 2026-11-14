@@ -1,0 +1,21 @@
+{
+    "description": "OIDC Role Trust Has Missing or Wildcard Audience Constraint (Review)",
+    "rationale": "An OIDC role trust statement lacks an explicit aud claim condition or uses wildcard matching. AWS validates IdP client IDs separately, so this is a defense-in-depth review rather than proof of accepted tokens from other audiences.",
+    "remediation": "Set provider-correct exact audience restrictions and audit identity provider client IDs and accepted token claims.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_oidc_audience_status",
+            "equal",
+            "review"
+        ]
+    ],
+    "id_suffix": "P4B2OIDCAudience",
+    "evidence_policy": "iam-p4b2-oidc-audience-v1"
+}

@@ -50,3 +50,43 @@ missing documents remain UNKNOWN. This increases IAM API requests per role.
 An incomplete role graph invalidates the P4-B OIDC and PassRole candidates as
 well as the overall graph status. CI covers boundary restrictions, empty and
 denied role attachments, missing managed documents and truncation.
+
+## P4-B2: users/groups, AssumeRole, claims and Access Analyzer
+
+Role-first graph is extended after existing IAM policy attachment finalization.
+Users and groups are separate nodes; a group is **not** a principal that can
+call STS. The graph correlates user-group memberships, direct/inherited
+identity-policy statements, explicit target role trust, `sts:AssumeRole`,
+`iam:PassRole` and EC2/Lambda creation grants.
+
+All candidate findings are `REVIEW`. Complete user group membership,
+GetUser permissions boundary, managed policy attachment census and complete
+inline policy pagination are prerequisites. Incomplete data, conditional grants,
+NotAction/NotResource, explicit Deny and malformed AWS responses cause UNKNOWN;
+they are never converted into verified PASS or a confirmed attack path.
+
+OIDC checks inspect provider-qualified `aud` and `sub` conditions. Missing or
+wildcard audience and broad/wildcard subject values trigger a review. For
+nonstandard providers, other token claims and IdP client ID restrictions are not
+simulated. AWS may reject some unbounded GitHub subject trusts at creation.
+
+Optional Access Analyzer `ValidatePolicy` calls are **read-only** policy-lint
+requests for up to 25 OIDC-trusting role documents. API errors, unsupported
+partitions, denied requests, malformed or excessive pages are UNKNOWN. The
+collector stores only `findingType` conclusions and bounded `issueCode`
+identifiers (never raw details, trust tokens or request payloads). A clean
+ValidatePolicy result is **not** effective permission proof.
+
+AWS API requests required beyond P4-B:
+- `iam:GetUser`, `iam:ListAttachedUserPolicies`,
+  `iam:ListAttachedGroupPolicies`, and bounded `iam:ListGroupsForUser`
+- Existing IAM inline policy reads now explicitly track pagination/completeness
+- `access-analyzer:ValidatePolicy` (optional, advisory)
+
+Limits: 1,800 sources, 160,000 source-target pairs, 4,000 edges,
+25 policy validation documents. Partial/truncated graph invalidates B2
+candidate statuses. Full effective authorization remains out of scope:
+SCP/RCP, resource policies, trust session contexts, MFA, session policies,
+permission boundaries' contents, Access Analyzer policy simulation, and
+cross-account controls are not fully evaluated.
+

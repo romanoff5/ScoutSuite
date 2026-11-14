@@ -1,0 +1,21 @@
+{
+    "description": "IAM User Has a Potential PassRole Path to a Privileged Service Role",
+    "rationale": "A user and its verified groups collectively have identity-policy Allow for iam:PassRole and service-resource creation into a role with administrator-like policy and compatible service trust. This is not effective AWS authorization or a demonstrated exploit.",
+    "remediation": "Scope PassRole resources and iam:PassedToService, limit workload creation and verify policy boundaries, organization controls and access path.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Users",
+    "path": "iam.users.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_user_passrole_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P4B2UserPassRole",
+    "evidence_policy": "iam-p4b2-user-passrole-v1"
+}

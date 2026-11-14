@@ -1,0 +1,21 @@
+{
+    "description": "IAM Group Contributes a Potential PassRole Delegation",
+    "rationale": "An IAM group has at least one verified user member on a candidate privilege delegation path, and a group identity policy supplies iam:PassRole for the privileged role. Groups cannot themselves assume IAM roles.",
+    "remediation": "Limit group-level PassRole grants and member access; verify the user effective permissions and service paths.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Groups",
+    "path": "iam.groups.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_group_passrole_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P4B2GroupPassRole",
+    "evidence_policy": "iam-p4b2-group-passrole-v1"
+}

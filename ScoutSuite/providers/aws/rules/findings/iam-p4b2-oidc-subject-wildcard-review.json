@@ -1,0 +1,21 @@
+{
+    "description": "OIDC Role Trust Subject Uses Broad or Wildcard Pattern (Review)",
+    "rationale": "The OIDC trust subject is broad or wildcard-scoped; it may include multiple identities, repositories or Kubernetes service accounts. Provider-specific conditions and issuer controls require review.",
+    "remediation": "Restrict sub conditions to expected repository, environment, branch, namespace or service account; validate issuer and protected workflows.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Roles",
+    "path": "iam.roles.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_oidc_subject_status",
+            "equal",
+            "review"
+        ]
+    ],
+    "id_suffix": "P4B2OIDCSubject",
+    "evidence_policy": "iam-p4b2-oidc-subject-v1"
+}

@@ -89,7 +89,9 @@ class IAMFacade(AWSBaseFacade):
         groups = await AWSFacadeUtils.get_all_pages('iam', None, self.session, 'list_groups', 'Groups')
         await get_and_set_concurrently(
             [self._get_and_set_group_users,
-             functools.partial(self._get_and_set_inline_policies, iam_resource_type='group')], groups)
+             functools.partial(self._get_and_set_inline_policies, iam_resource_type='group'),
+             functools.partial(self._get_and_set_p4b2_managed_attachments,
+                               entity_type='group')], groups)
         return groups
 
     async def get_policies(self):
@@ -130,13 +132,174 @@ class IAMFacade(AWSBaseFacade):
         users = await AWSFacadeUtils.get_all_pages('iam', None, self.session, 'list_users', 'Users')
         await get_and_set_concurrently(
             [functools.partial(self._get_and_set_inline_policies, iam_resource_type='user'),
-             self._get_and_set_user_groups,
+             self._get_and_set_p4b2_user_groups,
+             self._get_and_set_p4b2_user_details,
+             functools.partial(self._get_and_set_p4b2_managed_attachments,
+                               entity_type='user'),
              self._get_and_set_user_tags,
              self._get_and_set_user_login_profile,
              self._get_and_set_user_access_keys,
              self._get_and_set_user_mfa_devices],
             users)
         return users
+
+
+    async def _get_and_set_p4b2_user_groups(self, user):
+        """Exact, bounded group membership. Never infer empty on API failure."""
+        user['p4b2_membership_status'] = 'unknown'
+        user['groups'] = []
+        client = AWSFacadeUtils.get_client('iam', self.session)
+        if client is None:
+            return
+        try:
+            def collect():
+                result = []
+                pages = client.get_paginator('list_groups_for_user').paginate(
+                    UserName=user['UserName'])
+                for idx, page in enumerate(pages):
+                    if idx >= 25:
+                        raise ValueError('P4B2GroupMembershipPageCap')
+                    rows = page.get('Groups') if isinstance(page, dict) else None
+                    if not isinstance(rows, list):
+                        raise ValueError('P4B2GroupMembershipMalformed')
+                    for row in rows:
+                        name = row.get('GroupName') if isinstance(row, dict) else None
+                        if not isinstance(name, str) or not name:
+                            raise ValueError('P4B2GroupMembershipInvalidName')
+                        result.append(name)
+                        if len(result) > 1500:
+                            raise ValueError('P4B2GroupMembershipItemCap')
+                return sorted(set(result))
+            user['groups'] = await run_concurrently(collect)
+            user['p4b2_membership_status'] = 'complete'
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('iam', exc, 'P4B2ListGroupsForUser')
+
+    async def _get_and_set_p4b2_user_details(self, user):
+        """Read user's boundary; ListUsers is not authoritative for this field."""
+        user['p4b2_boundary_status'] = 'unknown'
+        user['p4b2_boundary'] = None
+        client = AWSFacadeUtils.get_client('iam', self.session)
+        if client is None:
+            return
+        try:
+            response = await run_concurrently(
+                lambda: client.get_user(UserName=user['UserName']))
+            item = response.get('User') if isinstance(response, dict) else None
+            if not isinstance(item, dict) or item.get('Arn') != user.get('Arn'):
+                raise ValueError('P4B2GetUserMalformed')
+            boundary = item.get('PermissionsBoundary')
+            if boundary is not None and (
+                    not isinstance(boundary, dict) or
+                    not isinstance(boundary.get('PermissionsBoundaryArn'), str)):
+                raise ValueError('P4B2GetUserBoundaryMalformed')
+            user['p4b2_boundary'] = boundary
+            user['p4b2_boundary_status'] = 'complete'
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('iam', exc, 'P4B2GetUser')
+
+    async def _get_and_set_p4b2_managed_attachments(self, entity, entity_type):
+        """Explicit role-independent IAM principal attachment census."""
+        entity['p4b2_managed_status'] = 'unknown'
+        entity['p4b2_managed_arns'] = []
+        if entity_type not in ('user', 'group'):
+            return
+        client = AWSFacadeUtils.get_client('iam', self.session)
+        if client is None:
+            return
+        name_key = 'UserName' if entity_type == 'user' else 'GroupName'
+        op = 'list_attached_' + entity_type + '_policies'
+        try:
+            def collect():
+                arns = set()
+                pages = client.get_paginator(op).paginate(**{
+                    name_key: entity[name_key]})
+                for index, page in enumerate(pages):
+                    if index >= 20:
+                        raise ValueError('P4B2ManagedAttachmentPageCap')
+                    rows = page.get('AttachedPolicies') if isinstance(page, dict) else None
+                    if not isinstance(rows, list):
+                        raise ValueError('P4B2ManagedAttachmentMalformed')
+                    for row in rows:
+                        arn = row.get('PolicyArn') if isinstance(row, dict) else None
+                        if not isinstance(arn, str) or ':policy/' not in arn:
+                            raise ValueError('P4B2ManagedAttachmentInvalidArn')
+                        arns.add(arn)
+                        if len(arns) > 500:
+                            raise ValueError('P4B2ManagedAttachmentItemCap')
+                return sorted(arns)
+            entity['p4b2_managed_arns'] = await run_concurrently(collect)
+            entity['p4b2_managed_status'] = 'complete'
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('iam', exc,
+                                                   'P4B2ListAttachedPolicies')
+
+    async def validate_p4b2_role_trusts(self, roles, partition='aws'):
+        """Advisory Access Analyzer ValidatePolicy, never effective-authorization proof.
+
+        No raw analyzer finding details or role trust policies are persisted in
+        result metadata; the trust document is sent only to AWS validation API.
+        """
+        import json
+        regions = {'aws': 'us-east-1', 'aws-us-gov': 'us-gov-west-1',
+                   'aws-cn': 'cn-north-1'}
+        region = regions.get(partition)
+        if region is None or not isinstance(roles, dict):
+            return {}
+        targets = [(arn, role) for arn, role in sorted(roles.items())
+                   if isinstance(role, dict) and role.get('p4b2_oidc_claims_status')
+                   not in (None, 'not_applicable')]
+        if not targets:
+            return {}
+        client = AWSFacadeUtils.get_client('accessanalyzer', self.session, region)
+        results = {arn: {'status': 'unknown', 'issue_codes': []}
+                   for arn, _ in targets}
+        if client is None:
+            return results
+        for arn, role in targets[:25]:
+            try:
+                wrapper = role.get('assume_role_policy')
+                doc = wrapper.get('PolicyDocument') if isinstance(wrapper, dict) else None
+                if not isinstance(doc, dict):
+                    continue
+                document = json.dumps(doc, sort_keys=True)
+                def validate():
+                    response = client.validate_policy(
+                        policyDocument=document, policyType='RESOURCE_POLICY',
+                        validatePolicyResourceType='AWS::IAM::AssumeRolePolicyDocument',
+                        maxResults=100)
+                    findings = []
+                    for index in range(5):
+                        if not isinstance(response, dict) or not isinstance(
+                                response.get('findings'), list):
+                            raise ValueError('P4B2ValidatePolicyMalformed')
+                        findings.extend(response['findings'])
+                        token = response.get('nextToken')
+                        if not token:
+                            break
+                        if index == 4:
+                            raise ValueError('P4B2ValidatePolicyPageCap')
+                        response = client.validate_policy(
+                            policyDocument=document, policyType='RESOURCE_POLICY',
+                            validatePolicyResourceType='AWS::IAM::AssumeRolePolicyDocument',
+                            maxResults=100, nextToken=token)
+                    return findings
+                findings = await run_concurrently(validate)
+                issue_codes = sorted({
+                    x['issueCode'] for x in findings
+                    if isinstance(x, dict) and x.get('findingType')
+                    in ('ERROR', 'SECURITY_WARNING')
+                    and isinstance(x.get('issueCode'), str)})[:12]
+                types = {x.get('findingType') for x in findings
+                         if isinstance(x, dict)}
+                status = ('error' if 'ERROR' in types else
+                          'security_warning' if 'SECURITY_WARNING' in types else
+                          'validated')
+                results[arn] = {'status': status, 'issue_codes': issue_codes}
+            except Exception as exc:
+                AWSFacadeUtils.record_listing_failure('iam', exc,
+                                                       'P4B2AccessAnalyzerValidatePolicy')
+        return results
 
     async def _get_and_set_user_login_profile(self, user: {}):
         client = AWSFacadeUtils.get_client('iam', self.session)
@@ -305,42 +468,57 @@ class IAMFacade(AWSBaseFacade):
             print_exception('Failed to get IAM group {}: {}'.format(group['GroupName'], e))
 
     async def _get_and_set_inline_policies(self, resource, iam_resource_type):
+        """Complete IAM inline policy census, with explicit failure status.
+
+        A denied or truncated IAM List*Policies/Get*Policy must never be
+        mistaken for a verified empty identity policy set.
+        """
         client = AWSFacadeUtils.get_client('iam', self.session)
-        list_policy_method = getattr(client, 'list_' + iam_resource_type + '_policies')
+        resource['inline_policy_collection_status'] = 'unknown'
+        resource['inline_policies'] = {}
+        if client is None:
+            return
         resource_name = resource[iam_resource_type.title() + 'Name']
         args = {iam_resource_type.title() + 'Name': resource_name}
-
-        resource['inline_policies'] = {}
-
+        list_policy_method = getattr(client, 'list_' + iam_resource_type + '_policies')
+        get_policy_method = getattr(client, 'get_' + iam_resource_type + '_policy')
         try:
-            policy_names = await run_concurrently(lambda: list_policy_method(**args)['PolicyNames'])
-            if len(policy_names) == 0:
-                resource['inline_policies_count'] = 0
-        except Exception as e:
-            print_exception(f'Failed to list IAM policy: {e}')
-        else:
-            get_policy_method = getattr(client, 'get_' + iam_resource_type + '_policy')
-            try:
-                tasks = {
-                    asyncio.ensure_future(
-                        run_concurrently(lambda policy_name=policy_name:
-                                         get_policy_method(**dict(args, PolicyName=policy_name)))
-                    ) for policy_name in policy_names
-                }
-            except Exception as e:
-                print_exception(f'Failed to get policy methods: {e}')
-            else:
-                for task in asyncio.as_completed(tasks):
-                    policy = await task
-                    policy_name = policy['PolicyName']
-                    policy_id = get_non_provider_id(policy_name)
-                    policy_document = policy['PolicyDocument']
-
-                    resource['inline_policies'][policy_id] = {}
-                    resource['inline_policies'][policy_id]['PolicyDocument'] = self._normalize_statements(
-                        policy_document)
-                    resource['inline_policies'][policy_id]['name'] = policy_name
-                resource['inline_policies_count'] = len(resource['inline_policies'])
+            def enumerate_names():
+                names, marker = set(), None
+                for _ in range(20):
+                    kwargs = dict(args)
+                    if marker is not None:
+                        kwargs['Marker'] = marker
+                    page = list_policy_method(**kwargs)
+                    rows = page.get('PolicyNames') if isinstance(page, dict) else None
+                    if not isinstance(rows, list) or any(not isinstance(n, str) for n in rows):
+                        raise ValueError('IAMInlinePolicyMalformedPage')
+                    names.update(rows)
+                    if len(names) > 500:
+                        raise ValueError('IAMInlinePolicyItemCap')
+                    if not page.get('IsTruncated', False):
+                        return sorted(names)
+                    marker = page.get('Marker')
+                    if not isinstance(marker, str) or not marker:
+                        raise ValueError('IAMInlinePolicyMissingMarker')
+                raise ValueError('IAMInlinePolicyPageCap')
+            names = await run_concurrently(enumerate_names)
+            for name in names:
+                document = await run_concurrently(
+                    lambda name=name: get_policy_method(
+                        **dict(args, PolicyName=name)))
+                if not isinstance(document, dict) or not isinstance(
+                        document.get('PolicyDocument'), dict):
+                    raise ValueError('IAMInlinePolicyMalformedDocument')
+                policy_id = get_non_provider_id(name)
+                resource['inline_policies'][policy_id] = {
+                    'PolicyDocument': self._normalize_statements(
+                        document['PolicyDocument']), 'name': name}
+            resource['inline_policies_count'] = len(resource['inline_policies'])
+            resource['inline_policy_collection_status'] = 'complete'
+        except Exception as exc:
+            AWSFacadeUtils.record_listing_failure('iam', exc,
+                                                   'IAMInlinePolicyInventory')
 
     def _normalize_statements(self, policy_document):
         if policy_document:

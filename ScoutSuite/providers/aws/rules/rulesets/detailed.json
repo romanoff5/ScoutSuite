@@ -2097,6 +2097,48 @@
                 "enabled": true,
                 "level": "review"
             }
+        ],
+        "iam-p4b2-user-passrole-to-privileged-role.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b2-user-assumerole-privileged.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b2-role-assumerole-privileged.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b2-group-contributed-passrole.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b2-oidc-audience-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b2-oidc-subject-wildcard-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p4b2-access-analyzer-trust-warning.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
         ]
     }
 }

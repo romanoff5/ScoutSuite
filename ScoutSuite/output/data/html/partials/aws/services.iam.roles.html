@@ -19,6 +19,13 @@
             <div class="list-group-item-text item-margin">P4-B potential PassRole delegation: <samp>{{p4b_passrole_path_status}}</samp></div>
             <div class="list-group-item-text item-margin">P4-B OIDC subject scope: <samp>{{p4b_oidc_scope_status}}</samp></div>
             <div class="list-group-item-text item-margin">P4-B OIDC admin candidate: <samp>{{p4b_privileged_oidc_status}}</samp></div>
+            <div class="list-group-item-text item-margin">P4-B2 role AssumeRole path: <samp>{{p4b2_role_assumerole_status}}</samp></div>
+            <div class="list-group-item-text item-margin">P4-B2 OIDC audience: <samp>{{p4b2_oidc_audience_status}}</samp></div>
+            <div class="list-group-item-text item-margin">P4-B2 OIDC subject: <samp>{{p4b2_oidc_subject_status}}</samp></div>
+            <div class="list-group-item-text item-margin">P4-B2 IAM Access Analyzer policy lint: <samp>{{p4b2_access_analyzer_status}}</samp></div>
+            <div class="list-group-item-text item-margin">P4-B2 validation issue codes:
+              {{#each p4b2_access_analyzer_issue_codes}}<samp>{{this}}</samp> {{/each}}</div>
+            <p><small>Access Analyzer ValidatePolicy reports policy-quality issues, not effective authorization.</small></p>
             <div class="list-group-item-text item-margin"><small>P4-B findings represent identity-policy candidates, not effective AWS permissions.</small></div>
         </div>
         <div class="list-group-item">

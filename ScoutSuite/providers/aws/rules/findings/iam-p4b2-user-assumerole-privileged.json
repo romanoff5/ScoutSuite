@@ -1,0 +1,21 @@
+{
+    "description": "IAM User Can Potentially Assume Administrator-Like Role",
+    "rationale": "User identity policies plus inherited group policies appear to allow sts:AssumeRole into an admin-like IAM role with an exact AWS principal or same-account root trust. Effective permission and cross-account constraints are not simulated.",
+    "remediation": "Limit sts:AssumeRole scope, tighten target role trust and verify SCPs, boundaries, MFA/session constraints.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ValidatePolicy.html"
+    ],
+    "dashboard_name": "Users",
+    "path": "iam.users.id",
+    "conditions": [
+        "and",
+        [
+            "p4b2_user_assumerole_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P4B2UserAssumeRole",
+    "evidence_policy": "iam-p4b2-user-assumerole-v1"
+}
