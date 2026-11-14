@@ -9,6 +9,10 @@ import fnmatch
 import hashlib
 import json
 
+from ScoutSuite.providers.aws.resources.iam.policy_accuracy import (
+    identity_permission, creation_permission,
+)
+
 
 MAX_ROLES = 2500
 MAX_EDGES = 4000
@@ -129,25 +133,37 @@ def _role_documents(role, policies_by_id):
 
 
 def _admin_hint(role, docs, incomplete):
-    """Admin-looking identity grant; never assert effective administrator privileges."""
+    """Admin-looking identity grant with scope-aware Deny review.
+
+    This remains a policy candidate, never effective administrator access.
+    """
     if role.get('role_boundary_collection_status') not in (None, 'complete'):
         return 'unknown'
-    if role.get('permissions_boundary'):
+    if role.get('permissions_boundary') or incomplete:
         return 'unknown'
-    admin = False
-    for _, rows in docs:
-        for row in rows:
-            if row.get('Effect') == 'Deny' or 'NotAction' in row or 'NotResource' in row:
-                incomplete = True
-            if (row.get('Effect') == 'Allow' and row.get('Condition') is None and
-                    _matches_action(row, 'iam:CreateRole') == 'yes' and
-                    _matches_action(row, 'ec2:RunInstances') == 'yes' and
-                    _matches_action(row, 's3:DeleteObject') == 'yes' and
-                    _matches_resource(row, '*') == 'yes'):
-                admin = True
-    if incomplete:
+    broad = any(
+        row.get('Effect') == 'Allow' and row.get('Condition') is None and
+        _matches_action(row, 'iam:CreateRole') == 'yes' and
+        _matches_action(row, 'ec2:RunInstances') == 'yes' and
+        _matches_action(row, 's3:DeleteObject') == 'yes' and
+        _matches_resource(row, '*') == 'yes'
+        for _, rows in docs for row in rows)
+    if not broad:
+        return 'no_admin_grant_observed'
+    arn = role.get('arn', '')
+    parts = arn.split(':', 5) if isinstance(arn, str) else []
+    if len(parts) != 6:
         return 'unknown'
-    return 'admin_policy_candidate' if admin else 'no_admin_grant_observed'
+    partition, account = parts[1], parts[4]
+    scenarios = (
+        ('iam:CreateRole', f'arn:{partition}:iam::{account}:role/P5AAdminWitness'),
+        ('ec2:RunInstances',
+         f'arn:{partition}:ec2:us-east-1:{account}:instance/i-0123456789abcdef0'),
+        ('s3:DeleteObject', 'arn:aws:s3:::p5a-iam-review/object'),
+    )
+    results = [identity_permission(docs, action, resource)
+               for action, resource in scenarios]
+    return 'admin_policy_candidate' if all(r == 'yes' for r in results) else 'unknown'
 
 
 def _trust_entries(role):
@@ -160,24 +176,32 @@ def _service_trust(role, service):
     rows = _trust_entries(role)
     if rows is None:
         return 'unknown'
-    relevant = False
+    allowed = False
+    uncertain = False
     for row in rows:
-        action = _matches_action(row, 'sts:AssumeRole')
         principal = row.get('Principal')
         value = principal.get('Service') if isinstance(principal, dict) else None
         values = _values(value)
-        if action == 'unknown':
-            return 'unknown'
-        if action != 'yes' or values is None or service not in values:
+        if values is None or service not in values:
+            if value is not None and values is None:
+                uncertain = True
             continue
-        relevant = True
+        action = _matches_action(row, 'sts:AssumeRole')
+        if action == 'no':
+            continue
+        if action == 'unknown':
+            uncertain = True
+            continue
         if row.get('Effect') == 'Deny':
-            return 'unknown'
-        if row.get('Effect') == 'Allow':
+            uncertain = True
+        elif row.get('Effect') == 'Allow':
             if row.get('Condition') is not None:
-                return 'unknown'
-            return 'yes'
-    return 'no' if not relevant else 'unknown'
+                uncertain = True
+            else:
+                allowed = True
+        else:
+            uncertain = True
+    return 'unknown' if uncertain else 'yes' if allowed else 'no'
 
 
 def _oidc_scope(condition, provider_arn):
@@ -346,9 +370,7 @@ def build_relationship_graph(roles, policies):
                 or source.get('permissions_boundary')):
             source['p4b_passrole_path_status'] = 'unknown'
             continue
-        if any(row.get('Effect') == 'Deny' or 'NotAction' in row or
-               'NotResource' in row for _, rows in docs for row in rows):
-            incomplete = True
+        creation_cache = {}
         for target in admins:
             target_arn = target['arn']
             if target_arn == source_arn:
@@ -357,19 +379,22 @@ def build_relationship_graph(roles, policies):
             for label, service_action, service_principal in SERVICE_PATHS:
                 if _service_trust(target, service_principal) != 'yes':
                     continue
-                passing = [(policy, row) for policy, rows in docs for row in rows
-                           if _permission(row, 'iam:PassRole', target_arn, service_principal) == 'yes']
-                capable = [(policy, row) for policy, rows in docs for row in rows
-                           if _permission(row, service_action, '*') == 'yes']
-                if not passing or not capable:
-                    continue
                 if incomplete:
                     source['p4b_passrole_path_status'] = 'unknown'
+                    continue
+                passing = identity_permission(
+                    docs, 'iam:PassRole', target_arn, service_principal)
+                if passing != 'yes':
+                    continue
+                if service_action not in creation_cache:
+                    creation_cache[service_action] = creation_permission(
+                        docs, service_action, source_arn)
+                if creation_cache[service_action] != 'yes':
                     continue
                 source['p4b_passrole_path_status'] = 'candidate'
                 source['p4b_passrole_target_arns'].append(target_arn)
                 add_edge(source_arn, target_arn, 'passrole_privileged_role_candidate',
-                         service=label, evidence=passing[0][0] + ' + ' + capable[0][0])
+                         service=label, evidence='identity policy + scoped Deny review')
                 found = True
             if found and graph['status'] == 'partial':
                 source['p4b_passrole_path_status'] = 'unknown'
