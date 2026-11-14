@@ -441,6 +441,7 @@
       "partials/aws/services.organizations.accounts.id.html",
       "partials/aws/services.organizations.organizations.id.html",
       "partials/aws/services.organizations.roots.id.html",
+      "partials/aws/services.rds.regions.id.clusters.html",
       "partials/aws/services.rds.regions.id.parameter_groups.html",
       "partials/aws/services.rds.regions.id.proxies.html",
       "partials/aws/services.rds.regions.id.security_groups.html",

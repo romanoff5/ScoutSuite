@@ -3,8 +3,6 @@
 Read-only AWS DescribeTargetGroups/DescribeTargetHealth have already been
 collected by P3-B. No network probes; the returned AWS reason is preserved.
 """
-from ScoutSuite.core.run_context import get_current_run_context
-
 
 TRANSIENT = {'initial', 'draining', 'unused', 'unavailable'}
 

@@ -4,7 +4,6 @@ A broad identity-policy Allow is a *grant candidate*, NOT proof of effective
 permissions: explicit Deny, permission boundaries, SCPs, resource policies and
 session conditions may restrict it. No IAM policy simulation or AWS calls.
 """
-import fnmatch
 import json
 
 
