@@ -59,5 +59,8 @@ class BaseServicesConfig:
             else:
                 print_debug(f'No method to fetch service {service}.')
         except Exception as e:
-            print(e) # for debugging
+            from ScoutSuite.core.run_context import get_current_run_context
+            context = get_current_run_context()
+            if context is not None:
+                context.record_collection_issue('failed', service, 'ServiceFetchFailed')
             print_exception(f'Could not fetch {format_service_name(service)} configuration: {e}')

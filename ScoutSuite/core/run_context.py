@@ -159,7 +159,7 @@ class RunContext:
         """Thread-safe, payload-free Botocore final-response counters."""
         import re
         if (self.provider != 'aws'
-                or outcome not in ('success', 'denied', 'unsupported', 'failed')):
+                or outcome not in ('success', 'absent', 'denied', 'unsupported', 'failed')):
             return
         if not all(isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,64}', value)
                    for value in (service, region, operation)):
@@ -167,14 +167,14 @@ class RunContext:
         key = (service, region)
         with self._telemetry_lock:
             record = self._api_observations.setdefault(key, {
-                'success': 0, 'denied': 0, 'unsupported': 0,
+                'success': 0, 'absent': 0, 'denied': 0, 'unsupported': 0,
                 'failed': 0, 'operations': {}
             })
             record[outcome] += 1
             ops = record['operations']
             # Aggregate only model operation names, never requests, IDs or bodies.
             if operation in ops or len(ops) < 256:
-                item = ops.setdefault(operation, {'success': 0, 'denied': 0,
+                item = ops.setdefault(operation, {'success': 0, 'absent': 0, 'denied': 0,
                                                   'unsupported': 0, 'failed': 0})
                 item[outcome] += 1
 

@@ -1421,6 +1421,13 @@ def evaluate_rule_evidence(rule, services):
     for path, resource in _walk_resources(services, parts):
         status = classifier(resource)
         counts[status] += 1
+        context = get_current_run_context()
+        if context is not None and context.provider == 'aws':
+            # Region comes from the *evaluated* resource path. This is more
+            # precise than associating a global issue with all AWS Regions.
+            segments = path.split('.')
+            region = segments[2] if len(segments) > 2 and segments[1] == 'regions' else 'global'
+            context.record_evidence_observation(segments[0], region, path, status)
         if status == 'unknown':
             unknown_paths.append(path)
 
