@@ -135,3 +135,18 @@ semantic status preview without creating or supplying an HMAC key.
   definitions by CI. It is not the native Python `recurse` engine nor
   complete AWS evidence re-evaluation. Reports remain the authoritative
   source of original evidence and resource identities.
+
+
+## P5-C: expanded synthetic regression and semantic replay
+
+The five rows listed above describe the historical P4-F2 initial release.
+P5-C now exports and re-evaluates **27 allowlisted status rules** spanning IAM,
+EC2, RDS, S3 and CloudWatch; historical five-rule HMAC snapshots remain
+supported. The keyless Scans & Snapshots browser preview also displays the
+new enums, but remains **unauthenticated** and cannot replace the offline
+`facts-replay` predicate execution. A missing IAM candidate is **not** a
+verified negative IAM effective-authorization decision.
+
+See [P5-C adversarial testing and replay](p5c-adversarial-replay.md) for
+fixture census, mutation-kill criteria, fail-closed UNKNOWN transitions,
+reproducible tests, and benchmark interpretation.
