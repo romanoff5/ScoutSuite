@@ -114,6 +114,6 @@ def test_rule_engine_reports_insecure_only_and_marks_unknown(tmp_path):
             }
             assert finding['assessment_status'] == 'incomplete'
             assert context.collection_issues == [{'status':'partial', 'scope':service,
-                                                  'reason_code':'RuleEvidenceUnknown'}]
+                                                  'reason_code':'RuleEvidenceUnknown', 'region':'us-east-1'}]
         finally:
             context.cleanup()

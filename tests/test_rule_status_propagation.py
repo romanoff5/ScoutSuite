@@ -75,7 +75,7 @@ def test_rule_evidence_gap_stays_with_its_rule_in_any_order(tmp_path):
         try:
             evaluated[order] = run_engine(tmp_path, 'aws', (IMDS, EBS, SNAPSHOT), provider, order)
             assert context.collection_issues == [{
-                'status': 'partial', 'scope': 'ec2', 'reason_code': 'RuleEvidenceUnknown'}]
+                'status': 'partial', 'scope': 'ec2', 'reason_code': 'RuleEvidenceUnknown', 'region': 'us-east-1'}]
         finally:
             context.cleanup()
         result = provider.services['ec2']['findings']

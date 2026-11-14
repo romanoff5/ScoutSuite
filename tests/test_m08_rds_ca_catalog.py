@@ -82,7 +82,7 @@ def test_rds_ca_finding_paths_and_severity_stable(tmp_path):
             'rds.regions.us-east-1.vpcs.vpc-1.instances.unknown',
         ]
         assert context.collection_issues == [{
-            'status': 'partial', 'scope': 'rds', 'reason_code': 'RuleEvidenceUnknown'
+            'status': 'partial', 'scope': 'rds', 'reason_code': 'RuleEvidenceUnknown', 'region': 'us-east-1'
         }]
     finally:
         context.cleanup()

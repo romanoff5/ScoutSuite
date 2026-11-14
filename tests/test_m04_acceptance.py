@@ -74,9 +74,10 @@ class TestM04ReportSerialization(TestCase):
                 result = await main.run_async(
                     provider='aws', no_browser=True, strict_completeness=True
                 )
-            self.assertEqual(result, 0)
+            self.assertEqual(result, 201)  # Evaluated mock has no API completion evidence.
             self.assertEqual(provider.collection_status['checked_items'], 1)
             self.assertTrue(provider.collection_status['evidence_evaluated'])
+            self.assertFalse(provider.collection_status['coverage_matrix']['complete'])
             report.save.assert_called_once()
 
         asyncio.run(scenario())
