@@ -12,6 +12,10 @@
             <div class="list-group-item-text">State: <samp>{{state}}</samp></div>
             <div class="list-group-item-text">CIDR Block: <samp>{{cidr_block}}</samp></div>
             <div class="list-group-item-text">Default: <samp>{{default}}</samp></div>
+            <div class="list-group-item-text">P4-A default VPC gateway usage: <samp>{{default_vpc_gateway_status}}</samp></div>
+            <div class="list-group-item-text">IGW count: <samp>{{default_vpc_igw_count}}</samp></div>
+            <div class="list-group-item-text">ENI count (includes managed ENIs): <samp>{{default_vpc_eni_count}}</samp></div>
+            <div class="list-group-item-text"><small>No ENIs is a possible unused VPC, not proof it can safely be deleted.</small></div>
         </div>
         <div class="list-group-item" style="padding-bottom: 0 !important;">
           <div class="accordion">

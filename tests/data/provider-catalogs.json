@@ -480,6 +480,7 @@
       "partials/aws/services.ses.regions.id.identities.html",
       "partials/aws/services.sns.regions.id.topics.html",
       "partials/aws/services.sqs.regions.id.queues.html",
+      "partials/aws/services.ssm.regions.html",
       "partials/aws/services.ssm.regions.id.documents.html",
       "partials/aws/services.ssm.regions.id.managed_nodes.html",
       "partials/aws/services.ssm.regions.id.patch_baselines.html",

@@ -1,0 +1,19 @@
+<script id="services.ssm.regions.partial" type="text/x-handlebars-template">
+  <div class="list-group-item active"><h4>{{name}}</h4></div>
+  <div class="list-group-item">
+    <h4>SSM document public-sharing control</h4>
+    <p>Region: <samp>{{region}}</samp></p>
+    <p>Account/Region setting: <samp>{{document_public_sharing_setting_status}}</samp></p>
+    <p>Document sharing inventory: <samp>{{document_sharing_collection_status}}</samp></p>
+    <p>Allowing future public shares is not equivalent to an already public document. An unknown setting does not prove the block is enabled.</p>
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("services.ssm.regions", $("#services\\.ssm\\.regions\\.partial").html());
+</script>
+<script id="single_ssm_regions-template" type="text/x-handlebars-template">
+  {{> modal-template template='services.ssm.regions'}}
+</script>
+<script>
+  var single_ssm_regions_template = Handlebars.compile($("#single_ssm_regions-template").html());
+</script>

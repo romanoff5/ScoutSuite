@@ -14,6 +14,7 @@
                 <li class="list-group-item-text">Reservation ID: <samp>{{reservation_id}}</samp></li>
                 <li class="list-group-item-text">IAM role: <samp>{{value_or_none iam_role}}</samp></li>
                 <li class="list-group-item-text">Monitoring: <span id="ec2.regions.{{region}}.vpcs.{{vpc}}.instances.{{@key}}.monitoring_disabled">{{convert_bool_to_enabled monitoring_enabled}}</span></li>
+                <li class="list-group-item-text">P4-A detailed monitoring review: <samp>{{detailed_monitoring_status}}</samp></li>
                 <li class="list-group-item-text">Access Key Name: <samp>{{KeyName}}</samp></li>
                 <li class="list-group-item-text">State: <samp>{{makeTitle State.Name}}</samp></li>
                 <li class="list-group-item-text">Instance Type:
