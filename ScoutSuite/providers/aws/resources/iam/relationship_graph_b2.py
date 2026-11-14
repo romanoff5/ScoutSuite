@@ -56,6 +56,9 @@ def _trust_principal(target, principal_arn):
     allowed = False
     ambiguous = False
     for row in rows:
+        if 'NotPrincipal' in row:
+            ambiguous = True
+            continue
         action = _matches_action(row, 'sts:AssumeRole')
         if action == 'unknown':
             ambiguous = True
@@ -90,7 +93,11 @@ def _oidc_audience_and_subject(role):
     values = []
     uncertain = False
     for row in rows:
-        if _matches_action(row, 'sts:AssumeRoleWithWebIdentity') != 'yes':
+        action = _matches_action(row, 'sts:AssumeRoleWithWebIdentity')
+        if action == 'unknown' or 'NotPrincipal' in row:
+            uncertain = True
+            continue
+        if action != 'yes':
             continue
         if row.get('Effect') != 'Allow':
             uncertain = True

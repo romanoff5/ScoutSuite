@@ -261,3 +261,18 @@ def test_all_rule_json_and_profile_review_contracts():
         for profile in ("default.json", "detailed.json"):
             config = json.loads((ROOT / "rulesets" / profile).read_text())
             assert config["rules"][name][0] == {"enabled": True, "level": "review"}
+
+
+def test_unknown_oidc_notaction_or_notprincipal_does_not_become_not_applicable():
+    host = "token.actions.githubusercontent.com"
+    bad = role("Ambiguous", [grant("*")], oidc=(host, {
+        "StringEquals": {host + ":sub": "repo:org/project:ref:refs/heads/main",
+                         host + ":aud": "sts.amazonaws.com"}}))
+    rows = bad["assume_role_policy"]["PolicyDocument"]["Statement"]
+    rows[0].pop("Action")
+    rows[0]["NotAction"] = "sts:AssumeRole"
+    assert _oidc_audience_and_subject(bad) == ("unknown", "unknown")
+    rows[0].pop("NotAction")
+    rows[0]["Action"] = "sts:AssumeRoleWithWebIdentity"
+    rows[0]["NotPrincipal"] = {"AWS": "arn:aws:iam::123456789012:root"}
+    assert _oidc_audience_and_subject(bad) == ("unknown", "unknown")
