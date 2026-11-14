@@ -1,0 +1,25 @@
+{
+    "description": "RDS DB cluster lacks an active local RDS event subscription",
+    "rationale": "No active, source-matching RDS event subscription was found for this cluster in a complete local inventory. Equivalent monitoring in EventBridge or another account remains unverified.",
+    "remediation": "Configure an active DB cluster event subscription to an owned SNS topic or supply evidence of an equivalent and tested alternative.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Events.Subscribing.html"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.clusters.id",
+    "conditions": [
+        "or",
+        [
+            "rds_event_subscription_status",
+            "equal",
+            "missing"
+        ],
+        [
+            "rds_event_subscription_status",
+            "equal",
+            "inactive"
+        ]
+    ],
+    "id_suffix": "P3DClusterEvent",
+    "evidence_policy": "p3d-rds-event-subscription-v1"
+}

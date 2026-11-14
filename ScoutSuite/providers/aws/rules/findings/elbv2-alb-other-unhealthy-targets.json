@@ -1,0 +1,20 @@
+{
+    "description": "ALB has unhealthy targets due to timeout or failed health checks",
+    "rationale": "AWS target health reports unhealthy targets with non-response-mismatch reasons such as Target.Timeout or Target.FailedHealthChecks. This does not establish which network or application layer is responsible.",
+    "remediation": "Review target group evidence, health-check settings, task readiness, SG/NACL routes, application listeners and metrics.",
+    "references": [
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html"
+    ],
+    "dashboard_name": "Load Balancers",
+    "path": "elbv2.regions.id.vpcs.id.lbs.id",
+    "conditions": [
+        "and",
+        [
+            "p3d_unhealthy_status",
+            "equal",
+            "other_unhealthy"
+        ]
+    ],
+    "id_suffix": "P3DUnhealthy",
+    "evidence_policy": "p3d-alb-other-unhealthy-v1"
+}

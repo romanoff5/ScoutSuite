@@ -1,0 +1,25 @@
+{
+    "description": "RDS standalone DB instance lacks an actionable local CloudWatch metric alarm",
+    "rationale": "A complete local CloudWatch metric-alarm inventory contains no enabled alarm with actions for the DBInstanceIdentifier, or only disabled/actionless alarms. External monitoring, EventBridge and other accounts are not checked.",
+    "remediation": "Configure a suitable actionable AWS/RDS CloudWatch metric alarm for this DB instance or document equivalent monitoring performed externally.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Events.Subscribing.html"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.vpcs.id.instances.id",
+    "conditions": [
+        "or",
+        [
+            "rds_alarm_status",
+            "equal",
+            "missing"
+        ],
+        [
+            "rds_alarm_status",
+            "equal",
+            "no_action"
+        ]
+    ],
+    "id_suffix": "P3DInstanceAlarm",
+    "evidence_policy": "p3d-rds-metric-alarm-v1"
+}

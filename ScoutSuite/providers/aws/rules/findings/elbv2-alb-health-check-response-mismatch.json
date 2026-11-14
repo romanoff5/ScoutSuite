@@ -1,0 +1,20 @@
+{
+    "description": "ALB targets return HTTP health-check responses outside their configured matcher",
+    "rationale": "AWS DescribeTargetHealth reports Target.ResponseCodeMismatch. Preserve the target group's health-check protocol, port, path and matcher for diagnosis. This is a verified mismatch symptom, not proof of a wrong health-check path or a connectivity exploit.",
+    "remediation": "Inspect the health-check path, matcher, protocol, application authentication/redirects and actual target responses, then adjust the application or ALB target group appropriately.",
+    "references": [
+        "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html"
+    ],
+    "dashboard_name": "Load Balancers",
+    "path": "elbv2.regions.id.vpcs.id.lbs.id",
+    "conditions": [
+        "and",
+        [
+            "p3d_health_mismatch_status",
+            "equal",
+            "response_mismatch"
+        ]
+    ],
+    "id_suffix": "P3DHealthMismatch",
+    "evidence_policy": "p3d-alb-health-mismatch-v1"
+}

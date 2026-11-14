@@ -1,0 +1,25 @@
+{
+    "description": "RDS DB cluster lacks an actionable local CloudWatch metric alarm",
+    "rationale": "No enabled, actionable CloudWatch AWS/RDS metric alarm was identified with the DBClusterIdentifier dimension in the complete local inventory. Per-instance alarms may exist but are not equivalent to verified cluster-level monitoring.",
+    "remediation": "Configure cluster-level actionable alarms or document validated equivalent coverage and notification delivery.",
+    "references": [
+        "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Events.Subscribing.html"
+    ],
+    "dashboard_name": "Databases",
+    "path": "rds.regions.id.clusters.id",
+    "conditions": [
+        "or",
+        [
+            "rds_alarm_status",
+            "equal",
+            "missing"
+        ],
+        [
+            "rds_alarm_status",
+            "equal",
+            "no_action"
+        ]
+    ],
+    "id_suffix": "P3DClusterAlarm",
+    "evidence_policy": "p3d-rds-metric-alarm-v1"
+}
