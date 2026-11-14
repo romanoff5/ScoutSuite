@@ -133,25 +133,37 @@ def _role_documents(role, policies_by_id):
 
 
 def _admin_hint(role, docs, incomplete):
-    """Admin-looking identity grant; never assert effective administrator privileges."""
+    """Admin-looking identity grant with scope-aware Deny review.
+
+    This remains a policy candidate, never effective administrator access.
+    """
     if role.get('role_boundary_collection_status') not in (None, 'complete'):
         return 'unknown'
-    if role.get('permissions_boundary'):
+    if role.get('permissions_boundary') or incomplete:
         return 'unknown'
-    admin = False
-    for _, rows in docs:
-        for row in rows:
-            if row.get('Effect') == 'Deny' or 'NotAction' in row or 'NotResource' in row:
-                incomplete = True
-            if (row.get('Effect') == 'Allow' and row.get('Condition') is None and
-                    _matches_action(row, 'iam:CreateRole') == 'yes' and
-                    _matches_action(row, 'ec2:RunInstances') == 'yes' and
-                    _matches_action(row, 's3:DeleteObject') == 'yes' and
-                    _matches_resource(row, '*') == 'yes'):
-                admin = True
-    if incomplete:
+    broad = any(
+        row.get('Effect') == 'Allow' and row.get('Condition') is None and
+        _matches_action(row, 'iam:CreateRole') == 'yes' and
+        _matches_action(row, 'ec2:RunInstances') == 'yes' and
+        _matches_action(row, 's3:DeleteObject') == 'yes' and
+        _matches_resource(row, '*') == 'yes'
+        for _, rows in docs for row in rows)
+    if not broad:
+        return 'no_admin_grant_observed'
+    arn = role.get('arn', '')
+    parts = arn.split(':', 5) if isinstance(arn, str) else []
+    if len(parts) != 6:
         return 'unknown'
-    return 'admin_policy_candidate' if admin else 'no_admin_grant_observed'
+    partition, account = parts[1], parts[4]
+    scenarios = (
+        ('iam:CreateRole', f'arn:{partition}:iam::{account}:role/P5AAdminWitness'),
+        ('ec2:RunInstances',
+         f'arn:{partition}:ec2:us-east-1:{account}:instance/i-0123456789abcdef0'),
+        ('s3:DeleteObject', 'arn:aws:s3:::p5a-iam-review/object'),
+    )
+    results = [identity_permission(docs, action, resource)
+               for action, resource in scenarios]
+    return 'admin_policy_candidate' if all(r == 'yes' for r in results) else 'unknown'
 
 
 def _trust_entries(role):
