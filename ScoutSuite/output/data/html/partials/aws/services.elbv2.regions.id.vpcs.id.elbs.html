@@ -50,6 +50,17 @@
         </div>
         {{/if}}
         <div class="list-group-item">
+            <h4>P3-B: backend / TLS hostname correlation</h4>
+            <p>Potential WAF backend bypass: <samp>{{backend_bypass_status}}</samp> (configuration only; routes and host firewall not verified)</p>
+            {{#each backend_bypass_evidence}}
+              <p>Instance <samp>{{instance_id}}</samp>, target port <samp>{{target_port}}</samp>,
+                 SG <samp>{{security_group_id}}</samp>, target group <samp>{{target_group_arn}}</samp></p>
+            {{/each}}
+            <p>Route53 hostname / HTTPS certificate: <samp>{{https_hostname_coverage_status}}</samp></p>
+            {{#each https_hostnames_checked}}<p>Known hostname: <samp>{{this}}</samp></p>{{/each}}
+            {{#each https_hostname_mismatches}}<p>Uncovered hostname: <samp>{{this}}</samp></p>{{/each}}
+        </div>
+        <div class="list-group-item">
             <h4>Listeners</h4>
             <ul>
                 {{#each listeners}}
