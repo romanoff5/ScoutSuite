@@ -216,6 +216,23 @@ def test_base_role_deny_unrelated_no_longer_hides_candidate():
     assert graph['edges_count'] == 1
 
 
+def test_unrelated_deny_on_privileged_target_does_not_hide_admin_hint():
+    target = role('Admin', [stmt('*'),
+                            stmt('s3:PutObject', effect='Deny')],
+                  service='lambda.amazonaws.com')
+    source = role('Builder', [stmt('iam:PassRole', TARGET),
+                              stmt('lambda:CreateFunction')])
+    roles = {'a': target, 'b': source}
+    build_relationship_graph(roles, {})
+    assert target['p4b_admin_policy_status'] == 'admin_policy_candidate'
+    assert source['p4b_passrole_path_status'] == 'candidate'
+    target['inline_policies']['p']['PolicyDocument']['Statement'].append(
+        stmt('iam:CreateRole', effect='Deny'))
+    build_relationship_graph(roles, {})
+    assert target['p4b_admin_policy_status'] == 'unknown'
+    assert source['p4b_passrole_path_status'] == 'unknown'
+
+
 def test_service_trust_deny_after_allow_must_not_be_ignored():
     target = role('Admin', [stmt('*')], service='lambda.amazonaws.com')
     target['assume_role_policy']['PolicyDocument']['Statement'].append(
