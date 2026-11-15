@@ -244,8 +244,12 @@ def _processed_case(case, ruleset):
     iam['relationship_graph'] = role_graph
     for role in iam.get('roles', {}).values():
         if role.get('name') == 'Priv':
-            assert role['p4b_admin_policy_status'] == 'admin_policy_candidate', (
-                case['id'], role['p4b_admin_policy_status'])
+            # Missing permissions-boundary evidence is deliberately UNKNOWN,
+            # never a confirmed admin target. Both branches must be tested.
+            expected_hint = ('unknown' if role.get('permissions_boundary')
+                             else 'admin_policy_candidate')
+            assert role['p4b_admin_policy_status'] == expected_hint, (
+                case['id'], role['p4b_admin_policy_status'], expected_hint)
     graph = annotate_p5d_attack_paths(services, sorted(services), CATALOG['account_id'])
     expected = _expected_findings(case, services)
     # Phase-1 facts are minimal and omit normal AWS collector count metadata.
