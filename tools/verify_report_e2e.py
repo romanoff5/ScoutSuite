@@ -262,7 +262,7 @@ def run_browser_checks(report, profile):
 
         # Untrusted resource strings are rendered as text, never as markup.
         page.goto(url + '#services.guardduty.findings.guardduty-detector-disabled.items')
-        page.wait_for_selector('text=synthetic-role', timeout=5000)
+        page.locator('text=synthetic-role >> visible=true').first.wait_for(timeout=5000)
         check(page.evaluate('window.__scoutXss') is None, 'hostile detector field executed')
         check(page.locator('img[src="x"]').count() == 0, 'hostile detector field injected markup')
 
@@ -273,6 +273,18 @@ def run_browser_checks(report, profile):
         page.goto(url + '#services.secretsmanager.findings.secretsmanager-secret-policy-public.items')
         card = page.wait_for_selector('text=Exposure:', timeout=5000)
         check('public' in card.evaluate('e => e.closest("div").innerText'), 'secret policy exposure evidence')
+
+        # P5-B2: real escaped per-resource cards are visible after expansion,
+        # and a hostile resource name remains literal text (not HTML).
+        page.goto(url + '#services.secretsmanager.findings')
+        page.wait_for_selector('#list-secretsmanager-secret-policy-public .finding-badge')
+        page.click('#list-secretsmanager-secret-policy-public button.finding')
+        card = page.locator('#list-secretsmanager-secret-policy-public .scout-evidence-card').first
+        card.wait_for(state='visible', timeout=5000)
+        check('Confidence:' in card.inner_text(), 'P5-B2 confidence not rendered')
+        check('synthetic-role' in card.inner_text(), 'P5-B2 original resource name lost')
+        check('Supporting evidence' in card.inner_text(), 'P5-B2 evidence not rendered')
+        check(page.locator('img[src="x"]').count() == 0, 'P5-B2 injected hostile markup')
         page.goto(url + '#services.elbv2.findings.elbv2-internet-facing-alb-without-waf.items')
         card = page.wait_for_selector('text=Origin exposure:', timeout=5000)
         check('open_to_internet' in card.evaluate('e => e.closest("ul").innerText'), 'ALB origin exposure evidence')
