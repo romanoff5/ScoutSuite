@@ -381,6 +381,10 @@ function hideFilters() {
 function showFindings(path, resourcePath) {
     let items = getValueAt(path)
     let level = getValueAt(path.replace('items', 'level'))
+    // Resource markers must honor the same fail-closed rule as dashboard
+    // headers. Preserve the raw severity in the report and detailed panels.
+    const assessment = getValueAt(path.replace('items', 'assessment_status'))
+    if (assessment === 'incomplete') level = 'incomplete'
     let resourcePathArray = resourcePath.split('.')
     let splitPath = path.split('.')
     let findingService = splitPath[1]
@@ -1129,9 +1133,10 @@ function updateDOM(anchor) {
         updateTitle(title)
     }
 
-    // Clear findings highlighting
+    // Clear findings highlighting, including unverified/partial findings.
     $('span').removeClass('finding-danger')
     $('span').removeClass('finding-warning')
+    $('span').removeClass('finding-incomplete')
 
     // DOM Update
     if (path === '') {
