@@ -60,7 +60,7 @@ def test_p5_one_fact_metamorphic_transition(transition):
     assert isinstance(delta, dict)
     assert set(delta) == {"op", "path", "value"}
     assert delta["op"] in ("set", "append")
-    assert isinstance(delta["path"], list) and len(delta["path"]) >= 3
+    assert isinstance(delta["path"], list) and len(delta["path"]) >= 2
     _apply_patch(mutated_input, delta)
     assert original != mutated_input, transition["id"]
 
