@@ -350,6 +350,62 @@ def _workload_routes(docs, source_arn, target, services, cache):
             paths.append((service + '_create', action,
                           'scoped identity grant + service trust; creation witness and execution grant verified as candidate'))
 
+    # CloudGoat iam_privesc_by_attachment: a privileged role may have
+    # *no* instance profile yet. An operator able to remove the current role
+    # from an observed profile, add the privileged role, pass that role to EC2
+    # and run a new instance has a separate potential delegation path.
+    # Require an actual collected, occupied instance profile and both profile
+    # mutation grants. Never assume an unobserved empty profile or that the
+    # change/instance creation succeeds in AWS.
+    if (_service_trust(target, 'ec2.amazonaws.com') == 'yes'
+            and not target.get('instance_profiles')
+            and identity_permission(docs, 'iam:PassRole', target_arn,
+                                    'ec2.amazonaws.com') == 'yes'):
+        if 'ec2' not in cache:
+            cache['ec2'] = (creation_permission(
+                docs, 'ec2:RunInstances', source_arn) == 'yes')
+        if cache['ec2']:
+            # This check executes once per source, not once per source-target
+            # pair: scanning IAM profiles inside MAX_PAIRS would be cubic.
+            if 'ec2_mutable_profile' not in cache:
+                cache['ec2_mutable_profile'] = None
+                inventory = services.get('iam') or {}
+                roles = inventory.get('roles') or {}
+                if isinstance(roles, dict):
+                    for other in sorted(roles.values(), key=lambda item:
+                                        str(item.get('arn', '')) if isinstance(item, dict) else ''):
+                        if not isinstance(other, dict):
+                            continue
+                        profiles = other.get('instance_profiles')
+                        if not isinstance(profiles, dict):
+                            continue
+                        for profile in sorted(profiles.values(), key=lambda item:
+                                              str(item.get('arn', '')) if isinstance(item, dict) else ''):
+                            if not isinstance(profile, dict):
+                                continue
+                            arn = profile.get('arn')
+                            if (_arn_account(arn) != _arn_account(source_arn)
+                                    or not arn.startswith(
+                                        'arn:' + source_arn.split(':')[1] + ':iam::')
+                                    or ':instance-profile/' not in arn):
+                                continue
+                            if (identity_permission(
+                                    docs, 'iam:RemoveRoleFromInstanceProfile', arn) == 'yes'
+                                    and identity_permission(
+                                        docs, 'iam:AddRoleToInstanceProfile', arn) == 'yes'):
+                                cache['ec2_mutable_profile'] = arn
+                                break
+                        if cache['ec2_mutable_profile']:
+                            break
+            profile_arn = cache['ec2_mutable_profile']
+            if profile_arn:
+                paths.append((
+                    'ec2_profile_mutation',
+                    'iam:RemoveRoleFromInstanceProfile+AddRoleToInstanceProfile+ec2:RunInstances',
+                    'observed occupied instance profile ' + profile_arn
+                    + '; profile replacement, propagation, EC2 launch and '
+                    'runtime credential access NOT verified'))
+
     if (_service_trust(target, 'lambda.amazonaws.com') == 'yes'
             and identity_permission(docs, 'iam:PassRole', target_arn,
                                     'lambda.amazonaws.com') == 'yes'):
@@ -657,17 +713,23 @@ def _resource_routes(services, own_account, emit):
             arn = key.get('arn')
             if not isinstance(arn, str):
                 continue
-            policy = key.get('policy')
-            principals, _ = _external_principals(policy, own_account)
-            for principal in principals:
-                if principal.endswith(':root'):
-                    continue
-                if _resource_permission(policy, principal, 'kms:Decrypt', arn) == 'yes':
-                    emit(principal, arn, 'kms_cross_account_key_policy', 'kms:Decrypt',
-                         'explicit key policy; remote IAM Allow, key context and SCP/RCP unknown',
-                         key, 'p5d_cross_account_status')
+            # Do not trust a stale/partially collected key policy. A denied
+            # GetKeyPolicy cannot be treated as a verified cross-account Allow.
+            # Grant results are independently checked below: their existence
+            # may still be observed even when the key policy is unreadable.
+            if key.get('policy_collection_status') == 'complete':
+                policy = key.get('policy')
+                principals, _ = _external_principals(policy, own_account)
+                for principal in principals:
+                    if principal.endswith(':root'):
+                        continue
+                    if _resource_permission(policy, principal, 'kms:Decrypt', arn) == 'yes':
+                        emit(principal, arn, 'kms_cross_account_key_policy', 'kms:Decrypt',
+                             'explicit key policy; remote IAM Allow, key context and SCP/RCP unknown',
+                             key, 'p5d_cross_account_status')
             grants = key.get('grants')
-            if isinstance(grants, dict):
+            if (key.get('grants_collection_status') == 'complete'
+                    and isinstance(grants, dict)):
                 for grant in list(grants.values())[:MAX_RESOURCES]:
                     if not isinstance(grant, dict):
                         continue

@@ -195,6 +195,8 @@ def test_kms_external_key_policy_and_unconstrained_grant():
     external = f'arn:aws:iam::{OTHER}:role/Reader'
     arn = f'arn:aws:kms:eu-central-1:{ACCOUNT}:key/uuid'
     key = {'arn': arn, 'key_enabled': True, 'key_manager': 'CUSTOMER',
+           'policy_collection_status': 'complete',
+           'grants_collection_status': 'complete',
            'policy': {'Statement': [{'Effect': 'Allow',
                'Principal': {'AWS': external}, 'Action': 'kms:Decrypt',
                'Resource': '*'}]},
