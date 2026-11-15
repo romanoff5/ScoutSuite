@@ -202,6 +202,42 @@ def check_dashboard_color_never_renders_incomplete_evidence_as_good():
     assert proc.returncode == 0, proc.stdout + '\n' + proc.stderr
 
 
+def check_sqlite_regional_fields_dispatch_by_data_shape():
+    """Execute the regional loader against scalar and paginated API shapes."""
+    node = shutil.which('node')
+    if not node:
+        raise RuntimeError('Node is required for SQLite regional UI verification')
+    script = r"""
+    const assert = require('assert');
+    const fs = require('fs');
+    const vm = require('vm');
+    const source = fs.readFileSync(process.argv[1], 'utf8');
+    const start = source.indexOf('function getRegionsResourcesFirstPage (');
+    const end = source.indexOf('\n}', start) + 2;
+    assert(start >= 0 && end > start);
+    const values = {id: 'us-east-1', status: 'denied', complete: false,
+                    checked_items: 0, resources: {type: 'dict', keys: ['r1']},
+                    events: {type: 'list', length: 2}};
+    const paged = [];
+    const state = {services: {demo: {regions: {'us-east-1': {}}}}};
+    const scope = {runResults: state,
+                   createQuery: (...parts) => parts.join('¤'),
+                   requestDb: key => values[key.split('¤').at(-1)],
+                   loadPage: path => paged.push(path.at(-1))};
+    vm.runInNewContext(source.slice(start, end), scope);
+    scope.getRegionsResourcesFirstPage('us-east-1', 'demo', Object.keys(values));
+    const region = state.services.demo.regions['us-east-1'];
+    assert.strictEqual(region.status, 'denied');
+    assert.strictEqual(region.complete, false);
+    assert.strictEqual(region.checked_items, 0);
+    assert.strictEqual(region.id, 'us-east-1');
+    assert.deepStrictEqual(paged, ['resources', 'events']);
+    """
+    proc = subprocess.run([node, '-e', script, str(ASSETS / 'inc-scoutsuite' / 'pagination.js')],
+                          capture_output=True, text=True, timeout=15, check=False)
+    assert proc.returncode == 0, proc.stdout + '\n' + proc.stderr
+
+
 def check_compiled_markup_blocks_dom_xss_in_real_chromium_when_available(tmp_path):
     chrome = next((shutil.which(binary) for binary in (
         'chromium', 'chromium-browser', 'google-chrome', 'chrome')

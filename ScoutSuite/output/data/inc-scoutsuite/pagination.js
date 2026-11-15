@@ -104,15 +104,15 @@ function loadFirstPageEverywhere () {
  */
 function getRegionsResourcesFirstPage (region, service, resources) {
   for (let resource in resources) {
-    // For everything that does not scale up with the ammount of resources fetch everything
-    if (resources[resource] === 'id' || resources[resource] === 'region' || 
-      resources[resource] === 'name' || resources[resource].match(reCount)) {
-      runResults['services'][service]['regions'][region][resources[resource]] =
-        requestDb(createQuery('services', service, 'regions', region, [resources[resource]]), null)
-    // Else (if it scales) only fetch one page per region
-    } else {
-      let pathArray = ['services', service, 'regions', region, resources[resource]]
+    const field = resources[resource]
+    const value = requestDb(createQuery('services', service, 'regions', region, field))
+    // The regional report contains scalars beyond id/name/count (for example,
+    // collection status). The API rejects pagination of those values.
+    if (value && (value.type === 'dict' || value.type === 'list')) {
+      let pathArray = ['services', service, 'regions', region, field]
       loadPage(pathArray, 0)
+    } else {
+      runResults['services'][service]['regions'][region][field] = value
     }
   }
 }
