@@ -66,9 +66,13 @@ function getPageInfo (pathArray) {
  */
 function loadFirstPageEverywhere () {
   for (let service in runResults['services']) {
-    // Check if the service we are dealing with contains regions (most AWS services do)
-    let regions = requestDb(createQuery('services', service, 'regions'))
-    if (regions !== null && regions.keys) {
+    // Only region-scoped inventories have regions_count in the SQLite
+    // summary. IAM, S3 and other global services do not: requesting an
+    // absent regions key returned 404 and caused a JS TypeError on undefined.
+    const summary = runResults['services'][service]
+    const regional = Object.prototype.hasOwnProperty.call(summary, 'regions_count')
+    let regions = regional ? requestDb(createQuery('services', service, 'regions')) : null
+    if (regions && Array.isArray(regions.keys)) {
       regions = regions.keys
       // Create a 'regions' key for each service, if you know a way to not have to add in this, please fixme
       runResults['services'][service]['regions'] = {}
