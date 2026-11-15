@@ -1133,9 +1133,10 @@ function updateDOM(anchor) {
         updateTitle(title)
     }
 
-    // Clear findings highlighting
+    // Clear findings highlighting, including unverified/partial findings.
     $('span').removeClass('finding-danger')
     $('span').removeClass('finding-warning')
+    $('span').removeClass('finding-incomplete')
 
     // DOM Update
     if (path === '') {

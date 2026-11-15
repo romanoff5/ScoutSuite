@@ -68,3 +68,4 @@ def test_resource_highlighting_fails_closed_but_keeps_original_severity():
     assert "getValueAt(path.replace('items', 'assessment_status'))" in function
     assert "if (assessment === 'incomplete') level = 'incomplete'" in function
     assert "addClass('finding-' + level)" in function
+    assert "removeClass('finding-incomplete')" in code
