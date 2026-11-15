@@ -6,7 +6,7 @@
         "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
         "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_passrole.html"
     ],
-    "dashboard_name": "Access Points",
+    "dashboard_name": "S3 advanced",
     "path": "s3.advanced.regions.id.access_points.id",
     "conditions": [
         "and",
