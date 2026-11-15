@@ -243,6 +243,21 @@ def _processed_case(case, ruleset):
                 case['id'], role['p4b_admin_policy_status'])
     graph = annotate_p5d_attack_paths(services, sorted(services), CATALOG['account_id'])
     expected = _expected_findings(case, services)
+    # Phase-1 facts are minimal and omit normal AWS collector count metadata.
+    # The real SQLite viewer uses these counters to lazily fetch resource
+    # pages, so supply them from actual synthetic inventories (never a fake
+    # finding count) before report serialization / postprocessing.
+    iam.update({name + '_count': len(iam.get(name, {}))
+                for name in ('roles', 'users', 'groups', 'policies')})
+    if 's3' in services:
+        services['s3']['buckets_count'] = len(services['s3'].get('buckets', {}))
+    for service, collection in (('ecs', 'task_definitions'), ('eks', 'clusters'),
+                                ('kms', 'keys'), ('awslambda', 'functions')):
+        if service in services:
+            regions = services[service].get('regions', {})
+            services[service]['regions_count'] = len(regions)
+            services[service][collection + '_count'] = sum(
+                len(region.get(collection, {})) for region in regions.values())
     provider = _aws_provider(services)
     ProcessingEngine(ruleset).run(provider)
     _assert_assembled(case, provider, graph, expected)
@@ -300,7 +315,16 @@ def _browser_check(url, expected_arn, profile):
         page.on('console', lambda m: m.type == 'error' and errors.append(m.text))
         try:
             page.goto(url, wait_until='domcontentloaded')
-            page.wait_for_selector('#last_run .service-status', timeout=20000)
+            try:
+                page.wait_for_selector('#last_run .service-status', timeout=12000)
+            except Exception as exc:
+                raise AssertionError('P5 SQLite HTML dashboard did not load; '
+                                     'browser errors=' + repr(errors[:8]) +
+                                     '; page title=' + page.title() +
+                                     '; page ready=' + page.evaluate(
+                                         "document.readyState") +
+                                     '; dashboard summary=' + str(page.locator(
+                                         '#last_run').count())) from exc
             page.goto(url + '#services.iam.findings')
             selector = '#list-iam-p5d-role-workload-delegation'
             page.locator(selector + ' .finding-badge').wait_for(timeout=10000)
