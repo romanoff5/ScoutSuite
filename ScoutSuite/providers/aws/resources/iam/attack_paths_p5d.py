@@ -261,7 +261,10 @@ def _s3_inventory_scope(s3):
     for bucket in buckets.values():
         if not isinstance(bucket, dict):
             return 'partial'
-        if bucket.get('policy_collection_status') not in ('success', 'absent'):
+        policy_status = bucket.get('policy_collection_status')
+        if policy_status not in ('success', 'absent'):
+            return 'partial'
+        if policy_status == 'success' and _statements(bucket.get('policy')) is None:
             return 'partial'
     advanced = s3.get('advanced')
     if advanced is not None:
@@ -276,8 +279,33 @@ def _s3_inventory_scope(s3):
             if not isinstance(points, dict):
                 return 'unknown'
             count += len(points)
-            if count > MAX_RESOURCES:
+            if count > MAX_RESOURCES or any(not isinstance(ap, dict)
+                                            for ap in points.values()):
                 return 'partial'
+    return 'observed_bounded'
+
+
+def _kms_inventory_scope(services):
+    """KMS coverage includes policy and grant API results, not only key list."""
+    census = _regional_inventory_scope(services, 'kms', 'keys')
+    if census != 'observed_bounded':
+        return census
+    for key in _regions(services, 'kms', 'keys'):
+        manager = key.get('key_manager')
+        enabled = key.get('key_enabled')
+        if manager not in ('CUSTOMER', 'AWS') or enabled is None:
+            return 'partial'
+        if manager != 'CUSTOMER' or enabled is False:
+            continue
+        if (key.get('policy_collection_status') != 'complete'
+                or key.get('grants_collection_status') != 'complete'
+                or _statements(key.get('policy')) is None):
+            return 'partial'
+        grants = key.get('grants')
+        if not isinstance(grants, dict) or len(grants) > MAX_RESOURCES:
+            return 'partial'
+        if any(not isinstance(grant, dict) for grant in grants.values()):
+            return 'partial'
     return 'observed_bounded'
 
 
@@ -765,8 +793,9 @@ def annotate_p5d_attack_paths(services, selected, account_id):
     for service, subkey in (('ecs', 'task_definitions'),
                             ('awslambda', 'functions'),
                             ('eks', 'clusters'), ('kms', 'keys')):
-        census = (_regional_inventory_scope(services, service, subkey)
-                  if service in selected else 'not_selected')
+        census = (('not_selected' if service not in selected else
+                   _kms_inventory_scope(services) if service == 'kms' else
+                   _regional_inventory_scope(services, service, subkey)))
         graph['collection'][service + '_inventory'] = census
         if census in ('partial', 'unknown'):
             graph['status'] = 'partial'
