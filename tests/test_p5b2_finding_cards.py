@@ -191,6 +191,10 @@ def test_p5d_iam_candidate_requires_correlated_edge_evidence_for_confidence():
     assert cards[0]['collection'] == 'PARTIAL'
     assert 'REQUIRED_PREDICATE_UNVERIFIED' in cards[0]['reason_codes']
     resource['p5d_service_delegation_edges'] = ['f' * 24]
+    services['iam']['attack_paths_p5d'] = {'edges': {'f' * 24: {
+        'id': 'f' * 24, 'source': resource['arn'],
+        'target': 'arn:aws:iam::123456789012:role/Privileged',
+        'type': 'iam_lambda_create', 'verification': 'POTENTIAL'}}}
     _, cards = assess('p5d-iam-delegation-v1', 'iam.roles.id', services)
     assert cards[0]['confidence'] == 'MEDIUM'
     assert cards[0]['claim_type'] == 'POTENTIAL_ATTACK_PATH'
@@ -207,7 +211,16 @@ def test_p5d_cross_account_bucket_scoped_edge_card_requires_edge_id():
                       {'s3': {'buckets': {'audit': bucket}}})
     assert cards[0]['confidence'] == 'UNKNOWN'
     bucket['p5d_cross_account_edges'] = ['0' * 24]
-    _, cards = assess('p5d-cross-account-v1', 's3.buckets.id',
-                      {'s3': {'buckets': {'audit': bucket}}})
+    graph = {'edges': {'0' * 24: {'id': '0' * 24,
+        'source': 'arn:aws:iam::999999999999:role/External',
+        'target': 'arn:aws:s3:::audit',
+        'type': 's3_cross_account_resource_policy',
+        'verification': 'POTENTIAL'}}}
+    services = {'iam': {'attack_paths_p5d': graph},
+                's3': {'buckets': {'audit': bucket}}}
+    _, cards = assess('p5d-cross-account-v1', 's3.buckets.id', services)
     assert cards[0]['confidence'] == 'MEDIUM'
+    graph['edges']['0' * 24]['target'] = 'arn:aws:s3:::other'
+    _, cards = assess('p5d-cross-account-v1', 's3.buckets.id', services)
+    assert cards[0]['confidence'] == 'UNKNOWN'
     assert cards[0]['verification_status'] == 'POTENTIAL'
