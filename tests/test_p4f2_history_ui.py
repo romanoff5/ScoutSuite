@@ -27,18 +27,21 @@ def test_report_bundles_history_ui_without_altering_result_serialization():
     assert "runResults" in code
 
 
-def test_ui_semantic_adapters_match_current_python_p4f2_rule_contract():
+def test_ui_semantic_adapters_match_current_python_rule_contract():
     source = UI.read_text(encoding="utf-8")
-    assert len(ADAPTERS) == 5
+    assert len(ADAPTERS) == 27
     for key, adapter in ADAPTERS.items():
         definition = json.loads((RULES / (key + ".json")).read_text(encoding="utf-8"))
         assert definition["path"] == adapter.path
         condition = definition["conditions"]
-        assert condition[0] == "and" and len(condition) == 2
-        field, operator, expected = condition[1]
-        assert operator == "equal" and field == adapter.field
-        assert expected in adapter.allowed
-        # UI has the same bounded rule/field/expected value.
+        assert condition[0] in ("and", "or")
+        assert len(condition) == (2 if condition[0] == "and" else 3)
+        for field, operator, expected in condition[1:]:
+            assert operator == "equal" and field == adapter.field
+            assert expected in adapter.allowed
+            assert "'" + expected + "'" in source
         assert "'" + key + "'" in source
-        assert "path: '" + adapter.path + "'" in source or "'" + adapter.path + "'," in source
-        assert "target: '" + expected + "'" in source
+        assert "path: '" + adapter.path + "'" in source
+        assert "field: '" + adapter.field + "'" in source
+    assert "matches(def, f.value)" in source
+    assert "P5-C" in source

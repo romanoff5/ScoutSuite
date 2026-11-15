@@ -321,9 +321,14 @@ def run_browser_checks(report, profile):
               'History did not resolve real resource path across scan versions')
         check('i-history-test' in page.locator('#scout-history-rows').inner_text(),
               'History hid a real resource ID from unredacted reports')
-        check('5' in page.locator('#scout-history-semantic').inner_text() or
-              page.locator('#scout-history-semantic tr').count() == 5,
-              'P4-F2 semantic preview is not integrated')
+        check(page.locator('#scout-history-semantic tr').count() == 27,
+              'P5-C 27-rule semantic preview is not integrated')
+        check('iam-p4b2-user-passrole-to-privileged-role' in
+              page.locator('#scout-history-semantic').inner_text(),
+              'P5-C IAM candidate preview is absent')
+        check('s3-bucket-effective-public-exposure' in
+              page.locator('#scout-history-semantic').inner_text(),
+              'P5-C S3 exposure preview is absent')
         check(page.evaluate('window.__scoutHistoryXss') is None,
               'History imported text executed script')
         check(page.locator('img[src="x"]').count() == 0,
