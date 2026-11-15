@@ -5,6 +5,7 @@ No cloud calls are made here. All output is JSON-safe and HTML-escaped by the
 Handlebars report; report identifiers remain original, not snapshot pseudonyms.
 """
 
+import hashlib
 from ipaddress import ip_address
 
 
@@ -179,6 +180,45 @@ P5D_EDGE_TYPES = {
 }
 
 
+def _p5d_edge_belongs_to_resource(policy, resource, edge):
+    """Require the graph witness to belong to THIS resource, not a sibling.
+
+    A matching graph id and classifier state alone cannot establish which
+    IAM role, EKS cluster, S3 bucket/AP, KMS key or Lambda was assessed.
+    """
+    source, target, kind = (edge.get('source'), edge.get('target'), edge.get('type'))
+    if (not isinstance(resource, dict) or
+            any(not isinstance(x, str) or not x for x in (source, target, kind))):
+        return False
+    if policy == 'p5d-iam-delegation-v1':
+        return source == resource.get('arn')
+    if policy == 'p5d-eks-role-v1':
+        return target == resource.get('arn')
+    if policy == 'p5d-eks-cluster-v1':
+        cluster_arn = resource.get('cluster_arn')
+        if not isinstance(cluster_arn, str) or not cluster_arn:
+            return False
+        if kind == 'eks_irsa_role':
+            return source == cluster_arn
+        if kind == 'eks_pod_identity':
+            parts = source.rsplit('/', 2)
+            return (len(parts) == 3 and parts[0] == cluster_arn
+                    and bool(parts[1]) and bool(parts[2]))
+        return False
+    if policy == 'p5d-cross-account-v1':
+        if kind == 's3_cross_account_resource_policy':
+            name = resource.get('name')
+            return isinstance(name, str) and bool(name) and target == 'arn:aws:s3:::' + name
+        if kind == 's3_access_point_cross_account':
+            return target == resource.get('AccessPointArn')
+        if kind in ('kms_cross_account_key_policy', 'kms_cross_account_grant'):
+            return target == resource.get('arn')
+        return False
+    if policy == 'p5d-external-invoke-review-v1':
+        return target == resource.get('arn')
+    return False
+
+
 def _p5d_checks(policy, resource, services, path):
     """Bind a P5-D finding to exact serializable graph edge witnesses."""
     field, expected = POLICY_FIELDS[policy]
@@ -202,9 +242,24 @@ def _p5d_checks(policy, resource, services, path):
             if not isinstance(edge_id, str):
                 continue
             edge = edges.get(edge_id)
-            if (not isinstance(edge, dict) or edge.get('type') not in P5D_EDGE_TYPES[policy]
-                    or any(edge.get(k) != item.get(k) for k in ('source', 'target', 'action'))
-                    or edge.get('verification') not in ('POTENTIAL', 'REVIEW')
+            if not isinstance(edge, dict) or edge.get('type') not in P5D_EDGE_TYPES[policy]:
+                continue
+            canonical = (edge.get('source'), edge.get('target'),
+                         edge.get('type'), edge.get('action'))
+            if any(not isinstance(value, str) or not value for value in canonical):
+                continue
+            expected_id = hashlib.sha256('|'.join(canonical).encode('utf-8')).hexdigest()[:24]
+            expected_verification = ('REVIEW' if policy == 'p5d-external-invoke-review-v1'
+                                     else 'POTENTIAL')
+            expected_confidence = ('LOW' if policy == 'p5d-external-invoke-review-v1'
+                                   else 'MEDIUM')
+            if (edge_id != expected_id or edge.get('id') != edge_id
+                    or not _p5d_edge_belongs_to_resource(policy, resource, edge)
+                    or any(edge.get(k) != item.get(k) for k in
+                           ('id', 'source', 'target', 'type', 'action',
+                            'verification', 'confidence'))
+                    or edge.get('verification') != expected_verification
+                    or edge.get('confidence') != expected_confidence
                     or edge.get('effective_permission_verified') is not False
                     or edge.get('execution_verified') is not False):
                 continue

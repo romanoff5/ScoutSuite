@@ -71,3 +71,14 @@ References:
 - https://docs.aws.amazon.com/eks/latest/APIReference/API_ListPodIdentityAssociations.html
 - https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribePodIdentityAssociation.html
 - https://docs.aws.amazon.com/eks/latest/userguide/pod-id-assign-target-role.html
+
+## Verification hardening (follow-up audit)
+
+- A graph witness must be a SHA-256-derived canonical edge id and must belong
+  to the *specific resource* under evaluation: IAM source role/user, EKS target
+  role or cluster, S3 bucket/access point, KMS key, or Lambda function.
+  A valid edge attached to an unrelated resource, or a tampered detail field,
+  remains `UNKNOWN` for that resource's mandatory evidence predicate.
+- EKS modal counts now distinguish **retained association summaries**,
+  **successfully described associations** and **unresolved associations**;
+  partial evidence must not be labelled as successfully described.

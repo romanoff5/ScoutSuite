@@ -27,7 +27,10 @@
   <div class="list-group-item scout-p5d-pod-associations">
     <h4>EKS Pod Identity association evidence (AWS API)</h4>
     <p>Inventory: <samp>{{pod_identity_inventory_status}}</samp>;
-       described: {{pod_identity_associations_count}}; issuer: <samp>{{oidc_issuer}}</samp></p>
+       associations retained: {{pod_identity_associations_count}};
+       descriptions verified: {{pod_identity_described_count}};
+       unresolved: {{pod_identity_unresolved_count}};
+       issuer: <samp>{{oidc_issuer}}</samp></p>
     <p><small>Pod Identity is independent of IRSA. Association configuration is not proof
       that its ServiceAccount or Pod exists or currently obtains credentials.</small></p>
     {{#each pod_identity_associations}}
@@ -42,7 +45,7 @@
       </div>
     {{/each}}
     {{#unless pod_identity_associations_count}}
-      <p><small>Zero described associations may indicate a verified empty inventory
+      <p><small>Zero retained associations may indicate a verified empty inventory
         or unavailable collection; inspect inventory status above.</small></p>
     {{/unless}}
   </div>

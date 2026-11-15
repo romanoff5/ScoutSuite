@@ -275,6 +275,8 @@ def run_browser_checks(report, profile):
                 p5d_workload_identity_status: 'candidate',
                 pod_identity_inventory_status: 'complete',
                 pod_identity_associations_count: 1,
+                pod_identity_described_count: 1,
+                pod_identity_unresolved_count: 0,
                 pod_identity_associations: {'pa-1': {
                     association_arn: 'arn:aws:eks:eu-central-1:000000000000:podidentityassociation/sample/pa-1',
                     namespace: 'team', service_account: 'api',
@@ -304,6 +306,8 @@ def run_browser_checks(report, profile):
         check('arn:aws:iam::000000000000:role/Admin' in rendered,
               'P5-D2 role ARN lost from report')
         check('session policy: absent' in rendered, 'P5-D2 association status missing')
+        check('associations retained: 1' in rendered and 'descriptions verified: 1' in rendered,
+              'P5-D2 association/Describe coverage labels inaccurate')
         check(page.evaluate('window.__scoutXss') is None, 'P5-D2 hostile ARN or evidence executed')
         check(page.locator('#scout-p5d2-e2e img[src="x"]').count() == 0,
               'P5-D2 hostile data injected HTML')

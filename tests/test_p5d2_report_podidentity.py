@@ -1,5 +1,6 @@
 """P5-D2: Pod Identity API parity and per-resource report regression."""
 import asyncio
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -218,3 +219,101 @@ def test_attack_path_ui_uses_escaped_fields_without_unsafe_html_insertion():
                  'services.awslambda.regions.id.functions'):
         template = (root / ('ScoutSuite/output/data/html/partials/aws/' + name + '.html')).read_text()
         assert '{{> p5d.attack_paths}}' in template
+
+
+
+def test_p5d2_eks_graph_witness_must_match_exact_role_and_cluster():
+    assoc = {'id': 'pa-1', 'role_arn': ROLE, 'namespace': 'team',
+             'service_account': 'api', 'association_arn': ASSOC,
+             'detail_collection_status': 'complete',
+             'session_policy_present': False, 'target_role_arn': None}
+    _, cluster, services = graph(assoc)
+    role_row = services['iam']['roles']['r']
+    good_role = build_observation_checks(
+        'p5d-eks-role-v1', role_row, services, 'iam.roles.r', 'insecure')
+    good_cluster = build_observation_checks(
+        'p5d-eks-cluster-v1', cluster, services,
+        'eks.regions.eu-central-1.clusters.sample', 'insecure')
+    assert good_role[1]['state'] == 'CONFIRMED'
+    assert good_cluster[1]['state'] == 'CONFIRMED'
+
+    other_role = {**role_row, 'arn': OTHER_ROLE}
+    other_cluster = {
+        **cluster, 'cluster_arn': 'arn:aws:eks:eu-central-1:123456789012:cluster/other'}
+    assert build_observation_checks(
+        'p5d-eks-role-v1', other_role, services, 'iam.roles.other', 'insecure'
+    )[1]['state'] == 'UNKNOWN'
+    assert build_observation_checks(
+        'p5d-eks-cluster-v1', other_cluster, services,
+        'eks.regions.eu-central-1.clusters.other', 'insecure'
+    )[1]['state'] == 'UNKNOWN'
+
+    tampered = {**role_row, 'p5d_attack_path_details': [
+        {**role_row['p5d_attack_path_details'][0], 'confidence': 'HIGH'}]}
+    assert build_observation_checks(
+        'p5d-eks-role-v1', tampered, services, 'iam.roles.r', 'insecure'
+    )[1]['state'] == 'UNKNOWN'
+
+
+def test_p5d2_graph_witness_rejects_cross_resource_reassignment_and_bad_hash():
+    principal = 'arn:aws:iam::222222222222:role/External'
+    source = 'arn:aws:iam::123456789012:role/Sender'
+    cases = (
+        ('p5d-iam-delegation-v1', 'iam_lambda_create', source, ROLE,
+         'lambda:CreateFunction', {'arn': source, 'p5d_service_delegation_status': 'candidate'},
+         {'arn': OTHER_ROLE}),
+        ('p5d-cross-account-v1', 's3_cross_account_resource_policy', principal,
+         'arn:aws:s3:::reports', 's3:GetObject',
+         {'name': 'reports', 'p5d_cross_account_status': 'candidate'},
+         {'name': 'private'}),
+        ('p5d-cross-account-v1', 's3_access_point_cross_account', principal,
+         'arn:aws:s3:eu-central-1:123456789012:accesspoint/reports', 's3:GetObject',
+         {'AccessPointArn': 'arn:aws:s3:eu-central-1:123456789012:accesspoint/reports',
+          'p5d_cross_account_status': 'candidate'},
+         {'AccessPointArn': 'arn:aws:s3:eu-central-1:123456789012:accesspoint/other'}),
+        ('p5d-cross-account-v1', 'kms_cross_account_key_policy', principal,
+         'arn:aws:kms:eu-central-1:123456789012:key/one', 'kms:Decrypt',
+         {'arn': 'arn:aws:kms:eu-central-1:123456789012:key/one',
+          'p5d_cross_account_status': 'candidate'},
+         {'arn': 'arn:aws:kms:eu-central-1:123456789012:key/two'}),
+        ('p5d-external-invoke-review-v1', 'lambda_external_invoke_review', principal,
+         'arn:aws:lambda:eu-central-1:123456789012:function:run', 'lambda:InvokeFunction',
+         {'arn': 'arn:aws:lambda:eu-central-1:123456789012:function:run',
+          'p5d_resource_policy_review': 'review'},
+         {'arn': 'arn:aws:lambda:eu-central-1:123456789012:function:other'}),
+    )
+    for policy, kind, edge_source, target, action, resource, wrong in cases:
+        edge_id = hashlib.sha256(
+            '|'.join((edge_source, target, kind, action)).encode('utf-8')
+        ).hexdigest()[:24]
+        review = policy == 'p5d-external-invoke-review-v1'
+        edge = {
+            'id': edge_id, 'source': edge_source, 'target': target, 'type': kind,
+            'action': action, 'verification': 'REVIEW' if review else 'POTENTIAL',
+            'confidence': 'LOW' if review else 'MEDIUM',
+            'effective_permission_verified': False, 'execution_verified': False,
+            'evidence': {'basis': 'synthetic non-secret policy witness'}}
+        resource['p5d_attack_path_details'] = [{
+            key: edge[key] for key in (
+                'id', 'source', 'target', 'type', 'action', 'verification', 'confidence')}]
+        services = {'iam': {'attack_paths_p5d': {'edges': {edge_id: edge}}}}
+        good = build_observation_checks(policy, resource, services, 'resource', 'insecure')
+        assert good[1]['state'] == 'CONFIRMED', (policy, good)
+        moved = {**resource, **wrong}
+        bad = build_observation_checks(policy, moved, services, 'other-resource', 'insecure')
+        assert bad[0]['state'] == 'CONFIRMED'
+        assert bad[1]['state'] == 'UNKNOWN', (policy, bad)
+        forged = {**edge, 'id': '000000000000000000000000'}
+        services['iam']['attack_paths_p5d']['edges'] = {edge_id: forged}
+        assert build_observation_checks(
+            policy, resource, services, 'resource', 'insecure')[1]['state'] == 'UNKNOWN'
+
+
+def test_p5d2_cluster_modal_shows_distinct_describe_and_census_counts():
+    root = Path(__file__).resolve().parents[1]
+    modal = (root / 'ScoutSuite/output/data/html/partials/aws/'
+             'services.eks.regions.id.clusters.html').read_text()
+    assert 'associations retained: {{pod_identity_associations_count}}' in modal
+    assert 'descriptions verified: {{pod_identity_described_count}}' in modal
+    assert 'unresolved: {{pod_identity_unresolved_count}}' in modal
+    assert 'described: {{pod_identity_associations_count}}' not in modal
