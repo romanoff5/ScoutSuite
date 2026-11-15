@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.core.finding_cards import build_observation_checks, resource_identity
 
 
 def _walk_resources(current, parts, prefix=()):
@@ -1423,12 +1424,12 @@ def classify_p5d_external_invoke(resource):
     return _p5d_state(resource, 'p5d_resource_policy_review', review=True)
 
 
-CLASSIFIERS = {    'p5d-iam-delegation-v1': classify_p5d_delegation,
+CLASSIFIERS = {
+    'p5d-iam-delegation-v1': classify_p5d_delegation,
     'p5d-eks-role-v1': classify_p5d_eks_role,
     'p5d-eks-cluster-v1': classify_p5d_eks_cluster,
     'p5d-cross-account-v1': classify_p5d_cross_account,
     'p5d-external-invoke-review-v1': classify_p5d_external_invoke,
-
     'iam-p4b2-user-passrole-v1': classify_p4b2_user_passrole,
     'iam-p4b2-user-assumerole-v1': classify_p4b2_user_assumerole,
     'iam-p4b2-role-assumerole-v1': classify_p4b2_role_assumerole,
@@ -1683,6 +1684,9 @@ def evaluate_rule_evidence(rule, services):
                 'outcome': status,
                 'evidence_policy': policy,
                 'observed_attributes': _p5b_facts(resource, path.split('.')[0]),
+                'resource_identity': resource_identity(resource, path),
+                'predicate_checks': build_observation_checks(
+                    policy, resource, services, path, status),
             })
         if status == 'unknown':
             unknown_paths.append(path)

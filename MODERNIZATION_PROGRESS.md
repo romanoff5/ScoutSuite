@@ -1060,3 +1060,39 @@ calls. See `docs/modernization/M10_WAFV2.md`.
   inventory or measured application RTO/RPO. Documentation and rollback:
   `docs/modernization/P5B_FINDING_CONFIDENCE.md`. Roll back the P5-B
   integration commit; P5-A remains intact.
+
+
+## P5-B2 — per-resource evidence cards and verified predicates (2026-11-15)
+
+- Added ScoutSuite/core/finding_cards.py: deterministic card assessment for
+  each versioned insecure/unknown resource. Existing finding severity, rule
+  IDs and AWS read-only collection are unchanged. Each card has independent
+  confidence, collection quality, verification/reachability status, mandatory
+  predicate confirmations, reason codes and technical evidence source paths.
+- EC2 direct HTTPS cards require an observed running instance, public ENI,
+  and linked world-ingress TCP/443 SG rule with original ENI, IP and SG IDs.
+  ALB backend bypass cards keep actual target instance, SG, target-group ARN
+  and port. IAM candidates do not claim effective authorization; CloudWatch
+  local gaps do not prove external SIEM delivery; TLS and AWS Backup cards
+  retain unverified SNI/production census or application RTO/RPO boundaries.
+  Rule-specific unsupported/contradictory conditions remain UNKNOWN.
+- Normal JSON/SQLite client-report diagnostics retain original resource names,
+  IDs, account metadata and ARNs. New observation predicates and cards are
+  rendered via escaped Handlebars only. Public P4-F/F2 snapshot projection
+  continues to include only pseudonymized identities and aggregate counts.
+  Historical reports without the new fields retain their old rendering.
+- Added synthetic regression tests, escaped HTML dashboard cards, and an
+  end-to-end browser assertion for actual visible cards with a hostile
+  resource name. Corrected the browser smoke selector to distinguish a
+  visible detail from duplicate hidden evidence text.
+- [Offline CI run #43658228198](https://github.com/romanoff5/ScoutSuite/actions/runs/43658228198)
+  completed successfully on all four jobs: Ubuntu 24.04 and Windows 2022,
+  Python 3.11 and 3.14. Ubuntu Python 3.11 guarded full suite:
+  1235 passed + 35 subtests passed. P3-C synthetic gate PASS (66 cases),
+  lint, network-isolated browser/XSS, SQLite HTTP and packaging passed.
+- Integrated P5-B2 fast-forward to master at
+  638737fcbf30e63d7c2c4b6525d47f01eaba9a98, based on the verified
+  P5-C head 44f89de679cb84cc0bf8b892eaf904db973a751f. No forced
+  history rewrite, upstream PR, real cloud scan or credential use.
+  Details: docs/modernization/P5B2_FINDING_EVIDENCE_CARDS.md.
+  Roll back this task's commits to restore the previous P5-B presentation.

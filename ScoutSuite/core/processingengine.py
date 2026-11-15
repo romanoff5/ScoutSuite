@@ -2,6 +2,7 @@ from ScoutSuite.core.console import print_debug, print_exception
 from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
 from ScoutSuite.core.finding_confidence import build_finding_confidence
+from ScoutSuite.core.finding_cards import build_resource_cards
 from ScoutSuite.core.policy_profiles import COMPLIANCE_PROFILE_ID, policy_requirement_for
 from ScoutSuite.utils import manage_dictionary
 
@@ -151,6 +152,7 @@ class ProcessingEngine:
                 if self.ruleset.rule_type == 'findings' and not skip_dashboard:
                     finding = cloud_provider.services[service][self.ruleset.rule_type][rule.key]
                     finding['confidence_assessment'] = build_finding_confidence(rule, finding)
+                    finding['finding_cards'] = build_resource_cards(finding)
 
     @staticmethod
     def _collection_gap_scopes(cloud_provider):
