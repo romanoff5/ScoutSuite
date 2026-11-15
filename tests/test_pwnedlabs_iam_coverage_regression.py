@@ -99,7 +99,7 @@ def test_credential_report_denied_does_not_mask_verified_identity_enumeration():
                        ('GenerateCredentialReport', 'denied'))
     result = census(ctx)
     assert result['status'] == 'complete'
-    assert result['credential_report_status'] == 'partial'
+    assert result['credential_report_status'] == 'denied'
     assert result['complete']
 
 

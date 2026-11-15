@@ -78,9 +78,12 @@ def iam_identity_inventory(context=None):
         status = 'partial'
     # Both GenerateCredentialReport and GetCredentialReport are needed to
     # classify that optional independent inventory as complete.
-    report_states = [_operation_state(operations.get(op))
-                     for op in CREDENTIAL_OPERATIONS]
-    credential_status = _combine(report_states)
+    generate = _operation_state(operations.get('GenerateCredentialReport'))
+    retrieve = _operation_state(operations.get('GetCredentialReport'))
+    # A denied GenerateCredentialReport has no corresponding download attempt.
+    # Preserve DENIED rather than diluting it with an unattempted UNKNOWN.
+    credential_status = (generate if generate != 'complete' else
+                         'partial' if retrieve == 'unknown' else retrieve)
     return {
         'schema': 'iam-identity-collection-v1',
         'status': status,
