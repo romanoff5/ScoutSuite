@@ -1,0 +1,21 @@
+{
+    "description": "Potential EKS Workload Identity to Privileged IAM Role",
+    "rationale": "Read-only P5-D cross-resource policy correlation. A scoped permission, workload association or resource-policy Allow is a potential path only, not proof of effective authorization, token access or exploitability. Unknown constraints and inaccessible APIs are not PASS.",
+    "remediation": "Review the exact principal, action, resource, role trust and service configuration; restrict PassRole/role scope, cross-account principals and workload permissions. Validate organization guardrails and effective authorization separately.",
+    "references": [
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_passrole.html"
+    ],
+    "dashboard_name": "Clusters",
+    "path": "eks.regions.id.clusters.id",
+    "conditions": [
+        "and",
+        [
+            "p5d_workload_identity_status",
+            "equal",
+            "candidate"
+        ]
+    ],
+    "id_suffix": "P5DEKSWorkload",
+    "evidence_policy": "p5d-eks-cluster-v1"
+}
