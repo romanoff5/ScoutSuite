@@ -145,6 +145,17 @@ class AWSProvider(BaseProvider):
             self._match_iam_policies_and_buckets()
 
         # TODO - this should be moved to the `finalize` method of the base resource, as it's not cross-service
+        # P5-D cross-service, read-only attack path correlation.
+        if 'iam' in self.service_list:
+            from ScoutSuite.providers.aws.resources.iam.attack_paths_p5d import annotate_p5d_attack_paths
+            try:
+                annotate_p5d_attack_paths(self.services, self.service_list, self.account_id)
+            except Exception as exc:
+                print_exception(f'P5-D graph correlation incomplete: {type(exc).__name__}')
+                self.services['iam']['attack_paths_p5d'] = {
+                    'schema': 'aws-attack-paths-p5d-v1', 'status': 'unknown',
+                    'nodes': {}, 'edges': {}, 'nodes_count': 0, 'edges_count': 0}
+
         if 'elb' in self.services:
             self._parse_elb_policies()
 
