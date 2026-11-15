@@ -1393,7 +1393,43 @@ def classify_p4b2_analyzer_warning(resource):
                         'security_warning')
 
 
+def _p5d_state(resource, field, *, review=False):
+    if not isinstance(resource, dict):
+        return 'unknown'
+    value = resource.get(field)
+    if value == ('review' if review else 'candidate'):
+        return 'insecure'
+    if value == 'not_applicable':
+        return 'not_applicable'
+    return 'unknown'
+
+
+def classify_p5d_delegation(resource):
+    return _p5d_state(resource, 'p5d_service_delegation_status')
+
+
+def classify_p5d_eks_role(resource):
+    return _p5d_state(resource, 'p5d_eks_identity_status')
+
+
+def classify_p5d_eks_cluster(resource):
+    return _p5d_state(resource, 'p5d_workload_identity_status')
+
+
+def classify_p5d_cross_account(resource):
+    return _p5d_state(resource, 'p5d_cross_account_status')
+
+
+def classify_p5d_external_invoke(resource):
+    return _p5d_state(resource, 'p5d_resource_policy_review', review=True)
+
+
 CLASSIFIERS = {
+    'p5d-iam-delegation-v1': classify_p5d_delegation,
+    'p5d-eks-role-v1': classify_p5d_eks_role,
+    'p5d-eks-cluster-v1': classify_p5d_eks_cluster,
+    'p5d-cross-account-v1': classify_p5d_cross_account,
+    'p5d-external-invoke-review-v1': classify_p5d_external_invoke,
     'iam-p4b2-user-passrole-v1': classify_p4b2_user_passrole,
     'iam-p4b2-user-assumerole-v1': classify_p4b2_user_assumerole,
     'iam-p4b2-role-assumerole-v1': classify_p4b2_role_assumerole,
@@ -1542,7 +1578,14 @@ P5B_EVIDENCE_FIELDS = {
             'p4b_privileged_oidc_status', 'p4b2_user_passrole_status',
             'p4b2_user_assumerole_status', 'p4b2_role_assumerole_status',
             'p4b2_group_passrole_status', 'p4b2_oidc_audience_status',
-            'p4b2_oidc_subject_status', 'p4b2_access_analyzer_status'),
+            'p4b2_oidc_subject_status', 'p4b2_access_analyzer_status',
+            'p5d_service_delegation_status', 'p5d_service_delegation_edges',
+            'p5d_eks_identity_status'),
+    's3': ('name', 'arn', 'p5d_cross_account_status', 'p5d_cross_account_edges'),
+    'kms': ('arn', 'p5d_cross_account_status', 'key_enabled'),
+    'eks': ('cluster_arn', 'oidc_issuer', 'p5d_workload_identity_status',
+            'pod_identity_inventory_status'),
+    'awslambda': ('arn', 'role_arn', 'p5d_resource_policy_review'),
     'cloudwatch': ('security_metric_alerting_status', 'metric_filters_collection_status',
                    'metric_alarms_collection_status', 'retention_status',
                    'retention_days', 'customer_kms_status'),

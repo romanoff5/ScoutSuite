@@ -26,6 +26,7 @@ class Clusters(AWSResources):
                 continue
             self[key] = value
         await self._enrich_access()
+        await self._enrich_pod_identities()
 
 
     async def _enrich_access(self):
@@ -108,6 +109,7 @@ class Clusters(AWSResources):
             'platform_version': raw.get('platformVersion'),
             'created_at': created, 'endpoint': raw.get('endpoint'),
             'cluster_role_arn': raw.get('roleArn'),
+            'oidc_issuer': ((raw.get('identity') or {}).get('oidc') or {}).get('issuer'),
             'public_endpoint_access': public,
             'private_endpoint_access': vpc.get('endpointPrivateAccess'),
             'public_access_cidrs': cidrs,
@@ -123,3 +125,37 @@ class Clusters(AWSResources):
             'health': raw.get('health') or {},
             'deletion_protection': raw.get('deletionProtection'),
         }
+
+    async def _enrich_pod_identities(self):
+        """Keep explicit incomplete state for missing or denied EKS API reads."""
+        import asyncio
+        gate = asyncio.Semaphore(4)
+
+        async def enrich(cluster):
+            collector = getattr(self.facade.eks, 'get_pod_identity_associations', None)
+            result = {'status': 'unknown', 'associations': []}
+            if collector is not None:
+                async with gate:
+                    try:
+                        result = await collector(self.region, cluster['name'])
+                    except Exception:
+                        context = get_current_run_context()
+                        if context is not None:
+                            context.record_collection_issue(
+                                'partial', 'eks', 'PodIdentityCollectionException')
+            records = result.get('associations') if isinstance(result, dict) else None
+            valid = isinstance(records, list)
+            mapped = {}
+            for item in records if valid else []:
+                ident = item.get('id') if isinstance(item, dict) else None
+                if not isinstance(ident, str) or ident in mapped:
+                    valid = False
+                    continue
+                mapped[ident] = item
+            status = result.get('status') if isinstance(result, dict) else None
+            cluster['pod_identity_inventory_status'] = (
+                'complete' if status == 'complete' and valid else 'partial')
+            cluster['pod_identity_associations'] = mapped
+            cluster['pod_identity_associations_count'] = len(mapped)
+
+        await asyncio.gather(*(enrich(c) for c in self.values()))

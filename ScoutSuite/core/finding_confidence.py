@@ -7,6 +7,10 @@ This metadata is additive; it never changes finding IDs, severity or rule result
 """
 
 ATTACK_PATH_POLICIES = frozenset((
+    'p5d-iam-delegation-v1',
+    'p5d-eks-role-v1',
+    'p5d-eks-cluster-v1',
+    'p5d-cross-account-v1',
     'iam-p4b-passrole-v1',
     'iam-p4b-privileged-oidc-v1',
     'iam-p4b2-user-passrole-v1',
