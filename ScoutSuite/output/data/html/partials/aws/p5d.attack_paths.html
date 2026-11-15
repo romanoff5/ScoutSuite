@@ -1,0 +1,49 @@
+<!-- P5-D2: report-only, escaped attack path evidence; never executes input as code. -->
+<script id="p5d.attack_paths.partial" type="text/x-handlebars-template">
+  <div class="list-group-item scout-p5d-paths">
+    <h4>P5-D2 — Candidate attack paths</h4>
+    <p><small>Read-only configuration correlation, not verified effective IAM
+      authorization or demonstrated execution. Missing evidence remains UNKNOWN.</small></p>
+    {{#if p5d_service_delegation_status}}
+      <div>IAM workload delegation: <samp>{{p5d_service_delegation_status}}</samp></div>
+    {{/if}}
+    {{#if p5d_eks_identity_status}}
+      <div>EKS workload role: <samp>{{p5d_eks_identity_status}}</samp></div>
+    {{/if}}
+    {{#if p5d_workload_identity_status}}
+      <div>EKS workload identity: <samp>{{p5d_workload_identity_status}}</samp></div>
+    {{/if}}
+    {{#if p5d_cross_account_status}}
+      <div>Cross-account policy/grant: <samp>{{p5d_cross_account_status}}</samp></div>
+    {{/if}}
+    {{#if p5d_resource_policy_review}}
+      <div>Resource-policy review: <samp>{{p5d_resource_policy_review}}</samp></div>
+    {{/if}}
+    {{#if p5d_attack_path_details}}
+      <ul class="scout-p5d-edge-list">
+        {{#each p5d_attack_path_details}}
+          <li class="scout-p5d-edge">
+            <strong>{{type}}</strong> — {{verification}} (confidence {{confidence}})
+            <div>Source: <samp>{{source}}</samp></div>
+            <div>Target: <samp>{{target}}</samp></div>
+            <div>Action: <samp>{{action}}</samp></div>
+            <div>Evidence: {{basis}}</div>
+            <div><small>Edge: <samp>{{id}}</samp>;
+              effective authorization verified: {{effective_permission_verified}};
+              execution verified: {{execution_verified}}</small></div>
+          </li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="scout-p5d-empty"><small>No candidate edge established for this resource.
+        This does not prove absence of reachable privilege escalation paths.</small></p>
+    {{/if}}
+    {{#if p5d_attack_path_details_truncated}}
+      <p><strong>Partial detail display:</strong> further graph edges exist in JSON results.</p>
+    {{/if}}
+  </div>
+</script>
+<script>
+  Handlebars.registerPartial("p5d.attack_paths",
+    $("#p5d\\.attack_paths\\.partial").html());
+</script>
