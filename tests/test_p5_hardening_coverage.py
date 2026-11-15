@@ -86,9 +86,9 @@ def test_user_delegation_requires_user_source_and_ecs_agent_review_not_escalatio
 def test_new_direct_graph_emitter_in_annotator_must_be_reviewed():
     manifest, catalog, code, rules = inputs()
     modified = code.replace(
-        "    return graph\\n",
+        "    return graph\n",
         "    emit('synthetic/source', 'synthetic/target', 'new_direct_edge', "
-        "'iam:NotARealAction', 'test-only')\\n    return graph\\n", 1)
+        "'iam:NotARealAction', 'test-only')\n    return graph\n", 1)
     assert modified != code
     assert "new_direct_edge" in discover_edge_kinds(modified)
     with pytest.raises(AssertionError, match="detector coverage drift"):
