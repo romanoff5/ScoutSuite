@@ -179,3 +179,35 @@ def test_uncollected_or_malformed_classifier_never_means_contradicted_or_leaks()
         {'p4b2_user_passrole_status': 'not_applicable'},
         {}, path, 'secure')
     assert checks[0]['state'] == 'CONTRADICTED'
+
+
+def test_p5d_iam_candidate_requires_correlated_edge_evidence_for_confidence():
+    resource = {'p5d_service_delegation_status': 'candidate',
+                'p5d_service_delegation_edges': [],
+                'arn': 'arn:aws:iam::123456789012:role/Builder'}
+    services = {'iam': {'roles': {'builder': resource}}}
+    _, cards = assess('p5d-iam-delegation-v1', 'iam.roles.id', services)
+    assert cards[0]['confidence'] == 'UNKNOWN'
+    assert cards[0]['collection'] == 'PARTIAL'
+    assert 'REQUIRED_PREDICATE_UNVERIFIED' in cards[0]['reason_codes']
+    resource['p5d_service_delegation_edges'] = ['f' * 24]
+    _, cards = assess('p5d-iam-delegation-v1', 'iam.roles.id', services)
+    assert cards[0]['confidence'] == 'MEDIUM'
+    assert cards[0]['claim_type'] == 'POTENTIAL_ATTACK_PATH'
+    assert cards[0]['collection'] == 'COMPLETE'
+    assert cards[0]['verification_status'] == 'POTENTIAL'
+    assert any(c['label'] == 'Effective IAM authorization'
+               and c['state'] == 'NOT_VERIFIED' for c in cards[0]['supporting_evidence'])
+
+
+def test_p5d_cross_account_bucket_scoped_edge_card_requires_edge_id():
+    bucket = {'p5d_cross_account_status': 'candidate',
+              'p5d_cross_account_edges': []}
+    _, cards = assess('p5d-cross-account-v1', 's3.buckets.id',
+                      {'s3': {'buckets': {'audit': bucket}}})
+    assert cards[0]['confidence'] == 'UNKNOWN'
+    bucket['p5d_cross_account_edges'] = ['0' * 24]
+    _, cards = assess('p5d-cross-account-v1', 's3.buckets.id',
+                      {'s3': {'buckets': {'audit': bucket}}})
+    assert cards[0]['confidence'] == 'MEDIUM'
+    assert cards[0]['verification_status'] == 'POTENTIAL'
