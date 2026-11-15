@@ -350,6 +350,54 @@ def _workload_routes(docs, source_arn, target, services, cache):
             paths.append((service + '_create', action,
                           'scoped identity grant + service trust; creation witness and execution grant verified as candidate'))
 
+    # CloudGoat iam_privesc_by_attachment: a privileged role may have
+    # *no* instance profile yet. An operator able to remove the current role
+    # from an observed profile, add the privileged role, pass that role to EC2
+    # and run a new instance has a separate potential delegation path.
+    # Require an actual collected, occupied instance profile and both profile
+    # mutation grants. Never assume an unobserved empty profile or that the
+    # change/instance creation succeeds in AWS.
+    if (_service_trust(target, 'ec2.amazonaws.com') == 'yes'
+            and not target.get('instance_profiles')
+            and identity_permission(docs, 'iam:PassRole', target_arn,
+                                    'ec2.amazonaws.com') == 'yes'):
+        if 'ec2' not in cache:
+            cache['ec2'] = (creation_permission(
+                docs, 'ec2:RunInstances', source_arn) == 'yes')
+        if cache['ec2']:
+            inventory = services.get('iam') or {}
+            roles = inventory.get('roles') or {}
+            candidates = []
+            if isinstance(roles, dict):
+                for other in roles.values():
+                    if not isinstance(other, dict) or other.get('arn') == target_arn:
+                        continue
+                    profiles = other.get('instance_profiles')
+                    if not isinstance(profiles, dict):
+                        continue
+                    for profile in profiles.values():
+                        if not isinstance(profile, dict):
+                            continue
+                        arn = profile.get('arn')
+                        if (_arn_account(arn) != _arn_account(source_arn)
+                                or not arn.startswith(
+                                    'arn:' + source_arn.split(':')[1] + ':iam::')
+                                or ':instance-profile/' not in arn):
+                            continue
+                        candidates.append(arn)
+            for profile_arn in sorted(set(candidates))[:MAX_RESOURCES]:
+                if (identity_permission(
+                        docs, 'iam:RemoveRoleFromInstanceProfile', profile_arn) == 'yes'
+                        and identity_permission(
+                            docs, 'iam:AddRoleToInstanceProfile', profile_arn) == 'yes'):
+                    paths.append((
+                        'ec2_profile_mutation',
+                        'iam:RemoveRoleFromInstanceProfile+AddRoleToInstanceProfile+ec2:RunInstances',
+                        'observed occupied instance profile ' + profile_arn
+                        + '; profile replacement, propagation, EC2 launch and '
+                        'runtime credential access NOT verified'))
+                    break
+
     if (_service_trust(target, 'lambda.amazonaws.com') == 'yes'
             and identity_permission(docs, 'iam:PassRole', target_arn,
                                     'lambda.amazonaws.com') == 'yes'):
