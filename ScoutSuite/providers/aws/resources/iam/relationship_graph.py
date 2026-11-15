@@ -164,7 +164,7 @@ def _admin_hint(role, docs, incomplete):
         ('iam:CreateRole', f'arn:{partition}:iam::{account}:role/P5AAdminWitness'),
         ('ec2:RunInstances',
          f'arn:{partition}:ec2:us-east-1:{account}:instance/i-0123456789abcdef0'),
-        ('s3:DeleteObject', 'arn:aws:s3:::p5a-iam-review/object'),
+        ('s3:DeleteObject', f'arn:{partition}:s3:::p5a-iam-review/object'),
     )
     results = [identity_permission(docs, action, resource)
                for action, resource in scenarios]
