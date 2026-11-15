@@ -399,7 +399,7 @@ def build_resource_cards(finding):
         confirmed = sum(check.get('state') == 'CONFIRMED' for check in required)
         contradicted = any(check.get('state') == 'CONTRADICTED' for check in required)
         complete = bool(required) and confirmed == len(required)
-        incomplete = finding.get('assessment_status') == 'incomplete'
+        incomplete = finding.get('assessment_status') == 'incomplete' or mismatch
         outcome = observation.get('outcome')
         attrs = observation.get('observed_attributes') or {}
         classifier_only = (len(required) == 1 and
@@ -421,7 +421,7 @@ def build_resource_cards(finding):
             reasons.append('REACHABILITY_OR_AUTHORIZATION_NOT_VERIFIED')
         if kind == 'POLICY_REVIEW' and not finding.get('severity_assigned'):
             reasons.append('ORGANIZATIONAL_POLICY_REVIEW')
-        if outcome != 'insecure' or not complete or contradicted:
+        if outcome != 'insecure' or not complete or contradicted or mismatch:
             confidence, verification = 'UNKNOWN', 'UNKNOWN'
         elif kind in ('POTENTIAL_NETWORK_EXPOSURE', 'POTENTIAL_ATTACK_PATH'):
             confidence, verification = 'MEDIUM', 'POTENTIAL'
