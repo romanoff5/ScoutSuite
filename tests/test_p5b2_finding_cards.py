@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from ScoutSuite.core.finding_cards import build_resource_cards
+from ScoutSuite.core.finding_cards import build_resource_cards, build_observation_checks
 from ScoutSuite.core.finding_confidence import build_finding_confidence
 from ScoutSuite.core.rule_evidence import evaluate_rule_evidence
 
@@ -162,3 +162,20 @@ def test_html_template_escapes_hostile_names_and_evidence_text():
     _, cards = assess('ec2-direct-public-https-v1', EC2_PATH,
                       ec2_services(name='<img src=x onerror=alert(1)>'))
     assert cards[0]['resource_name'].startswith('<img')
+
+
+def test_uncollected_or_malformed_classifier_never_means_contradicted_or_leaks():
+    path = 'iam.users.user-1'
+    for status in (None, 'unknown', 'unavailable', 'incomplete',
+                   {'secret_token': 'NEVER_RENDER_RAW'}):
+        checks = build_observation_checks(
+            'iam-p4b2-user-passrole-v1',
+            {'p4b2_user_passrole_status': status},
+            {}, path, 'unknown')
+        assert checks[0]['state'] == 'UNKNOWN'
+        assert 'NEVER_RENDER_RAW' not in json.dumps(checks)
+    checks = build_observation_checks(
+        'iam-p4b2-user-passrole-v1',
+        {'p4b2_user_passrole_status': 'not_applicable'},
+        {}, path, 'secure')
+    assert checks[0]['state'] == 'CONTRADICTED'
