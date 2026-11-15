@@ -7,6 +7,10 @@
     {{#if p5d_service_delegation_status}}
       <div>IAM workload delegation: <samp>{{p5d_service_delegation_status}}</samp></div>
     {{/if}}
+    {{#if p5d_ecs_execution_review_status}}
+      <div>ECS agent execution-role review (not container credentials):
+        <samp>{{p5d_ecs_execution_review_status}}</samp></div>
+    {{/if}}
     {{#if p5d_eks_identity_status}}
       <div>EKS workload role: <samp>{{p5d_eks_identity_status}}</samp></div>
     {{/if}}

@@ -24,6 +24,11 @@ class Keys(AWSCompositeResources):
             scopes={key_id: {'region': self.region, 'key_id': key['id']}
                     for (key_id, key) in self.items()}
         )
+        census = getattr(self.facade.kms, 'grants_collection_status', {})
+        for key in self.values():
+            key['grants_collection_status'] = (
+                census.get((self.region, key.get('id')), 'unknown')
+                if isinstance(census, dict) else 'unknown')
 
     async def _parse_key(self, raw_key):
         key = {
@@ -31,6 +36,7 @@ class Keys(AWSCompositeResources):
             'name': raw_key.get('KeyId'),
             'arn': raw_key.get('KeyArn'),
             'policy': raw_key.get('policy'),
+            'policy_collection_status': raw_key.get('policy_collection_status', 'unknown'),
             'rotation_enabled': None,
             'rotation_status': 'unknown',
             'rotation_period_days': None,

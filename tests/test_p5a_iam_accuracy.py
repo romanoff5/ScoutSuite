@@ -7,7 +7,6 @@ from ScoutSuite.providers.aws.resources.iam.policy_accuracy import (
     creation_permission, identity_permission,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
-    _service_trust,
     _service_trust, build_relationship_graph,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph_b2 import (
@@ -286,3 +285,37 @@ def test_wildcard_service_trust_deny_blocks_both_p4b_and_b2():
     assert source['p4b2_user_passrole_status'] == 'unknown'
     assert not any(edge['type'] == 'user_passrole_privileged_candidate'
                    for edge in graph['edges'].values())
+
+
+def test_admin_candidate_aggregates_split_allow_statements_with_deny_precedence():
+    """AWS ORs Allows across statements; unrelated scoped Deny does not veto."""
+    target = role('Admin', [
+        stmt('iam:CreateRole'),
+        stmt('ec2:RunInstances'),
+        stmt('s3:DeleteObject'),
+        stmt('lambda:DeleteFunction', effect='Deny'),
+    ], service='lambda.amazonaws.com')
+    source = role('Builder', [
+        stmt('iam:PassRole', TARGET), stmt('lambda:CreateFunction')])
+    roles = {'a': target, 'b': source}
+    graph = build_relationship_graph(roles, {})
+    assert target['p4b_admin_policy_status'] == 'admin_policy_candidate'
+    assert source['p4b_passrole_path_status'] == 'candidate'
+    assert graph['edges_count'] == 1
+    # A scoped relevant explicit deny vetoes the matching witness.
+    target['inline_policies']['p']['PolicyDocument']['Statement'].append(
+        stmt('iam:CreateRole', effect='Deny'))
+    build_relationship_graph(roles, {})
+    assert target['p4b_admin_policy_status'] == 'unknown'
+    assert source['p4b_passrole_path_status'] == 'unknown'
+
+
+def test_admin_candidate_not_broad_when_one_action_only_resource_scoped():
+    target = role('Admin', [
+        stmt('iam:CreateRole'),
+        stmt('ec2:RunInstances', 'arn:aws:ec2:us-east-1:123456789012:instance/*'),
+        stmt('s3:DeleteObject'),
+    ])
+    roles = {'a': target}
+    build_relationship_graph(roles, {})
+    assert target['p4b_admin_policy_status'] == 'no_admin_grant_observed'

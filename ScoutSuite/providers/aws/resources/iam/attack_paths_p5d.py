@@ -118,14 +118,14 @@ def _resource_permission(policy, principal, action, resource):
     return 'yes' if allowed else 'no'
 
 
-def _s3_object_witnesses(policy, bucket_name, principal, action):
+def _s3_object_witnesses(policy, bucket_name, principal, action, partition='aws'):
     """Construct bounded existing-policy prefix witnesses, not a fixed key.
 
     A bucket policy restricted to reports/* must not be tested only against
     P5DObjectWitness at the bucket root. All witnesses remain hypothetical;
     neither object existence nor external IAM authorization is inferred.
     """
-    candidates = ['arn:aws:s3:::' + bucket_name + '/P5DObjectWitness']
+    candidates = [f'arn:{partition}:s3:::{bucket_name}/P5DObjectWitness']
     rows = _statements(policy)
     if rows is None:
         return candidates
@@ -201,6 +201,7 @@ def _sources(iam):
                         missing |= incomplete
             obj['p5d_service_delegation_status'] = 'unknown'
             obj['p5d_service_delegation_edges'] = []
+            obj['p5d_ecs_execution_review_status'] = 'unknown'
             obj['p5d_attack_path_details'] = []
             result.append((arn, kind, obj, docs, missing))
             complete &= not missing
@@ -223,6 +224,89 @@ def _regions(services, service, subkey):
         if isinstance(entries, dict):
             objects.extend((v for v in entries.values() if isinstance(v, dict)))
     return objects[:MAX_RESOURCES]
+
+
+def _regional_inventory_scope(services, service, subkey):
+    """State whether a selected regional inventory is bounded and well-formed.
+
+    _regions intentionally caps its output. Without checking the original
+    source, a 3,001st resource can be silently skipped while the graph says
+    complete and a clean finding incorrectly suggests full coverage.
+    """
+    root = services.get(service)
+    regions = root.get('regions') if isinstance(root, dict) else None
+    if not isinstance(regions, dict):
+        return 'unknown'
+    count = 0
+    for region in regions.values():
+        if not isinstance(region, dict):
+            return 'partial'
+        items = region.get(subkey)
+        if not isinstance(items, dict):
+            return 'unknown'
+        count += len(items)
+        if count > MAX_RESOURCES or any(not isinstance(item, dict)
+                                        for item in items.values()):
+            return 'partial'
+    return 'observed_bounded'
+
+
+def _s3_inventory_scope(s3):
+    """Treat denied or truncated bucket policies as incomplete, not empty."""
+    buckets = s3.get('buckets') if isinstance(s3, dict) else None
+    if not isinstance(buckets, dict):
+        return 'unknown'
+    if len(buckets) > MAX_RESOURCES:
+        return 'partial'
+    for bucket in buckets.values():
+        if not isinstance(bucket, dict):
+            return 'partial'
+        policy_status = bucket.get('policy_collection_status')
+        if policy_status not in ('success', 'absent'):
+            return 'partial'
+        if policy_status == 'success' and _statements(bucket.get('policy')) is None:
+            return 'partial'
+    advanced = s3.get('advanced')
+    if advanced is not None:
+        regions = advanced.get('regions') if isinstance(advanced, dict) else None
+        if not isinstance(regions, dict):
+            return 'unknown'
+        count = 0
+        for region in regions.values():
+            if not isinstance(region, dict):
+                return 'partial'
+            points = region.get('access_points')
+            if not isinstance(points, dict):
+                return 'unknown'
+            count += len(points)
+            if count > MAX_RESOURCES or any(not isinstance(ap, dict)
+                                            for ap in points.values()):
+                return 'partial'
+    return 'observed_bounded'
+
+
+def _kms_inventory_scope(services):
+    """KMS coverage includes policy and grant API results, not only key list."""
+    census = _regional_inventory_scope(services, 'kms', 'keys')
+    if census != 'observed_bounded':
+        return census
+    for key in _regions(services, 'kms', 'keys'):
+        manager = key.get('key_manager')
+        enabled = key.get('key_enabled')
+        if manager not in ('CUSTOMER', 'AWS') or enabled is None:
+            return 'partial'
+        if manager != 'CUSTOMER' or enabled is False:
+            continue
+        if (key.get('policy_collection_status') != 'complete'
+                or key.get('grants_collection_status') != 'complete'
+                or _statements(key.get('policy')) is None):
+            return 'partial'
+        grants = key.get('grants')
+        if not isinstance(grants, dict) or len(grants) > MAX_RESOURCES:
+            return 'partial'
+        if any(not isinstance(grant, dict) for grant in grants.values()):
+            return 'partial'
+    return 'observed_bounded'
 
 
 def _invokable_lambda_creation(docs, source_arn):
@@ -291,18 +375,31 @@ def _workload_routes(docs, source_arn, target, services, cache):
                                     'ecs-tasks.amazonaws.com') == 'yes'):
         if 'ecs_run_by_role' not in cache:
             cache['ecs_run_by_role'] = {}
+            cache['ecs_execution_by_role'] = {}
             for task in _regions(services, 'ecs', 'task_definitions'):
                 arn = task.get('task_definition_arn')
-                role = task.get('task_role_arn')
-                if (_arn_account(arn) == _arn_account(source_arn)
-                        and isinstance(role, str)
-                        and identity_permission(docs, 'ecs:RunTask', arn) == 'yes'):
-                    cache['ecs_run_by_role'].setdefault(role, arn)
+                if (_arn_account(arn) != _arn_account(source_arn)
+                        or identity_permission(docs, 'ecs:RunTask', arn) != 'yes'):
+                    continue
+                task_role = task.get('task_role_arn')
+                if isinstance(task_role, str):
+                    cache['ecs_run_by_role'].setdefault(task_role, arn)
+                execution_role = task.get('execution_role_arn')
+                if isinstance(execution_role, str):
+                    cache['ecs_execution_by_role'].setdefault(execution_role, arn)
         arn = cache['ecs_run_by_role'].get(target_arn)
         if arn:
             paths.append(('ecs_run_task', 'ecs:RunTask',
-                          'observed task definition ' + arn
+                          'observed task-role definition ' + arn
                           + '; cluster/network execution unverified'))
+        execution_arn = cache['ecs_execution_by_role'].get(target_arn)
+        if execution_arn:
+            # The ECS agent uses execution-role credentials; they are NOT
+            # exposed to application containers. Never treat this as
+            # container task-role privilege escalation.
+            paths.append(('ecs_execution_role_review', 'ecs:RunTask',
+                          'observed ECS agent execution role in ' + execution_arn
+                          + '; agent permissions only, container access NOT proven'))
         if 'ecs_register_witness' not in cache:
             cache['ecs_register_witness'] = None
             if identity_permission(docs, 'ecs:RegisterTaskDefinition', '*') == 'yes':
@@ -483,8 +580,17 @@ def _resource_routes(services, own_account, emit):
                 continue
             name = bucket.get('name')
             policy = bucket.get('policy')
-            if not isinstance(name, str):
+            if not isinstance(name, str) or not name:
                 continue
+            # The bucket collector's arn denotes bucket/*, not the bucket
+            # root. Reconstruct the bucket root with its real AWS partition.
+            raw_bucket_arn = bucket.get('arn')
+            parts = raw_bucket_arn.split(':', 5) if isinstance(raw_bucket_arn, str) else []
+            partition = (parts[1] if len(parts) == 6
+                         and parts[0] == 'arn' and parts[2] == 's3'
+                         and parts[1] in ('aws', 'aws-cn', 'aws-us-gov')
+                         else 'aws')
+            bucket_arn = f'arn:{partition}:s3:::{name}'
             principals, uncertain = _external_principals(policy, own_account)
             for principal in principals:
                 # RestrictPublicBuckets blocks cross-account permissions from a
@@ -493,8 +599,9 @@ def _resource_routes(services, own_account, emit):
                 if bucket.get('policy_is_public') is True and pab.get('RestrictPublicBuckets') is True:
                     continue
                 for action in READ_ACTIONS:
-                    candidates = (['arn:aws:s3:::' + name] if action == 's3:ListBucket'
-                                  else _s3_object_witnesses(policy, name, principal, action))
+                    candidates = ([bucket_arn] if action == 's3:ListBucket'
+                                  else _s3_object_witnesses(policy, name, principal, action,
+                                                            partition))
                     witness = next((r for r in candidates if
                                     _resource_permission(policy, principal, action, r) == 'yes'), None)
                     if witness is None:
@@ -503,7 +610,7 @@ def _resource_routes(services, own_account, emit):
                         continue  # Account root principal delegates to remote IAM.
                     if bucket.get('policy_is_public') is True and pab.get('RestrictPublicBuckets') is None:
                         continue
-                    edge_id = emit(principal, 'arn:aws:s3:::' + name,
+                    edge_id = emit(principal, bucket_arn,
                                    's3_cross_account_resource_policy', action,
                                    'explicit external principal + scoped policy witness ' + witness
                                    + '; remote identity policy and object existence unknown',
@@ -671,16 +778,41 @@ def annotate_p5d_attack_paths(services, selected, account_id):
             if source_arn == target['arn']:
                 continue
             for service, action, basis in _workload_routes(docs, source_arn, target, services, capability_cache):
+                review = service == 'ecs_execution_role_review'
+                status_field = ('p5d_ecs_execution_review_status' if review
+                                else 'p5d_service_delegation_status')
                 edge = emit(source_arn, target['arn'], 'iam_' + service, action,
-                            basis, source, 'p5d_service_delegation_status')
-                if edge:
+                            basis, source, status_field, review=review)
+                if edge and not review:
                     source['p5d_service_delegation_edges'].append(edge)
         if graph['status'] == 'partial' and graph['scenarios_checked'] > MAX_PAIRS:
             break
+    # Correlate only the bounded prefix of each AWS inventory, but make
+    # incomplete/denied/truncated collection explicit. No resource omission
+    # may appear as a fully observed empty attack-path graph.
+    for service, subkey in (('ecs', 'task_definitions'),
+                            ('awslambda', 'functions'),
+                            ('eks', 'clusters'), ('kms', 'keys')):
+        census = (('not_selected' if service not in selected else
+                   _kms_inventory_scope(services) if service == 'kms' else
+                   _regional_inventory_scope(services, service, subkey)))
+        graph['collection'][service + '_inventory'] = census
+        if census in ('partial', 'unknown'):
+            graph['status'] = 'partial'
+    s3_scope = (_s3_inventory_scope(services.get('s3'))
+                if 's3' in selected else 'not_selected')
+    graph['collection']['s3_inventory'] = s3_scope
+    if s3_scope in ('partial', 'unknown'):
+        graph['status'] = 'partial'
     graph['collection']['lambda_ecs_ec2'] = (
         'partial' if graph['status'] == 'partial' else 'candidate_only')
     if 'eks' in selected:
         _eks_routes(services, iam, emit)
+        # List/Describe denied, partial or malformed on any EKS cluster
+        # invalidates the coverage census even if unrelated IRSA edges exist.
+        if any(cluster.get('pod_identity_inventory_status') != 'complete'
+               for cluster in _regions(services, 'eks', 'clusters')):
+            graph['status'] = 'partial'
         graph['collection']['eks'] = 'partial_workload_scope'
     else:
         graph['collection']['eks'] = 'not_selected'
@@ -714,7 +846,11 @@ def annotate_p5d_attack_paths(services, selected, account_id):
         else:
             cluster['p5d_attack_path_details_truncated'] = True
     for service in ('s3', 'kms', 'awslambda'):
-        graph['collection'][service] = 'candidate_only' if service in selected else 'not_selected'
+        census = graph['collection'].get(service + '_inventory', 'not_selected')
+        graph['collection'][service] = (
+            'not_selected' if service not in selected else
+            'partial' if graph['status'] == 'partial' or census in ('partial', 'unknown')
+            else 'candidate_only')
     graph['edges_count'] = len(graph['edges'])
     graph['nodes_count'] = len(graph['nodes'])
     return graph

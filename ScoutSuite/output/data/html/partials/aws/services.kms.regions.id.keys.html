@@ -16,6 +16,8 @@
         <li class="list-group-item-text">Origin: <span id="kms.regions.{{region}}.keys.{{@key}}.origin"><samp>{{value_or_none origin}}</samp></span></li>
         <li class="list-group-item-text">Key Manager: <span id="kms.regions.{{region}}.keys.{{@key}}.key_manager"><samp>{{value_or_none key_manager}}</samp></span></li>
         <li class="list-group-item-text">Rotation: <span id="kms.regions.{{region}}.keys.{{@key}}.rotation_enabled">{{convert_bool_to_enabled rotation_enabled}}</span></li>
+        <li class="list-group-item-text">P5-D key policy collection: <samp>{{policy_collection_status}}</samp></li>
+        <li class="list-group-item-text">P5-D grants collection: <samp>{{grants_collection_status}}</samp></li>
       </ul>
     </div>
     <div class="list-group-item">

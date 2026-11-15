@@ -26,3 +26,43 @@ This phase adds a deterministic, bounded, read-only cross-service graph under `i
 - Rule-level negative evidence is UNKNOWN rather than a universal proof of no exposure. High confidence is not assigned to cross-service exploit paths.
 
 Test with `python -m pytest tests/test_p5d_attack_paths.py -q` and the repository's Offline CI across its configured platforms. Do not merge on red CI.
+
+## Correctness audit follow-up (P5-A/B/B2/C/D/D2)
+
+- P5-A admin-looking role hints aggregate independent broad IAM/EC2/S3
+  Allow statements rather than requiring all three actions in one statement.
+  Relevant scoped Deny still vetoes a candidate. S3 synthetic witness
+  respects the partition (commercial, GovCloud and China).
+- P5-B and P5-B2 flag mismatched rule-engine and independently classified
+  insecure counts as UNKNOWN/PARTIAL, not medium/high confidence.
+- P5-C maintains its reviewed 27-rule fixed semantic replay allowlist,
+  HMAC integrity, and no raw ARN/policy serialization. Existing and
+  cross-phase mutation/privacy tests remain enforced.
+- P5-D records observed/partial/unknown source-inventory census before
+  truncating at each resource cap. No incomplete service census may claim
+  complete cross-service graph coverage.
+- ECS task roles and execution roles are distinct. The ECS agent execution
+  role is review-only (LOW confidence); it is not directly available to
+  application containers. Existing task-role paths remain POTENTIAL.
+- S3 bucket policy witnesses preserve the actual AWS partition in both the
+  deterministic graph target and P5-B2 per-resource evidence binding.
+- P5-D2 retains real ARNs in confidential reports, while replay export
+  remains anonymized. EKS Pod Identity List→Describe trust/denial/session
+  restrictions are unchanged.
+
+### KMS grant API status fidelity
+
+Previously the generic AWS paginator returned an empty list after some
+`AccessDenied` or malformed responses, so an unreadable KMS grants
+inventory could be indistinguishable from a legitimately empty one.
+Read-only `ListGrants` now uses bounded 100-item pages and at most 20
+pages per key, with explicit `Truncated/NextMarker` validation. Errors,
+duplicate grant IDs, malformed pages and page-limit overruns yield
+`grants_collection_status=partial`, not a verified empty list. Successful
+policy reads separately record `policy_collection_status=complete`.
+Both states appear on KMS report details and in P5-D service coverage.
+Missing account IDs in malformed grant entries no longer crash parsing.
+
+These are collection facts and do not prove the external principal can
+decrypt: KMS key policy/grants, external IAM, constraints and AWS
+Organizations restrictions remain separate authorization checks.

@@ -208,7 +208,15 @@ def _p5d_edge_belongs_to_resource(policy, resource, edge):
     if policy == 'p5d-cross-account-v1':
         if kind == 's3_cross_account_resource_policy':
             name = resource.get('name')
-            return isinstance(name, str) and bool(name) and target == 'arn:aws:s3:::' + name
+            if not isinstance(name, str) or not name:
+                return False
+            raw = resource.get('arn')
+            parts = raw.split(':', 5) if isinstance(raw, str) else []
+            partition = (parts[1] if len(parts) == 6 and parts[0] == 'arn'
+                         and parts[2] == 's3'
+                         and parts[1] in ('aws', 'aws-cn', 'aws-us-gov')
+                         else 'aws')
+            return target == f'arn:{partition}:s3:::{name}'
         if kind == 's3_access_point_cross_account':
             return target == resource.get('AccessPointArn')
         if kind in ('kms_cross_account_key_policy', 'kms_cross_account_grant'):
@@ -391,7 +399,7 @@ def build_resource_cards(finding):
         confirmed = sum(check.get('state') == 'CONFIRMED' for check in required)
         contradicted = any(check.get('state') == 'CONTRADICTED' for check in required)
         complete = bool(required) and confirmed == len(required)
-        incomplete = finding.get('assessment_status') == 'incomplete'
+        incomplete = finding.get('assessment_status') == 'incomplete' or mismatch
         outcome = observation.get('outcome')
         attrs = observation.get('observed_attributes') or {}
         classifier_only = (len(required) == 1 and
@@ -413,7 +421,7 @@ def build_resource_cards(finding):
             reasons.append('REACHABILITY_OR_AUTHORIZATION_NOT_VERIFIED')
         if kind == 'POLICY_REVIEW' and not finding.get('severity_assigned'):
             reasons.append('ORGANIZATIONAL_POLICY_REVIEW')
-        if outcome != 'insecure' or not complete or contradicted:
+        if outcome != 'insecure' or not complete or contradicted or mismatch:
             confidence, verification = 'UNKNOWN', 'UNKNOWN'
         elif kind in ('POTENTIAL_NETWORK_EXPOSURE', 'POTENTIAL_ATTACK_PATH'):
             confidence, verification = 'MEDIUM', 'POTENTIAL'

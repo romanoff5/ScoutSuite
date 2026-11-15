@@ -106,11 +106,14 @@ def build_finding_confidence(rule, finding):
         else:
             verification, confidence = 'NO_MATCH_OBSERVED', 'HIGH'
             codes.append('RULE_SCOPE_ONLY_NOT_COMPLIANCE')
-    if (has_evidence and flagged != bad
-            and 'RULE_EVIDENCE_DISAGREEMENT' not in codes):
-        codes.append('RULE_EVIDENCE_COUNT_DIFFERENCE')
-        if confidence == 'HIGH':
-            confidence = 'MEDIUM'
+    # A mismatch between rule-engine findings and independently classified
+    # evidence invalidates the aggregate verification claim, even if one
+    # observed insecure resource happens to be real. Preserve details, but
+    # never assign arbitrary MEDIUM/HIGH confidence to inconsistent totals.
+    if has_evidence and flagged != bad:
+        if 'RULE_EVIDENCE_COUNT_DIFFERENCE' not in codes:
+            codes.append('RULE_EVIDENCE_COUNT_DIFFERENCE')
+        verification, confidence, quality = 'UNKNOWN', 'UNKNOWN', 'PARTIAL'
 
     result = {
         'schema_version': 1,
