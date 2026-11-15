@@ -220,7 +220,8 @@ def test_p5d_cross_account_bucket_scoped_edge_card_requires_edge_id():
                 's3': {'buckets': {'audit': bucket}}}
     _, cards = assess('p5d-cross-account-v1', 's3.buckets.id', services)
     assert cards[0]['confidence'] == 'MEDIUM'
+    assert cards[0]['verification_status'] == 'POTENTIAL'
     graph['edges']['0' * 24]['target'] = 'arn:aws:s3:::other'
     _, cards = assess('p5d-cross-account-v1', 's3.buckets.id', services)
     assert cards[0]['confidence'] == 'UNKNOWN'
-    assert cards[0]['verification_status'] == 'POTENTIAL'
+    assert cards[0]['verification_status'] == 'UNKNOWN'
