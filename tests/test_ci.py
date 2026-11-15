@@ -163,3 +163,65 @@ def test_pip_disables_eager_bytecode_compilation_only_for_installs(tmp_path):
     pipeline.pip('build', 'wheel', '--no-index', 'synthetic==1.0')
     assert commands[-1][4] == 'wheel'
     assert '--no-compile' not in commands[-1]
+
+
+def test_ci_independent_gates_preserve_cross_platform_matrix():
+    assert set(Pipeline.independent_gates('Linux', (3, 11))) == {
+        'dependencies', 'lint', 'tests', 'p3c', 'sqlite_http',
+        'xss_browser', 'report_e2e', 'packaging',
+    }
+    assert set(Pipeline.independent_gates('Linux', (3, 14))) == set(
+        Pipeline.independent_gates('Linux', (3, 11)))
+    assert set(Pipeline.independent_gates('Windows', (3, 14))) == {
+        'dependencies', 'lint', 'tests', 'p3c', 'xss_browser',
+        'report_e2e', 'packaging',
+    }
+    # Historical RC8 exception stays specific to Windows Python 3.11 E2E.
+    assert set(Pipeline.independent_gates('Windows', (3, 11))) == {
+        'dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging',
+    }
+
+
+def test_ci_parallel_verify_waits_for_all_and_fails_closed(monkeypatch, tmp_path):
+    pipeline = Pipeline(tmp_path, 'verify')
+    completed = []
+
+    def fake_independent_gates(system, python_version):
+        return ('lint', 'tests', 'p3c')
+
+    def fake_gate(self, phase):
+        completed.append(phase)
+        if phase == 'tests':
+            raise ValueError('synthetic isolated gate failed')
+
+    monkeypatch.setattr(Pipeline, 'independent_gates', staticmethod(fake_independent_gates))
+    monkeypatch.setattr(Pipeline, '_verify_one', fake_gate)
+    with pytest.raises(RuntimeError, match='Parallel CI gates failed: tests'):
+        pipeline.verify()
+    assert set(completed) == {'lint', 'tests', 'p3c'}
+
+
+def test_ci_parallel_verify_writes_individual_status_on_failure(monkeypatch, tmp_path):
+    pipeline = Pipeline(tmp_path, 'verify')
+
+    def broken(self):
+        raise RuntimeError('synthetic lint failure')
+
+    monkeypatch.setattr(Pipeline, 'lint', broken)
+    with pytest.raises(RuntimeError, match='synthetic lint failure'):
+        pipeline._verify_one('lint')
+    result = json.loads((tmp_path / 'phase-lint.json').read_text())
+    assert result['status'] == 'FAILED'
+    assert result['phase'] == 'lint'
+    assert result['seconds'] >= 0
+    with pytest.raises(ValueError, match='Unsafe or unsupported'):
+        pipeline._verify_one('acquire')
+
+
+def test_ci_parallel_verify_preserves_successful_gate_status(monkeypatch, tmp_path):
+    pipeline = Pipeline(tmp_path, 'verify')
+    monkeypatch.setattr(Pipeline, 'p3c', lambda self: None)
+    pipeline._verify_one('p3c')
+    result = json.loads((tmp_path / 'phase-p3c.json').read_text())
+    assert result['status'] == 'PASSED'
+    assert result['phase'] == 'p3c'

@@ -251,6 +251,53 @@ class Pipeline:
                 (self.root / binary).write_bytes(release.extractfile(binary).read())
             (self.root / binary).chmod(0o755)
 
+    @staticmethod
+    def independent_gates(system, python_version):
+        """Keep every required gate; preserve the existing RC8 Win/3.11 E2E exception."""
+        phases = ['dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging']
+        if system == 'Linux':
+            phases.append('sqlite_http')
+        # The Windows 3.11 browser E2E exception is narrowly documented in
+        # MODERNIZATION_PROGRESS.md; XSS parser/browser checks still execute.
+        if system != 'Windows' or python_version != (3, 11):
+            phases.append('report_e2e')
+        return tuple(phases)
+
+    def _verify_one(self, phase):
+        """Separate phase context and status file, even if this gate fails."""
+        if phase not in PHASES or phase in ('acquire', 'build', 'workflows'):
+            raise ValueError('Unsafe or unsupported parallel CI phase: ' + phase)
+        worker = Pipeline(self.root, phase)
+        started = time.monotonic()
+        status = 'FAILED'
+        print('START independent CI gate: ' + phase, flush=True)
+        try:
+            getattr(worker, phase)()
+            status = 'PASSED'
+        finally:
+            worker.write('phase-' + phase, {
+                'phase': phase, 'status': status,
+                'seconds': round(time.monotonic() - started, 2),
+            })
+            print('FINISH independent CI gate: {} {}'.format(phase, status), flush=True)
+
+    def verify(self):
+        """Run all previously sequential, independent OFFLINE gates concurrently.
+
+        Each child invocation retains its own OS network namespace/firewall
+        boundary and sanitized HOME. No independent gate is dropped or
+        short-circuited on failure: every future completes, and the orchestration
+        fails closed if even one result fails. Results keep their original
+        per-gate JSON status for the final GitHub Actions summary.
+        """
+        system = platform.system()
+        gates = self.independent_gates(system, sys.version_info[:2])
+        # Avoid oversubscribing Windows runners during browser and packaging
+        # checks; Linux runners can overlap pytest, browser, and smoke gates.
+        workers = 2 if system == 'Windows' else 3
+        self.parallel([(phase, lambda item=phase: self._verify_one(item))
+                       for phase in gates], max_workers=workers)
+
     def workflows(self):
         binary = self.root / ('actionlint.exe' if os.name == 'nt' else 'actionlint')
         self.run([binary, '-color', '-shellcheck=', '-pyflakes='], cwd=SOURCE)
@@ -374,7 +421,7 @@ class Pipeline:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('phase', choices=PHASES + ('summary',))
+    parser.add_argument('phase', choices=PHASES + ('verify', 'summary'))
     parser.add_argument('--root', type=Path, default=os.environ.get('SCOUT_CI_ROOT'))
     args = parser.parse_args()
     if args.root is None:
