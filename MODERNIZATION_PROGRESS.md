@@ -1142,3 +1142,25 @@ calls. See `docs/modernization/M10_WAFV2.md`.
 - Integrated the four CI commits by fast-forward on top of P5-D master
   c5051a9631a2926febf0b1fb0a5027afbd2d54e7. Rollback is to
   revert the CI-only changes; prior AWS findings and reports are intact.
+
+## 2026-11-16 — PwnedLabs final report UI validation
+
+- Source master `b3460acfdde46333323d032688d43dc69e49c527` contains the IAM
+  completeness/coverage fix and the unverified finding presentation fix.
+  Reused the immutable 2026-11-15 AWS results for reporting validation; no
+  new cloud collection or permission was required.
+- The live SQLite HTML viewer emitted 144 HTTP 400 responses because regional
+  scalar fields such as collection status were sent to `/api/page`. The API
+  correctly accepts pagination only for dictionaries and lists. Implementation
+  commit `3df7d6581b6bbc80cbdf6d436954713d76e7fdcb` checks `/api/data`
+  shape before loading a page and preserves scalar values directly.
+- Added an executable Node regression for scalar `denied`, `false`, zero,
+  dictionary and list cases to the offline XSS/report gate. JSON and SQLite
+  browser runs against the same AWS report now show neutral incomplete finding
+  cards and zero page errors, failed requests, or HTTP 400 responses. JSON and
+  SQLite data match at all 15 root sections; SQLite integrity is `ok`.
+- Scope is the SQLite report UI only. AWS/Azure/GCP collectors, authentication,
+  schemas and cloud permissions are unchanged. Rollback is to revert the UI
+  commit. The lab's IAM inventory remains denied and attack-path state UNKNOWN.
+- Branch `feat/sqlite-regional-metadata-ui`; hosted PR CI and final integration
+  SHA are recorded in the final handoff after those gates finish.
