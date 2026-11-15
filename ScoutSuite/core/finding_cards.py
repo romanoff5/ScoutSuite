@@ -189,12 +189,27 @@ def build_observation_checks(policy, resource, services, path, outcome):
         links_field = ('p5d_service_delegation_edges' if policy == 'p5d-iam-delegation-v1'
                        else 'p5d_cross_account_edges')
         links = resource.get(links_field)
+        iam = services.get('iam') if isinstance(services, dict) else None
+        graph = iam.get('attack_paths_p5d') if isinstance(iam, dict) else None
+        edges = graph.get('edges') if isinstance(graph, dict) else None
+        expected_source = resource.get('arn')
+        expected_target = 'arn:aws:s3:::' + str(resource.get('name') or path.rsplit('.', 1)[-1])
         valid_links = (isinstance(links, list) and bool(links) and
-                       all(isinstance(x, str) and len(x) == 24 and
-                           all(ch in '0123456789abcdef' for ch in x) for x in links))
+                       isinstance(edges, dict) and all(
+                           isinstance(x, str) and isinstance(edges.get(x), dict)
+                           and edges[x].get('id') == x
+                           and edges[x].get('verification') == 'POTENTIAL'
+                           and ((policy == 'p5d-iam-delegation-v1'
+                                 and edges[x].get('source') == expected_source
+                                 and str(edges[x].get('type', '')).startswith('iam_'))
+                                or (policy == 'p5d-cross-account-v1'
+                                    and edges[x].get('target') == expected_target
+                                    and edges[x].get('type') ==
+                                    's3_cross_account_resource_policy'))
+                           for x in links))
         checks.append(_check('Linked attack-path graph edges',
                              'CONFIRMED' if valid_links else 'UNKNOWN',
-                             ', '.join(links) if valid_links else 'No verified graph edge identifiers',
+                             ', '.join(links) if valid_links else 'No matching P5-D graph edges',
                              path + '.' + links_field))
     if policy == 'p3b-alb-backend-bypass-v1':
         matches = resource.get('backend_bypass_evidence')
