@@ -1,4 +1,7 @@
 $ErrorActionPreference = 'Stop'
+# Skip only eager .pyc generation: imports and installed CLI are still executed.
+# pip honors PIP_NO_COMPILE, and dependency installation stays --no-index.
+$env:PIP_NO_COMPILE = '1'
 $root = Join-Path $env:RUNNER_TEMP ('scout-main-real-install-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null
 try {

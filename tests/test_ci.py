@@ -236,6 +236,7 @@ def test_ci_windows_real_installer_remains_full_and_non_networked():
         '-ExpectedSha256', 'fork-install.json',
         'invoke-selected-scout.ps1', 'aws --help'))
     assert 'Get-FileHash' in script
+    assert "$env:PIP_NO_COMPILE = '1'" in script
     assert '-FromOrigin' not in script
     assert '-FromRelease' not in script
 
