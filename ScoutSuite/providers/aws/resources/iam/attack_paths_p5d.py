@@ -365,38 +365,46 @@ def _workload_routes(docs, source_arn, target, services, cache):
             cache['ec2'] = (creation_permission(
                 docs, 'ec2:RunInstances', source_arn) == 'yes')
         if cache['ec2']:
-            inventory = services.get('iam') or {}
-            roles = inventory.get('roles') or {}
-            candidates = []
-            if isinstance(roles, dict):
-                for other in roles.values():
-                    if not isinstance(other, dict) or other.get('arn') == target_arn:
-                        continue
-                    profiles = other.get('instance_profiles')
-                    if not isinstance(profiles, dict):
-                        continue
-                    for profile in profiles.values():
-                        if not isinstance(profile, dict):
+            # This check executes once per source, not once per source-target
+            # pair: scanning IAM profiles inside MAX_PAIRS would be cubic.
+            if 'ec2_mutable_profile' not in cache:
+                cache['ec2_mutable_profile'] = None
+                inventory = services.get('iam') or {}
+                roles = inventory.get('roles') or {}
+                if isinstance(roles, dict):
+                    for other in sorted(roles.values(), key=lambda item:
+                                        str(item.get('arn', '')) if isinstance(item, dict) else ''):
+                        if not isinstance(other, dict):
                             continue
-                        arn = profile.get('arn')
-                        if (_arn_account(arn) != _arn_account(source_arn)
-                                or not arn.startswith(
-                                    'arn:' + source_arn.split(':')[1] + ':iam::')
-                                or ':instance-profile/' not in arn):
+                        profiles = other.get('instance_profiles')
+                        if not isinstance(profiles, dict):
                             continue
-                        candidates.append(arn)
-            for profile_arn in sorted(set(candidates))[:MAX_RESOURCES]:
-                if (identity_permission(
-                        docs, 'iam:RemoveRoleFromInstanceProfile', profile_arn) == 'yes'
-                        and identity_permission(
-                            docs, 'iam:AddRoleToInstanceProfile', profile_arn) == 'yes'):
-                    paths.append((
-                        'ec2_profile_mutation',
-                        'iam:RemoveRoleFromInstanceProfile+AddRoleToInstanceProfile+ec2:RunInstances',
-                        'observed occupied instance profile ' + profile_arn
-                        + '; profile replacement, propagation, EC2 launch and '
-                        'runtime credential access NOT verified'))
-                    break
+                        for profile in sorted(profiles.values(), key=lambda item:
+                                              str(item.get('arn', '')) if isinstance(item, dict) else ''):
+                            if not isinstance(profile, dict):
+                                continue
+                            arn = profile.get('arn')
+                            if (_arn_account(arn) != _arn_account(source_arn)
+                                    or not arn.startswith(
+                                        'arn:' + source_arn.split(':')[1] + ':iam::')
+                                    or ':instance-profile/' not in arn):
+                                continue
+                            if (identity_permission(
+                                    docs, 'iam:RemoveRoleFromInstanceProfile', arn) == 'yes'
+                                    and identity_permission(
+                                        docs, 'iam:AddRoleToInstanceProfile', arn) == 'yes'):
+                                cache['ec2_mutable_profile'] = arn
+                                break
+                        if cache['ec2_mutable_profile']:
+                            break
+            profile_arn = cache['ec2_mutable_profile']
+            if profile_arn:
+                paths.append((
+                    'ec2_profile_mutation',
+                    'iam:RemoveRoleFromInstanceProfile+AddRoleToInstanceProfile+ec2:RunInstances',
+                    'observed occupied instance profile ' + profile_arn
+                    + '; profile replacement, propagation, EC2 launch and '
+                    'runtime credential access NOT verified'))
 
     if (_service_trust(target, 'lambda.amazonaws.com') == 'yes'
             and identity_permission(docs, 'iam:PassRole', target_arn,
