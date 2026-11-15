@@ -29,7 +29,7 @@
     ],
     "iam_ecs_execution_role_review": [
       "ecs-agent-execution-role-review",
-      "ecs-task-role-candidate",
+      "ecs-task-run-deny",
       "ecs-agent-boundary-unknown"
     ],
     "iam_ecs_register_run": [
