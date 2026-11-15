@@ -168,8 +168,16 @@ def check_dashboard_color_never_renders_incomplete_evidence_as_good():
     assert.strictEqual(color('warning', 3, 0, options), 'good disabled-link');
     assert.strictEqual(color('warning', 3, 0, 'incomplete', options), 'incomplete disabled-link');
     assert.strictEqual(color('warning', 3, 0, 'not_applicable', options), 'good disabled-link');
-    assert.strictEqual(color('danger', 3, 2, 'incomplete', options), 'danger');
-    assert.strictEqual(color('warning', 0, 0, 'incomplete', options), 'unknown disabled-link');
+    // Explicitly incomplete evidence is always neutral, even when legacy
+    // rules emit synthetic flagged paths with danger/warning severity.
+    assert.strictEqual(color('danger', 3, 2, 'incomplete', options), 'incomplete');
+    assert.strictEqual(color('warning', 3, 3, 'incomplete', options), 'incomplete');
+    assert.strictEqual(color('danger', 1, 1, 'incomplete', options), 'incomplete');
+    assert.strictEqual(color('danger', 0, 1, 'incomplete', options), 'incomplete');
+    assert.strictEqual(color('warning', 0, 0, 'incomplete', options), 'incomplete disabled-link');
+    // A finding with actually observed evidence keeps its original severity.
+    assert.strictEqual(color('danger', 3, 2, options), 'danger');
+    assert.strictEqual(color('warning', 3, 2, options), 'warning');
     assert.strictEqual(color('warning', 5, 0, 2, options), 'incomplete disabled-link');
     assert.strictEqual(color('warning', 5, 0, 0, options), 'good disabled-link');
     assert.strictEqual(color('danger', 5, 1, 2, options), 'danger');
