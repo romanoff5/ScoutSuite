@@ -198,7 +198,8 @@ def _invokable_lambda_creation(docs, source_arn):
     return False
 
 
-def _workload_routes(docs, source_arn, target, services):
+def _workload_routes(docs, source_arn, target, services, cache):
+    """Per-source capability precomputation avoids quadratic inventory scans."""
     target_arn = target['arn']
     paths = []
     for service, principal, action in (
@@ -212,53 +213,72 @@ def _workload_routes(docs, source_arn, target, services):
         if service == 'ec2' and not target.get('instance_profiles'):
             # RunInstances accepts an instance profile, not a bare IAM role.
             continue
-        viable = (_invokable_lambda_creation(docs, source_arn) if service == 'lambda'
-                  else creation_permission(docs, action, source_arn) == 'yes')
-        if viable:
-            paths.append((service + '_create', action, 'identity Allow + compatible service trust; synthetic creation witness'))
+        if service not in cache:
+            cache[service] = (
+                _invokable_lambda_creation(docs, source_arn)
+                if service == 'lambda' else
+                creation_permission(docs, action, source_arn) == 'yes')
+        if cache[service]:
+            paths.append((service + '_create', action,
+                          'scoped identity grant + service trust; creation witness and execution grant verified as candidate'))
+
     if (_service_trust(target, 'lambda.amazonaws.com') == 'yes'
             and identity_permission(docs, 'iam:PassRole', target_arn,
                                     'lambda.amazonaws.com') == 'yes'):
-        for function in _regions(services, 'awslambda', 'functions'):
-            arn = function.get('arn')
-            if _arn_account(arn) != _arn_account(source_arn):
-                continue
-            if (identity_permission(docs, 'lambda:UpdateFunctionConfiguration', arn) == 'yes'
-                    and identity_permission(docs, 'lambda:UpdateFunctionCode', arn) == 'yes'
-                    and identity_permission(docs, 'lambda:InvokeFunction', arn) == 'yes'):
-                paths.append(('lambda_update', 'lambda:UpdateFunctionConfiguration+UpdateFunctionCode',
-                              'observed function ' + arn + '; role replacement and code control candidate'))
-                break
+        if 'lambda_update' not in cache:
+            cache['lambda_update'] = None
+            for function in _regions(services, 'awslambda', 'functions'):
+                arn = function.get('arn')
+                if _arn_account(arn) != _arn_account(source_arn):
+                    continue
+                if (identity_permission(docs, 'lambda:UpdateFunctionConfiguration', arn) == 'yes'
+                        and identity_permission(docs, 'lambda:UpdateFunctionCode', arn) == 'yes'
+                        and identity_permission(docs, 'lambda:InvokeFunction', arn) == 'yes'):
+                    cache['lambda_update'] = arn
+                    break
+        if cache['lambda_update']:
+            paths.append(('lambda_update',
+                          'lambda:UpdateFunctionConfiguration+UpdateFunctionCode+InvokeFunction',
+                          'observed function ' + cache['lambda_update']
+                          + '; role replacement + code control + invocation candidate'))
+
     if (_service_trust(target, 'ecs-tasks.amazonaws.com') == 'yes'
             and identity_permission(docs, 'iam:PassRole', target_arn,
                                     'ecs-tasks.amazonaws.com') == 'yes'):
-        for task in _regions(services, 'ecs', 'task_definitions'):
-            arn = task.get('task_definition_arn')
-            if not arn or _arn_account(arn) != _arn_account(source_arn):
-                continue
-            if (task.get('task_role_arn') == target_arn
-                    and identity_permission(docs, 'ecs:RunTask', arn) == 'yes'):
-                paths.append(('ecs_run_task', 'ecs:RunTask',
-                              'observed task definition ' + arn + '; cluster/network execution unverified'))
-                break
-        # New task definitions require a registration grant and a launch grant.
-        # Resource-scoped RunTask grants cannot safely be generalized to new revisions.
-        if identity_permission(docs, 'ecs:RegisterTaskDefinition', '*') == 'yes':
-            tasks = _regions(services, 'ecs', 'task_definitions')
-            seen = set()
-            for task in tasks:
+        if 'ecs_run_by_role' not in cache:
+            cache['ecs_run_by_role'] = {}
+            for task in _regions(services, 'ecs', 'task_definitions'):
                 arn = task.get('task_definition_arn')
-                if not isinstance(arn, str) or _arn_account(arn) != _arn_account(source_arn):
-                    continue
-                family = arn.rsplit(':', 1)[0]
-                if family in seen:
-                    continue
-                seen.add(family)
-                witness = family + ':99999'
-                if identity_permission(docs, 'ecs:RunTask', witness) == 'yes':
-                    paths.append(('ecs_register_run', 'ecs:RegisterTaskDefinition+RunTask',
-                                  'synthetic next-revision witness ' + witness + '; workload launch unverified'))
-                    break
+                role = task.get('task_role_arn')
+                if (_arn_account(arn) == _arn_account(source_arn)
+                        and isinstance(role, str)
+                        and identity_permission(docs, 'ecs:RunTask', arn) == 'yes'):
+                    cache['ecs_run_by_role'].setdefault(role, arn)
+        arn = cache['ecs_run_by_role'].get(target_arn)
+        if arn:
+            paths.append(('ecs_run_task', 'ecs:RunTask',
+                          'observed task definition ' + arn
+                          + '; cluster/network execution unverified'))
+        if 'ecs_register_witness' not in cache:
+            cache['ecs_register_witness'] = None
+            if identity_permission(docs, 'ecs:RegisterTaskDefinition', '*') == 'yes':
+                seen = set()
+                for task in _regions(services, 'ecs', 'task_definitions'):
+                    arn = task.get('task_definition_arn')
+                    if not isinstance(arn, str) or _arn_account(arn) != _arn_account(source_arn):
+                        continue
+                    family = arn.rsplit(':', 1)[0]
+                    if family in seen:
+                        continue
+                    seen.add(family)
+                    witness = family + ':99999'
+                    if identity_permission(docs, 'ecs:RunTask', witness) == 'yes':
+                        cache['ecs_register_witness'] = witness
+                        break
+        if cache['ecs_register_witness']:
+            paths.append(('ecs_register_run', 'ecs:RegisterTaskDefinition+RunTask',
+                          'synthetic revision witness ' + cache['ecs_register_witness']
+                          + '; workload launch unverified'))
     return paths
 
 
@@ -546,6 +566,7 @@ def annotate_p5d_attack_paths(services, selected, account_id):
     for source_arn, kind, source, docs, missing in source_rows:
         if missing or _arn_account(source_arn) != account_id:
             continue
+        capability_cache = {}
         for target in targets:
             graph['scenarios_checked'] += 1
             if graph['scenarios_checked'] > MAX_PAIRS:
@@ -553,7 +574,7 @@ def annotate_p5d_attack_paths(services, selected, account_id):
                 break
             if source_arn == target['arn']:
                 continue
-            for service, action, basis in _workload_routes(docs, source_arn, target, services):
+            for service, action, basis in _workload_routes(docs, source_arn, target, services, capability_cache):
                 edge = emit(source_arn, target['arn'], 'iam_' + service, action,
                             basis, source, 'p5d_service_delegation_status')
                 if edge:
