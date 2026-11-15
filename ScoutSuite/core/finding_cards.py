@@ -356,6 +356,9 @@ def build_resource_cards(finding):
             confidence, verification = 'MEDIUM', 'POTENTIAL'
         elif kind == 'BACKUP_RESTORE_OBSERVATION' or kind == 'VISIBLE_HOSTNAME_CORRELATION':
             confidence, verification = 'MEDIUM', 'OBSERVED_PARTIAL_SCOPE'
+        elif kind == 'RESOURCE_POLICY_REVIEW':
+            confidence, verification = 'LOW', 'REVIEW'
+            reasons.append('INVOKE_GRANT_IS_NOT_ROLE_ESCALATION')
         elif kind == 'POLICY_REVIEW':
             confidence = 'MEDIUM' if incomplete or classifier_only else 'HIGH'
             verification = 'POLICY_VIOLATION' if finding.get('severity_assigned') else 'REVIEW'

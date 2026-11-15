@@ -36,6 +36,8 @@ RECOVERY_POLICIES = frozenset((
 def _claim_kind(policy, finding):
     if finding.get('finding_category') == 'policy_dependent':
         return 'POLICY_REVIEW'
+    if policy == 'p5d-external-invoke-review-v1':
+        return 'RESOURCE_POLICY_REVIEW'
     if policy in ATTACK_PATH_POLICIES:
         return 'POTENTIAL_ATTACK_PATH'
     if policy in POTENTIAL_EXPOSURE_POLICIES:
@@ -83,6 +85,9 @@ def build_finding_confidence(rule, finding):
         elif kind in ('BACKUP_RESTORE_OBSERVATION', 'VISIBLE_HOSTNAME_CORRELATION'):
             verification, confidence = 'OBSERVED_PARTIAL_SCOPE', 'MEDIUM'
             codes.append('OBSERVATION_DOES_NOT_VERIFY_OBJECTIVE')
+        elif kind == 'RESOURCE_POLICY_REVIEW':
+            verification, confidence = 'REVIEW', 'LOW'
+            codes.append('INVOKE_GRANT_IS_NOT_ROLE_ESCALATION')
         elif kind == 'POLICY_REVIEW':
             verification = ('POLICY_VIOLATION' if finding.get('severity_assigned')
                             else 'REVIEW')
