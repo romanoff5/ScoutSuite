@@ -141,13 +141,18 @@ def _admin_hint(role, docs, incomplete):
         return 'unknown'
     if role.get('permissions_boundary') or incomplete:
         return 'unknown'
-    broad = any(
-        row.get('Effect') == 'Allow' and row.get('Condition') is None and
-        _matches_action(row, 'iam:CreateRole') == 'yes' and
-        _matches_action(row, 'ec2:RunInstances') == 'yes' and
-        _matches_action(row, 's3:DeleteObject') == 'yes' and
-        _matches_resource(row, '*') == 'yes'
-        for _, rows in docs for row in rows)
+    # AWS unions Allows across policy documents/statements; requiring all
+    # admin-like actions in *one* statement incorrectly misses ordinary
+    # split IAM/EC2/S3 managed policies. Keep the original broad Resource='*'
+    # bar per action, then evaluate each synthetic request with scoped Deny.
+    broad = all(
+        any(row.get('Effect') == 'Allow'
+            and row.get('Condition') is None
+            and _matches_action(row, action) == 'yes'
+            and _matches_resource(row, '*') == 'yes'
+            for _, rows in docs for row in rows)
+        for action in ('iam:CreateRole', 'ec2:RunInstances', 's3:DeleteObject')
+    )
     if not broad:
         return 'no_admin_grant_observed'
     arn = role.get('arn', '')
