@@ -435,7 +435,7 @@ def _eks_routes(services, iam, emit):
         associations = cluster.get('pod_identity_associations')
         if cluster.get('pod_identity_inventory_status') == 'complete' and isinstance(associations, dict):
             for assoc in associations.values():
-                if not isinstance(assoc, dict) or assoc.get('detail_collection_status', 'complete') != 'complete':
+                if not isinstance(assoc, dict) or assoc.get('detail_collection_status') != 'complete':
                     continue
                 namespace = assoc.get('namespace')
                 service_account = assoc.get('service_account')

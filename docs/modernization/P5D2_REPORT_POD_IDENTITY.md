@@ -87,3 +87,7 @@ References:
   provided by two separate unconditional `Allow` statements. Both are
   independently checked, with matching/uncertain explicit Deny precedence;
   unknown trust conditions remain unsupported rather than assumed true.
+
+- Fail closed for legacy/incomplete Pod Identity records: an omitted
+  `detail_collection_status` is `UNKNOWN`, never an implicit successful
+  `DescribePodIdentityAssociation`.

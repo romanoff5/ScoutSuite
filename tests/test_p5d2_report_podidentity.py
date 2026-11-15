@@ -345,3 +345,19 @@ def test_p5d2_separate_trust_allow_statements_are_valid_with_deny_precedence():
                    statement('sts:TagSession', condition={
                        'StringEquals': {'aws:RequestTag/unknown': 'x'}})]
     assert not pod_edges(graph(assoc, trust=conditional)[0])
+
+
+
+def test_p5d2_missing_explicit_describe_status_is_unknown_not_a_candidate():
+    # Legacy or partial snapshots may contain roleArn without List->Describe
+    # provenance. They must never be promoted into verified Pod Identity edges.
+    assoc = {'id': 'pa-1', 'role_arn': ROLE, 'namespace': 'team',
+             'service_account': 'api', 'association_arn': ASSOC,
+             'session_policy_present': False, 'target_role_arn': None}
+    paths, cluster, _ = graph(assoc)
+    assert not pod_edges(paths)
+    assert cluster['p5d_workload_identity_status'] == 'unknown'
+    assoc['detail_collection_status'] = 'unknown'
+    assert not pod_edges(graph(assoc)[0])
+    assoc['detail_collection_status'] = 'complete'
+    assert len(pod_edges(graph(assoc)[0])) == 1
