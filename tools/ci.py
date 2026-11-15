@@ -19,7 +19,7 @@ import zipfile
 
 SOURCE = Path(__file__).resolve().parents[1]
 PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'p3c',
-          'sqlite_http', 'xss_browser', 'report_e2e', 'packaging')
+          'sqlite_http', 'xss_browser', 'report_e2e', 'packaging', 'windows_install')
 CLI_CASES = {'test_empty', 'test_aws_provider', 'test_gcp_provider', 'test_azure_provider',
              'test_unauthenticated', 'test_keyboardinterrupted'}
 ACTIONLINT = {
@@ -254,7 +254,10 @@ class Pipeline:
     @staticmethod
     def independent_gates(system, python_version):
         """Keep every required gate; preserve the existing RC8 Win/3.11 E2E exception."""
-        phases = ['dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging']
+        # On Windows/3.11 the full real wheel installer is the expensive
+        # independent gate. Start it first to overlap with the existing suite.
+        phases = ['windows_install'] if system == 'Windows' and python_version == (3, 11) else []
+        phases += ['dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging']
         if system == 'Linux':
             phases.append('sqlite_http')
         # The Windows 3.11 browser E2E exception is narrowly documented in
@@ -297,6 +300,17 @@ class Pipeline:
         workers = 2 if system == 'Windows' else 3
         self.parallel([(phase, lambda item=phase: self._verify_one(item))
                        for phase in gates], max_workers=workers)
+
+    def windows_install(self):
+        """Run the unchanged provenance-checked wheel installer alongside other gates.
+
+        The already-enforced Windows firewall remains installed through the
+        entire verify step, and the copied PowerShell smoke script uses
+        --no-index with the validated wheelhouse, never a live package index.
+        """
+        if platform.system() != 'Windows' or sys.version_info[:2] != (3, 11):
+            raise RuntimeError('Real wheel install gate is Windows Python 3.11 only')
+        self.run(['pwsh', '-NoProfile', '-File', SOURCE / 'tools/ci_verify_install.ps1'], cwd=SOURCE)
 
     def workflows(self):
         binary = self.root / ('actionlint.exe' if os.name == 'nt' else 'actionlint')

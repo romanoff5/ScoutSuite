@@ -2,6 +2,7 @@
 
 import copy
 import json
+from pathlib import Path
 from threading import Barrier
 import xml.etree.ElementTree as ET
 
@@ -178,7 +179,7 @@ def test_ci_independent_gates_preserve_cross_platform_matrix():
     }
     # Historical RC8 exception stays specific to Windows Python 3.11 E2E.
     assert set(Pipeline.independent_gates('Windows', (3, 11))) == {
-        'dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging',
+        'windows_install', 'dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging',
     }
 
 
@@ -225,3 +226,22 @@ def test_ci_parallel_verify_preserves_successful_gate_status(monkeypatch, tmp_pa
     result = json.loads((tmp_path / 'phase-p3c.json').read_text())
     assert result['status'] == 'PASSED'
     assert result['phase'] == 'p3c'
+
+
+def test_ci_windows_real_installer_remains_full_and_non_networked():
+    script = (Path(__file__).resolve().parents[1] /
+              'tools/ci_verify_install.ps1').read_text()
+    assert all(value in script for value in (
+        'install-fork.ps1', '-WheelhousePath', '-CommitSha',
+        '-ExpectedSha256', 'fork-install.json',
+        'invoke-selected-scout.ps1', 'aws --help'))
+    assert 'Get-FileHash' in script
+    assert '-FromOrigin' not in script
+    assert '-FromRelease' not in script
+
+
+def test_ci_windows_installer_not_executed_on_other_runtimes(monkeypatch, tmp_path):
+    pipeline = Pipeline(tmp_path, 'windows_install')
+    monkeypatch.setattr('tools.ci.platform.system', lambda: 'Linux')
+    with pytest.raises(RuntimeError, match='Windows Python 3.11 only'):
+        pipeline.windows_install()
