@@ -35,6 +35,10 @@ from ScoutSuite.providers.aws.resources.iam.attack_paths_p5d import annotate_p5d
 from tests.test_p5_phase1_synthetic_aws import (
     CASES, CATALOG, _p5_fixture, assert_p5_graph_goldens,
 )
+from tools.p5_finding_goldens import (
+    load as load_finding_goldens, validate_manifest, assert_rule_finding,
+)
+FINDING_GOLDENS = validate_manifest(load_finding_goldens(), CATALOG)
 
 RULES = (
     'iam-p5d-user-workload-delegation.json',
@@ -163,6 +167,7 @@ def _expected_findings(case, services):
 
 def _assert_assembled(case, provider, graph, expected):
     assert_p5_graph_goldens(graph, case)
+    golden = FINDING_GOLDENS[case['id']]
     for rule_name in RULES:
         service = rule_name.split('-')[0]
         if service == 'lambda':
@@ -172,6 +177,13 @@ def _assert_assembled(case, provider, graph, expected):
         key = rule_name[:-5]
         finding = provider.services[service]['findings'][key]
         expected_paths = expected[rule_name]
+        # Independent reviewed manifest, not graph-derived rule expectations.
+        pinned = {row['path'] for row in golden['flagged']
+                  if row['rule'] == rule_name}
+        assert expected_paths == pinned, (
+            case['id'], rule_name, 'graph-to-finding oracle drift',
+            expected_paths, pinned)
+        assert_rule_finding(case['id'], rule_name, finding, golden)
         assert finding['flagged_items'] == len(expected_paths), (
             case['id'], rule_name, expected_paths, finding['items'])
         assert finding['checked_items'] >= finding['flagged_items']
@@ -433,6 +445,8 @@ def run():
                         key = rule_name[:-5]
                         finding = _request(opener, url, 'full', {
                             'key': 'services¤' + service + '¤findings¤' + key})
+                        assert_rule_finding(case['id'], rule_name, finding,
+                                            FINDING_GOLDENS[case['id']])
                         assert finding['flagged_items'] == len(paths)
                         assert finding['evaluation_summary']['counts']['insecure'] == len(paths)
                         assert finding['confidence_assessment'] == (
