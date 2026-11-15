@@ -218,12 +218,19 @@ class EKSPublicFacade(AWSBaseFacade):
 
 
     async def get_pod_identity_associations(self, region, cluster_name):
-        """P5-D: bounded, read-only Pod Identity association census."""
+        """P5-D2: bounded List->Describe Pod Identity census.
+
+        List summaries deliberately contain NO roleArn. Never infer roles from
+        that response; only accept role/target role from verified Describe.
+        Restrictive session-policy bodies are not written into the report.
+        """
+        import asyncio
+
         client = AWSFacadeUtils.get_client('eks', self.session, region)
         if client is None:
             self.issue('failed', 'PodIdentityClientUnavailable')
             return {'status': 'unknown', 'associations': []}
-        seen_tokens, seen_ids, token, rows = set(), set(), None, []
+        seen_tokens, seen_ids, token, summaries = set(), set(), None, []
         complete = True
         for _ in range(MAX_PAGES):
             args = {'clusterName': cluster_name, 'maxResults': PAGE_SIZE}
@@ -233,7 +240,7 @@ class EKSPublicFacade(AWSBaseFacade):
                 page = await run_concurrently(
                     lambda args=args: client.list_pod_identity_associations(**args))
             except Exception as error:
-                self.error('ListPodIdentityAssociations', error, partial=bool(rows))
+                self.error('ListPodIdentityAssociations', error, partial=bool(summaries))
                 complete = False
                 break
             items = page.get('associations') if isinstance(page, dict) else None
@@ -243,23 +250,27 @@ class EKSPublicFacade(AWSBaseFacade):
                 break
             for item in items:
                 if not isinstance(item, dict):
+                    self.issue('partial', 'MalformedPodIdentitySummary')
                     complete = False
                     continue
                 ident = item.get('associationId')
-                role = item.get('roleArn')
                 namespace = item.get('namespace')
-                sa = item.get('serviceAccount')
+                account_name = item.get('serviceAccount')
+                association_arn = item.get('associationArn')
                 if (not isinstance(ident, str) or not ident or ident in seen_ids
-                        or not isinstance(role, str) or not role.startswith('arn:')
-                        or not all(isinstance(x, str) and x for x in (namespace, sa))
-                        or len(rows) >= MAX_CLUSTERS):
-                    self.issue('partial', 'InvalidPodIdentityAssociation')
+                        or item.get('clusterName', cluster_name) != cluster_name
+                        or not all(isinstance(x, str) and x for x in
+                                   (namespace, account_name, association_arn))
+                        or len(summaries) >= MAX_CLUSTERS):
+                    self.issue('partial', 'InvalidPodIdentitySummary')
                     complete = False
                     continue
                 seen_ids.add(ident)
-                rows.append({'id': ident, 'role_arn': role, 'namespace': namespace,
-                             'service_account': sa,
-                             'association_arn': item.get('associationArn')})
+                summaries.append({
+                    'id': ident, 'namespace': namespace, 'service_account': account_name,
+                    'association_arn': association_arn,
+                    'owner_arn': item.get('ownerArn') if isinstance(item.get('ownerArn'), str) else None,
+                })
             following = page.get('nextToken') if isinstance(page, dict) else None
             if following in (None, ''):
                 break
@@ -273,4 +284,65 @@ class EKSPublicFacade(AWSBaseFacade):
         else:
             self.issue('partial', 'PodIdentityPageLimit')
             complete = False
-        return {'status': 'complete' if complete else 'partial', 'associations': rows}
+
+        gate = asyncio.Semaphore(8)
+
+        async def describe(summary):
+            ident = summary['id']
+            async with gate:
+                try:
+                    response = await run_concurrently(
+                        lambda: client.describe_pod_identity_association(
+                            clusterName=cluster_name, associationId=ident))
+                except Exception as error:
+                    self.error('DescribePodIdentityAssociation', error, partial=True)
+                    return None
+            detail = response.get('association') if isinstance(response, dict) else None
+            if not isinstance(detail, dict) or any((
+                    detail.get('associationId') != ident,
+                    detail.get('clusterName') != cluster_name,
+                    detail.get('namespace') != summary['namespace'],
+                    detail.get('serviceAccount') != summary['service_account'],
+                    detail.get('associationArn') != summary['association_arn'],
+            )):
+                self.issue('partial', 'PodIdentityDescribeMismatch')
+                return None
+            role = detail.get('roleArn')
+            partition = ('aws', 'aws-us-gov', 'aws-cn')
+            parts = role.split(':', 5) if isinstance(role, str) else []
+            if (len(parts) != 6 or parts[0] != 'arn' or parts[1] not in partition
+                    or parts[2] != 'iam' or parts[3] != ''
+                    or parts[4] != self.owner_id or not parts[5].startswith('role/')):
+                self.issue('partial', 'PodIdentityRoleMissingOrCrossAccount')
+                return None
+            target = detail.get('targetRoleArn')
+            if target is not None and (not isinstance(target, str)
+                                       or re.fullmatch(r'arn:(aws|aws-us-gov|aws-cn):iam::[0-9]{12}:role/.+', target) is None):
+                self.issue('partial', 'MalformedPodIdentityTargetRole')
+                return None
+            raw_policy = detail.get('policy')
+            if raw_policy is not None and not isinstance(raw_policy, str):
+                self.issue('partial', 'MalformedPodIdentitySessionPolicy')
+                return None
+            # Only metadata, not raw session policy/values.
+            return {
+                **summary, 'role_arn': role, 'target_role_arn': target,
+                'session_policy_present': bool(raw_policy),
+                'session_policy_status': 'present' if raw_policy else 'absent',
+                'disable_session_tags': detail.get('disableSessionTags')
+                if isinstance(detail.get('disableSessionTags'), bool) else None,
+                'detail_collection_status': 'complete',
+            }
+
+        details = await asyncio.gather(*(describe(summary) for summary in summaries))
+        if any(item is None for item in details):
+            complete = False
+        records = [
+            item if item is not None else {
+                **summary, 'role_arn': None, 'target_role_arn': None,
+                'session_policy_status': 'unknown', 'session_policy_present': None,
+                'detail_collection_status': 'unknown',
+            }
+            for summary, item in zip(summaries, details)
+        ]
+        return {'status': 'complete' if complete else 'partial', 'associations': records}

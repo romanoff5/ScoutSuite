@@ -375,6 +375,7 @@
     "templates": [
       "partials/aws/left_menu_for_region.html",
       "partials/aws/left_menu_for_vpc.html",
+      "partials/aws/p5d.attack_paths.html",
       "partials/aws/services.accessanalyzer.regions.html",
       "partials/aws/services.accessanalyzer.regions.id.analyzers.html",
       "partials/aws/services.acm.regions.id.certificates.html",

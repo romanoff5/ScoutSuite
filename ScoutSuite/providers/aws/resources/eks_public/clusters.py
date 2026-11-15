@@ -148,8 +148,12 @@ class Clusters(AWSResources):
             mapped = {}
             for item in records if valid else []:
                 ident = item.get('id') if isinstance(item, dict) else None
-                if not isinstance(ident, str) or ident in mapped:
+                if (not isinstance(ident, str) or not ident or ident in mapped
+                        or item.get('detail_collection_status') != 'complete'
+                        or not isinstance(item.get('role_arn'), str)):
                     valid = False
+                    if isinstance(ident, str) and ident and ident not in mapped:
+                        mapped[ident] = item
                     continue
                 mapped[ident] = item
             status = result.get('status') if isinstance(result, dict) else None
@@ -157,5 +161,10 @@ class Clusters(AWSResources):
                 'complete' if status == 'complete' and valid else 'partial')
             cluster['pod_identity_associations'] = mapped
             cluster['pod_identity_associations_count'] = len(mapped)
+            cluster['pod_identity_described_count'] = sum(
+                item.get('detail_collection_status') == 'complete'
+                for item in mapped.values() if isinstance(item, dict))
+            cluster['pod_identity_unresolved_count'] = (
+                len(mapped) - cluster['pod_identity_described_count'])
 
         await asyncio.gather(*(enrich(c) for c in self.values()))

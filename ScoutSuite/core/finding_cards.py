@@ -11,6 +11,11 @@ from ipaddress import ip_address
 # Mandatory predicates are confirmed only when the explicitly named field
 # has the classifier's vulnerable state. No inferred policy simulator results.
 POLICY_FIELDS = {
+    'p5d-iam-delegation-v1': ('p5d_service_delegation_status', ('candidate',)),
+    'p5d-eks-role-v1': ('p5d_eks_identity_status', ('candidate',)),
+    'p5d-eks-cluster-v1': ('p5d_workload_identity_status', ('candidate',)),
+    'p5d-cross-account-v1': ('p5d_cross_account_status', ('candidate',)),
+    'p5d-external-invoke-review-v1': ('p5d_resource_policy_review', ('review',)),
     'iam-p4b-passrole-v1': ('p4b_passrole_path_status', ('candidate',)),
     'iam-p4b-privileged-oidc-v1': ('p4b_privileged_oidc_status', ('candidate',)),
     'iam-p4b2-user-passrole-v1': ('p4b2_user_passrole_status', ('candidate',)),
@@ -159,11 +164,69 @@ def _ec2_direct_checks(instance, services, path):
     return checks
 
 
+P5D_EDGE_TYPES = {
+    'p5d-iam-delegation-v1': frozenset((
+        'iam_lambda_create', 'iam_lambda_update', 'iam_ec2_create',
+        'iam_ecs_run_task', 'iam_ecs_register_run')),
+    'p5d-eks-role-v1': frozenset(('eks_irsa_role', 'eks_pod_identity')),
+    'p5d-eks-cluster-v1': frozenset(('eks_irsa_role', 'eks_pod_identity')),
+    'p5d-cross-account-v1': frozenset((
+        's3_cross_account_resource_policy', 's3_access_point_cross_account',
+        'kms_cross_account_key_policy', 'kms_cross_account_grant')),
+    'p5d-external-invoke-review-v1': frozenset(('lambda_external_invoke_review',)),
+}
+
+
+def _p5d_checks(policy, resource, services, path):
+    """Bind a P5-D finding to exact serializable graph edge witnesses."""
+    field, expected = POLICY_FIELDS[policy]
+    state = resource.get(field)
+    verdict = ('UNKNOWN' if state in (None, 'unknown', 'partial') else
+               'CONFIRMED' if state in expected else 'CONTRADICTED')
+    checks = [_check('P5-D resource verdict', verdict,
+                     '{}={}'.format(field, state or 'not collected'), path + '.' + field)]
+    graph = (services.get('iam') or {}).get('attack_paths_p5d') or {}
+    edges = graph.get('edges') if isinstance(graph, dict) else None
+    details = resource.get('p5d_attack_path_details')
+    valid = []
+    if isinstance(details, list) and isinstance(edges, dict):
+        for item in details[:80]:
+            if not isinstance(item, dict):
+                continue
+            edge = edges.get(item.get('id'))
+            if (not isinstance(edge, dict) or edge.get('type') not in P5D_EDGE_TYPES[policy]
+                    or any(edge.get(k) != item.get(k) for k in ('source', 'target', 'action'))
+                    or edge.get('verification') not in ('POTENTIAL', 'REVIEW')
+                    or edge.get('effective_permission_verified') is not False
+                    or edge.get('execution_verified') is not False):
+                continue
+            valid.append(edge)
+    if valid:
+        example = sorted(valid, key=lambda e: e['id'])[0]
+        detail = ('{} | {} -> {} | {} | {}'.format(
+            example['type'], example['source'], example['target'],
+            example['action'], (example.get('evidence') or {}).get('basis', '')))
+        checks.append(_check(
+            'Cross-service graph witness', 'CONFIRMED', detail,
+            'iam.attack_paths_p5d.edges.' + example['id']))
+    else:
+        checks.append(_check('Cross-service graph witness', 'UNKNOWN',
+                             'Missing or inconsistent graph edge; source and target unverified',
+                             'iam.attack_paths_p5d.edges'))
+    checks.append(_unverified(
+        'Effective permission and workload execution',
+        'NOT_VERIFIED: remote IAM, SCP/RCP, session policies, API execution and live Pods not simulated',
+        'iam.attack_paths_p5d.limitations'))
+    return checks
+
+
 def build_observation_checks(policy, resource, services, path, outcome):
     """Generate explicitly sourced predicates without copying raw policies or secrets."""
     resource = resource if isinstance(resource, dict) else {}
     if policy == 'ec2-direct-public-https-v1':
         return _ec2_direct_checks(resource, services, path)
+    if policy in P5D_EDGE_TYPES:
+        return _p5d_checks(policy, resource, services, path)
 
     if policy in POLICY_FIELDS:
         field, expected = POLICY_FIELDS[policy]
@@ -231,7 +294,8 @@ def resource_identity(resource, path):
     resource = resource if isinstance(resource, dict) else {}
     identity = {'resource_id': resource.get('id') if isinstance(resource.get('id'), str)
                 else path.rsplit('.', 1)[-1]}
-    for source, target in (('arn', 'resource_arn'), ('name', 'resource_name'),
+    for source, target in (('arn', 'resource_arn'), ('cluster_arn', 'resource_arn'),
+                           ('AccessPointArn', 'resource_arn'), ('name', 'resource_name'),
                            ('account_id', 'account_id'), ('owner_id', 'owner_id')):
         value = resource.get(source)
         if isinstance(value, str):
@@ -292,6 +356,9 @@ def build_resource_cards(finding):
             confidence, verification = 'MEDIUM', 'POTENTIAL'
         elif kind == 'BACKUP_RESTORE_OBSERVATION' or kind == 'VISIBLE_HOSTNAME_CORRELATION':
             confidence, verification = 'MEDIUM', 'OBSERVED_PARTIAL_SCOPE'
+        elif kind == 'RESOURCE_POLICY_REVIEW':
+            confidence, verification = 'LOW', 'REVIEW'
+            reasons.append('INVOKE_GRANT_IS_NOT_ROLE_ESCALATION')
         elif kind == 'POLICY_REVIEW':
             confidence = 'MEDIUM' if incomplete or classifier_only else 'HIGH'
             verification = 'POLICY_VIOLATION' if finding.get('severity_assigned') else 'REVIEW'

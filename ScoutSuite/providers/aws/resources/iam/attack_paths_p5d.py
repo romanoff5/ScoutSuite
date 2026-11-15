@@ -24,6 +24,7 @@ MAX_TARGETS = 1200
 MAX_PAIRS = 150000
 MAX_EDGES = 5000
 MAX_RESOURCES = 3000
+MAX_DETAILS_PER_RESOURCE = 80
 READ_ACTIONS = ('s3:GetObject', 's3:PutObject', 's3:ListBucket')
 
 
@@ -158,6 +159,7 @@ def _sources(iam):
                         missing |= incomplete
             obj['p5d_service_delegation_status'] = 'unknown'
             obj['p5d_service_delegation_edges'] = []
+            obj['p5d_attack_path_details'] = []
             result.append((arn, kind, obj, docs, missing))
             complete &= not missing
     result.sort(key=lambda row: row[0])
@@ -311,10 +313,13 @@ def _eks_routes(services, iam, emit):
         issuer = cluster.get('oidc_issuer')
         cluster_arn = cluster.get('cluster_arn')
         account = _arn_account(cluster_arn)
-        if not isinstance(issuer, str) or not issuer.startswith('https://') or not account:
+        if not account:
             cluster['p5d_workload_identity_status'] = 'unknown'
             continue
-        issuer_host = issuer[len('https://'):].rstrip('/')
+        # Pod Identity is independent of IRSA/OIDC: a cluster without an
+        # observed OIDC issuer may still have verified EKS Pod Identity roles.
+        has_issuer = isinstance(issuer, str) and issuer.startswith('https://')
+        issuer_host = issuer[len('https://'):].rstrip('/') if has_issuer else ''
         partition = cluster_arn.split(':')[1]
         provider = 'arn:' + partition + ':iam::' + account + ':oidc-provider/' + issuer_host
         found = False
@@ -325,8 +330,9 @@ def _eks_routes(services, iam, emit):
             statements = _statements((role.get('assume_role_policy') or {}).get('PolicyDocument'))
             if statements is None:
                 continue
-            if _trust_blocked(statements, 'sts:AssumeRoleWithWebIdentity',
-                              provider, 'Federated'):
+            if not has_issuer or _trust_blocked(
+                    statements, 'sts:AssumeRoleWithWebIdentity',
+                    provider, 'Federated'):
                 continue
             for row in statements:
                 principal = row.get('Principal')
@@ -361,6 +367,13 @@ def _eks_routes(services, iam, emit):
         associations = cluster.get('pod_identity_associations')
         if cluster.get('pod_identity_inventory_status') == 'complete' and isinstance(associations, dict):
             for assoc in associations.values():
+                if not isinstance(assoc, dict) or assoc.get('detail_collection_status', 'complete') != 'complete':
+                    continue
+                # Role chaining or a restrictive association session policy
+                # changes effective permissions. Do not label the first role
+                # as an exploitable privilege destination in this case.
+                if assoc.get('target_role_arn') or assoc.get('session_policy_present') is not False:
+                    continue
                 target = assoc.get('role_arn')
                 role = next((x for x in roles if x.get('arn') == target), None)
                 if role is None:
@@ -553,6 +566,19 @@ def annotate_p5d_attack_paths(services, selected, account_id):
         }
         if isinstance(resource, dict) and status_field:
             resource[status_field] = 'review' if review else 'candidate'
+            details = resource.setdefault('p5d_attack_path_details', [])
+            if isinstance(details, list) and len(details) < MAX_DETAILS_PER_RESOURCE:
+                details.append({
+                    'id': ident, 'source': source, 'target': target,
+                    'type': kind, 'action': action,
+                    'verification': 'REVIEW' if review else 'POTENTIAL',
+                    'confidence': 'LOW' if review else 'MEDIUM',
+                    'basis': evidence,
+                    'effective_permission_verified': False,
+                    'execution_verified': False,
+                })
+            else:
+                resource['p5d_attack_path_details_truncated'] = True
         return ident
     roles = iam.get('roles') if isinstance(iam.get('roles'), dict) else {}
     targets = sorted((r for r in roles.values()
@@ -589,6 +615,34 @@ def annotate_p5d_attack_paths(services, selected, account_id):
     else:
         graph['collection']['eks'] = 'not_selected'
     _resource_routes(services, account_id, emit)
+    # The EKS cluster modal needs the same exact edge witnesses that are
+    # already serialized for IAM target roles. No additional AWS calls.
+    cluster_index = {
+        cluster['cluster_arn']: cluster
+        for cluster in _regions(services, 'eks', 'clusters')
+        if isinstance(cluster.get('cluster_arn'), str)
+    }
+    for cluster in cluster_index.values():
+        cluster['p5d_attack_path_details'] = []
+    for edge in sorted(graph['edges'].values(), key=lambda e: e['id']):
+        if edge['type'] not in ('eks_irsa_role', 'eks_pod_identity'):
+            continue
+        anchor = (edge['source'] if edge['type'] == 'eks_irsa_role'
+                  else edge['source'].rsplit('/', 2)[0])
+        cluster = cluster_index.get(anchor)
+        if cluster is None:
+            continue
+        details = cluster['p5d_attack_path_details']
+        if len(details) < MAX_DETAILS_PER_RESOURCE:
+            details.append({
+                'id': edge['id'], 'source': edge['source'], 'target': edge['target'],
+                'type': edge['type'], 'action': edge['action'],
+                'verification': edge['verification'], 'confidence': edge['confidence'],
+                'basis': edge['evidence']['basis'],
+                'effective_permission_verified': False, 'execution_verified': False,
+            })
+        else:
+            cluster['p5d_attack_path_details_truncated'] = True
     for service in ('s3', 'kms', 'awslambda'):
         graph['collection'][service] = 'candidate_only' if service in selected else 'not_selected'
     graph['edges_count'] = len(graph['edges'])

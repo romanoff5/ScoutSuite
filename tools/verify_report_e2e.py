@@ -266,6 +266,49 @@ def run_browser_checks(report, profile):
         check(page.evaluate('window.__scoutXss') is None, 'hostile detector field executed')
         check(page.locator('img[src="x"]').count() == 0, 'hostile detector field injected markup')
 
+        # P5-D2: an actual report must register the escaped attack-path modal
+        # and show exact resource identifiers without interpreting hostile input.
+        rendered = page.evaluate("""(hostile) => {
+            const synthetic = {
+                name: 'EKS cluster',
+                cluster_arn: 'arn:aws:eks:eu-central-1:000000000000:cluster/sample',
+                p5d_workload_identity_status: 'candidate',
+                pod_identity_inventory_status: 'complete',
+                pod_identity_associations_count: 1,
+                pod_identity_associations: {'pa-1': {
+                    association_arn: 'arn:aws:eks:eu-central-1:000000000000:podidentityassociation/sample/pa-1',
+                    namespace: 'team', service_account: 'api',
+                    role_arn: 'arn:aws:iam::000000000000:role/Admin',
+                    detail_collection_status: 'complete',
+                    session_policy_status: 'absent'
+                }},
+                p5d_attack_path_details: [{
+                    id: 'synthetic-edge',
+                    type: 'eks_pod_identity', verification: 'POTENTIAL',
+                    confidence: 'MEDIUM', source: hostile,
+                    target: 'arn:aws:iam::000000000000:role/Admin',
+                    action: 'sts:AssumeRole+TagSession',
+                    basis: hostile, effective_permission_verified: false,
+                    execution_verified: false
+                }]
+            };
+            const template = Handlebars.compile('{{> services.eks.regions.id.clusters}}');
+            const modal = document.createElement('div');
+            modal.id = 'scout-p5d2-e2e';
+            modal.innerHTML = template(synthetic);
+            document.body.appendChild(modal);
+            return modal.innerText;
+        }""", HOSTILE)
+        check('eks_pod_identity' in rendered, 'P5-D2 EKS edge type hidden')
+        check('sts:AssumeRole+TagSession' in rendered, 'P5-D2 edge action hidden')
+        check('arn:aws:iam::000000000000:role/Admin' in rendered,
+              'P5-D2 role ARN lost from report')
+        check('session policy: absent' in rendered, 'P5-D2 association status missing')
+        check(page.evaluate('window.__scoutXss') is None, 'P5-D2 hostile ARN or evidence executed')
+        check(page.locator('#scout-p5d2-e2e img[src="x"]').count() == 0,
+              'P5-D2 hostile data injected HTML')
+        page.locator('#scout-p5d2-e2e').evaluate('(el) => el.remove()')
+
         # RC9 evidence views: masked secrets, Secrets Manager status, ALB WAF and DNS domains.
         page.goto(url + '#services.awslambda.findings.awslambda-function-env-secrets.items')
         page.wait_for_selector('text=Sensitive variable name with literal value', timeout=5000)
