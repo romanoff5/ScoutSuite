@@ -1,0 +1,541 @@
+{
+  "schema": "scoutsuite-p5-finding-goldens-v1",
+  "scope": "Eight enabled P5-D rules only; independently pinned positive resource paths and original ARNs; never output-derived expected findings.",
+  "cases": [
+    {
+      "id": "iam-lambda-passrole-allow",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-passrole-explicit-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-unrelated-deny",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-missing-invoke",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-boundary-unverified",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "iam-ec2-profile-present",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-ec2-profile-missing",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-ec2-runinstances-denied",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "ecs-task-role-candidate",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "ecs-task-run-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "ecs-agent-execution-role-review",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-irsa-exact-issuer-aud-sub",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-eks-role-identity.json",
+          "path": "iam.roles.priv",
+          "resource_arn": "arn:aws:iam::123456789012:role/Priv"
+        },
+        {
+          "rule": "eks-p5d-workload-identity.json",
+          "path": "eks.regions.eu-central-1.clusters.sample",
+          "resource_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-irsa-wrong-audience",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-irsa-denied-trust",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-podidentity-list-describe-complete",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-eks-role-identity.json",
+          "path": "iam.roles.priv",
+          "resource_arn": "arn:aws:iam::123456789012:role/Priv"
+        },
+        {
+          "rule": "eks-p5d-workload-identity.json",
+          "path": "eks.regions.eu-central-1.clusters.sample",
+          "resource_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-podidentity-describe-accessdenied",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-eks-role-identity.json",
+          "path": "iam.roles.priv",
+          "resource_arn": "arn:aws:iam::123456789012:role/Priv"
+        },
+        {
+          "rule": "eks-p5d-workload-identity.json",
+          "path": "eks.regions.eu-central-1.clusters.sample",
+          "resource_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample"
+        }
+      ]
+    },
+    {
+      "id": "eks-podidentity-list-accessdenied",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-eks-role-identity.json",
+          "path": "iam.roles.priv",
+          "resource_arn": "arn:aws:iam::123456789012:role/Priv"
+        },
+        {
+          "rule": "eks-p5d-workload-identity.json",
+          "path": "eks.regions.eu-central-1.clusters.sample",
+          "resource_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample"
+        }
+      ]
+    },
+    {
+      "id": "eks-podidentity-session-policy",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-podidentity-target-role",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "eks-podidentity-tag-session-denied",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "s3-cross-account-prefix-get",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "s3-p5d-cross-account-bucket.json",
+          "path": "s3.buckets.audit",
+          "resource_arn": "arn:aws:s3:::audit-reports/*"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "s3-cross-account-explicit-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "s3-bucket-policy-accessdenied",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "s3-p5d-cross-account-bucket.json",
+          "path": "s3.buckets.audit",
+          "resource_arn": "arn:aws:s3:::audit-reports/*"
+        }
+      ]
+    },
+    {
+      "id": "s3-object-source-vpce-conditional",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "s3-govcloud-partition",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "s3-p5d-cross-account-bucket.json",
+          "path": "s3.buckets.audit",
+          "resource_arn": "arn:aws-us-gov:s3:::audit-reports/*"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "kms-key-policy-external-decrypt",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "kms-p5d-cross-account-key.json",
+          "path": "kms.regions.eu-central-1.keys.example",
+          "resource_arn": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "kms-key-policy-explicit-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "kms-key-policy-accessdenied",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "kms-p5d-cross-account-key.json",
+          "path": "kms.regions.eu-central-1.keys.example",
+          "resource_arn": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid"
+        }
+      ]
+    },
+    {
+      "id": "kms-grant-unconstrained",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "kms-p5d-cross-account-key.json",
+          "path": "kms.regions.eu-central-1.keys.example",
+          "resource_arn": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "kms-grant-encryption-context",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "kms-grants-list-accessdenied",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "kms-p5d-cross-account-key.json",
+          "path": "kms.regions.eu-central-1.keys.example",
+          "resource_arn": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid"
+        }
+      ]
+    },
+    {
+      "id": "lambda-external-invoke-review",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "awslambda-p5d-external-privileged-invoke-review.json",
+          "path": "awslambda.regions.eu-central-1.functions.example",
+          "resource_arn": "arn:aws:lambda:eu-central-1:123456789012:function:Example"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "lambda-external-invoke-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-update-positive",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-update-scoped-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-lambda-update-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "iam-ec2-profile-mutation-positive",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-ec2-profile-mutation-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-ec2-profile-mutation-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "ecs-register-run-positive",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "ecs-register-run-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "ecs-register-run-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "s3-access-point-external-positive",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "s3-p5d-cross-account-access-point.json",
+          "path": "s3.advanced.regions.eu-central-1.access_points.synthetic",
+          "resource_arn": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "s3-access-point-external-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "s3-access-point-policy-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "s3-p5d-cross-account-access-point.json",
+          "path": "s3.advanced.regions.eu-central-1.access_points.synthetic",
+          "resource_arn": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic"
+        }
+      ]
+    },
+    {
+      "id": "iam-user-lambda-delegation-positive",
+      "graph_status": "complete",
+      "flagged": [
+        {
+          "rule": "iam-p5d-user-workload-delegation.json",
+          "path": "iam.users.builder",
+          "resource_arn": "arn:aws:iam::123456789012:user/Builder"
+        }
+      ],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-user-lambda-delegation-deny",
+      "graph_status": "complete",
+      "flagged": [],
+      "unknown_scope": []
+    },
+    {
+      "id": "iam-user-lambda-delegation-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-user-workload-delegation.json",
+          "path": "iam.users.builder",
+          "resource_arn": "arn:aws:iam::123456789012:user/Builder"
+        }
+      ]
+    },
+    {
+      "id": "iam-ec2-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "ecs-task-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "ecs-agent-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-role-workload-delegation.json",
+          "path": "iam.roles.operator",
+          "resource_arn": "arn:aws:iam::123456789012:role/Operator"
+        }
+      ]
+    },
+    {
+      "id": "eks-irsa-boundary-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "iam-p5d-eks-role-identity.json",
+          "path": "iam.roles.priv",
+          "resource_arn": "arn:aws:iam::123456789012:role/Priv"
+        },
+        {
+          "rule": "eks-p5d-workload-identity.json",
+          "path": "eks.regions.eu-central-1.clusters.sample",
+          "resource_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample"
+        }
+      ]
+    },
+    {
+      "id": "lambda-invoke-collector-unknown",
+      "graph_status": "partial",
+      "flagged": [],
+      "unknown_scope": [
+        {
+          "rule": "awslambda-p5d-external-privileged-invoke-review.json",
+          "path": "awslambda.regions.eu-central-1.functions.example",
+          "resource_arn": "arn:aws:lambda:eu-central-1:123456789012:function:Example"
+        }
+      ]
+    }
+  ]
+}
