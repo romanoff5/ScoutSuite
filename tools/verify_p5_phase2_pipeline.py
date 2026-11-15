@@ -6,6 +6,7 @@ CI namespace. No AWS credentials, external network or real account artifacts.
 The checked-in 33 independently pinned Phase-1 cases remain the source oracle.
 """
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -31,7 +32,9 @@ from ScoutSuite.core.server import Server, MAX_RESPONSE_BYTES
 from ScoutSuite.providers.aws.provider import AWSProvider
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import build_relationship_graph
 from ScoutSuite.providers.aws.resources.iam.attack_paths_p5d import annotate_p5d_attack_paths
-from tests.test_p5_phase1_synthetic_aws import CASES, CATALOG, _p5_fixture
+from tests.test_p5_phase1_synthetic_aws import (
+    CASES, CATALOG, _p5_fixture, assert_p5_graph_goldens,
+)
 
 RULES = (
     'iam-p5d-user-workload-delegation.json',
@@ -159,16 +162,7 @@ def _expected_findings(case, services):
 
 
 def _assert_assembled(case, provider, graph, expected):
-    assert graph['status'] == case['expected']['graph_status'], case['id']
-    actual_edges = {
-        (edge['type'], edge['source'], edge['target'], edge['verification'])
-        for edge in graph['edges'].values()
-    }
-    pinned_edges = {
-        (e['type'], e['source'], e['target'], e['verification'])
-        for e in case['expected']['edges']
-    }
-    assert actual_edges == pinned_edges, (case['id'], actual_edges, pinned_edges)
+    assert_p5_graph_goldens(graph, case)
     for rule_name in RULES:
         service = rule_name.split('-')[0]
         if service == 'lambda':
@@ -218,11 +212,32 @@ def _assert_assembled(case, provider, graph, expected):
                 assert card['verification_status'] == verification, (
                     case['id'], rule_name, card['resource_arn'],
                     card['verification_status'], verification)
-                assert card['confidence'] in ('LOW', 'MEDIUM')
-                assert card['collection'] in ('COMPLETE', 'PARTIAL')
-                assert any(check['label'] == 'Cross-service graph witness'
-                           and check['state'] == 'CONFIRMED'
-                           for check in card['supporting_evidence'])
+                assert card['confidence'] == (
+                    'LOW' if service == 'awslambda' else 'MEDIUM'), (
+                        case['id'], rule_name, card['confidence'])
+                assert card['collection'] == 'COMPLETE', (
+                    case['id'], rule_name, card['collection'])
+                witnesses = [check for check in card['supporting_evidence']
+                             if check['label'] == 'Cross-service graph witness'
+                             and check['state'] == 'CONFIRMED']
+                assert len(witnesses) == 1, (case['id'], rule_name, card)
+                confirmed = witnesses[0]
+                # Only oracle-pinned expected fields may establish the witness:
+                # action, textual basis, source and target must survive B2.
+                expected_witnesses = set()
+                for oracle in case['expected']['edges']:
+                    if oracle['type'] == GRAPH_ONLY_REVIEW:
+                        continue
+                    digest = hashlib.sha256('|'.join(
+                        (oracle['source'], oracle['target'], oracle['type'],
+                         oracle['action'])).encode('utf-8')).hexdigest()[:24]
+                    expected_witnesses.add((
+                        'iam.attack_paths_p5d.edges.' + digest,
+                        '{} | {} -> {} | {} | {}'.format(
+                            oracle['type'], oracle['source'], oracle['target'],
+                            oracle['action'], oracle['evidence']['basis'])))
+                assert (confirmed['source'], confirmed['detail']) in expected_witnesses, (
+                    case['id'], rule_name, confirmed)
                 assert any(check['state'] == 'NOT_VERIFIED'
                            for check in card['supporting_evidence'])
         else:
@@ -404,8 +419,7 @@ def run():
                         {'key': 'services¤iam¤attack_paths_p5d'})
                     assert restored_graph == prepare_results(
                         item['provider'])['services']['iam']['attack_paths_p5d']
-                    assert restored_graph['edges_count'] == len(
-                        case['expected']['edges'])
+                    assert_p5_graph_goldens(restored_graph, case)
                     for rule_name, paths in item['expected'].items():
                         service = rule_name.split('-')[0]
                         if service == 'lambda':

@@ -106,7 +106,6 @@ def test_agent_execution_role_review_has_distinct_confidence_after_one_fact():
                  "task_definitions", "example", "execution_role_arn"],
         "value": "arn:aws:iam::123456789012:role/Priv",
     })
-    amended["expected"] = {"api_status": None}  # overridden by direct assertions
     after = _scan(amended)
     assert after["status"] == "complete"
     assert len(after["edges"]) == 2

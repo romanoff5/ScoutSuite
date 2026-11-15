@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORRELATOR = ROOT / "ScoutSuite/providers/aws/resources/iam/attack_paths_p5d.py"
 CATALOG = ROOT / "tests/data/p5_phase1_synthetic_aws.json"
 MATRIX = ROOT / "tests/data/p5_detector_coverage.json"
+METAMORPHIC = ROOT / "tests/data/p5_metamorphic_transitions.json"
 RULESET = ROOT / "ScoutSuite/providers/aws/rules/rulesets/default.json"
 STATUSES = ("positive", "negative", "unknown")
 
@@ -158,20 +159,76 @@ def validate(matrix, catalog, code, ruleset):
     # to this gate's explicit witness case selection.
     observed = {edge["type"] for case in cases for edge in case["expected"]["edges"]}
     assert observed <= expected_types, "Orphan or obsolete fixture kinds"
+    # The graph oracle pins every observable edge field. No test may use
+    # runtime-generated action/provenance/confidence as its own oracle.
+    required = {"type", "source", "target", "action", "verification",
+                "confidence", "collection", "effective_permission_verified",
+                "execution_verified", "evidence"}
+    golden_count = 0
+    for case in cases:
+        for edge in case["expected"]["edges"]:
+            assert set(edge) == required, "Incomplete P5 edge golden: " + case["id"]
+            provenance = edge["evidence"]
+            assert set(provenance) == {"source", "resource", "basis"}
+            assert provenance["source"] == edge["source"]
+            assert provenance["resource"] == edge["target"]
+            assert isinstance(provenance["basis"], str) and provenance["basis"]
+            assert isinstance(edge["action"], str) and edge["action"]
+            assert edge["confidence"] == (
+                "LOW" if edge["verification"] == "REVIEW" else "MEDIUM")
+            assert edge["collection"] == "complete"
+            assert edge["effective_permission_verified"] is False
+            assert edge["execution_verified"] is False
+            golden_count += 1
     return {
         "detectors": len(detectors),
         "finding_rules": len(rules),
         "scenarios": len(cases),
         "checked_states": len(detectors) * len(STATUSES),
+        "golden_edges": golden_count,
     }
 
 
+def validate_metamorphic(matrix, catalog, manifest):
+    """Every active P5 graph kind requires a single-fact negative and UNKNOWN transition."""
+    assert manifest.get("schema") == "scoutsuite-p5-metamorphic-v1"
+    cases = {case["id"]: case for case in catalog["cases"]}
+    transitions = manifest.get("transitions")
+    assert isinstance(transitions, list) and len(transitions) >= 28
+    assert len({tr["id"] for tr in transitions}) == len(transitions)
+    coverage = {kind: set() for kind in matrix["detectors"]}
+    for tr in transitions:
+        kind = tr["edge_type"]
+        assert kind in coverage, "Unknown metamorphic detector: " + kind
+        category = tr["kind"]
+        assert category in ("negative", "unknown", "invariant")
+        assert category not in coverage[kind], "Repeated metamorphic transition"
+        coverage[kind].add(category)
+        assert tr["base_case"] in cases, "Metamorphic base missing"
+        base = cases[tr["base_case"]]
+        assert len(base["expected"]["edges"]) == 1
+        assert base["expected"]["edges"][0]["type"] == kind
+        assert tr["expected_graph_status"] == (
+            "partial" if category == "unknown" else "complete")
+        delta = tr["change"]
+        assert isinstance(delta, dict) and set(delta) == {"op", "path", "value"}
+        assert delta["op"] in ("set", "append")
+        assert isinstance(delta["path"], list) and len(delta["path"]) >= 3
+        assert delta["path"][0] in ("services", "api")
+    for kind, states in coverage.items():
+        assert {"negative", "unknown"} <= states, (
+            kind + " missing single-fact negative/UNKNOWN transition")
+    return len(transitions)
+
+
 def check():
-    result = validate(
-        json.loads(MATRIX.read_text(encoding="utf-8")),
-        json.loads(CATALOG.read_text(encoding="utf-8")),
-        CORRELATOR.read_text(encoding="utf-8"),
-        json.loads(RULESET.read_text(encoding="utf-8")))
+    matrix = json.loads(MATRIX.read_text(encoding="utf-8"))
+    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    result = validate(matrix, catalog,
+                      CORRELATOR.read_text(encoding="utf-8"),
+                      json.loads(RULESET.read_text(encoding="utf-8")))
+    result["metamorphic_transitions"] = validate_metamorphic(
+        matrix, catalog, json.loads(METAMORPHIC.read_text(encoding="utf-8")))
     print("P5 detector coverage: PASS (" +
           ", ".join(str(value) + " " + key for key, value in result.items()) +
           ")", flush=True)
