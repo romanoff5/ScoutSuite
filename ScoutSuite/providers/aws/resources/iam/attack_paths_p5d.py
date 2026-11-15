@@ -118,14 +118,14 @@ def _resource_permission(policy, principal, action, resource):
     return 'yes' if allowed else 'no'
 
 
-def _s3_object_witnesses(policy, bucket_name, principal, action):
+def _s3_object_witnesses(policy, bucket_name, principal, action, partition='aws'):
     """Construct bounded existing-policy prefix witnesses, not a fixed key.
 
     A bucket policy restricted to reports/* must not be tested only against
     P5DObjectWitness at the bucket root. All witnesses remain hypothetical;
     neither object existence nor external IAM authorization is inferred.
     """
-    candidates = ['arn:aws:s3:::' + bucket_name + '/P5DObjectWitness']
+    candidates = [f'arn:{partition}:s3:::{bucket_name}/P5DObjectWitness']
     rows = _statements(policy)
     if rows is None:
         return candidates
@@ -497,8 +497,17 @@ def _resource_routes(services, own_account, emit):
                 continue
             name = bucket.get('name')
             policy = bucket.get('policy')
-            if not isinstance(name, str):
+            if not isinstance(name, str) or not name:
                 continue
+            # The bucket collector's arn denotes bucket/*, not the bucket
+            # root. Reconstruct the bucket root with its real AWS partition.
+            raw_bucket_arn = bucket.get('arn')
+            parts = raw_bucket_arn.split(':', 5) if isinstance(raw_bucket_arn, str) else []
+            partition = (parts[1] if len(parts) == 6
+                         and parts[0] == 'arn' and parts[2] == 's3'
+                         and parts[1] in ('aws', 'aws-cn', 'aws-us-gov')
+                         else 'aws')
+            bucket_arn = f'arn:{partition}:s3:::{name}'
             principals, uncertain = _external_principals(policy, own_account)
             for principal in principals:
                 # RestrictPublicBuckets blocks cross-account permissions from a
@@ -507,8 +516,9 @@ def _resource_routes(services, own_account, emit):
                 if bucket.get('policy_is_public') is True and pab.get('RestrictPublicBuckets') is True:
                     continue
                 for action in READ_ACTIONS:
-                    candidates = (['arn:aws:s3:::' + name] if action == 's3:ListBucket'
-                                  else _s3_object_witnesses(policy, name, principal, action))
+                    candidates = ([bucket_arn] if action == 's3:ListBucket'
+                                  else _s3_object_witnesses(policy, name, principal, action,
+                                                            partition))
                     witness = next((r for r in candidates if
                                     _resource_permission(policy, principal, action, r) == 'yes'), None)
                     if witness is None:
@@ -517,7 +527,7 @@ def _resource_routes(services, own_account, emit):
                         continue  # Account root principal delegates to remote IAM.
                     if bucket.get('policy_is_public') is True and pab.get('RestrictPublicBuckets') is None:
                         continue
-                    edge_id = emit(principal, 'arn:aws:s3:::' + name,
+                    edge_id = emit(principal, bucket_arn,
                                    's3_cross_account_resource_policy', action,
                                    'explicit external principal + scoped policy witness ' + witness
                                    + '; remote identity policy and object existence unknown',
