@@ -282,6 +282,13 @@ def _s3_inventory_scope(s3):
             if count > MAX_RESOURCES or any(not isinstance(ap, dict)
                                             for ap in points.values()):
                 return 'partial'
+            # A denied/unfinished GetAccessPointPolicy is not an empty policy.
+            # Preserve uncertainty even when the AP inventory itself was read.
+            if any(ap.get('policy_status') != 'verified'
+                   or ap.get('detail_complete') is not True
+                   or _statements(ap.get('policy_document')) is None
+                   for ap in points.values()):
+                return 'partial'
     return 'observed_bounded'
 
 
