@@ -247,3 +247,51 @@ def test_pod_identity_pagination_access_denied_fail_closed():
         result = asyncio.run(facade.get_pod_identity_associations('eu-central-1', 'test'))
     assert result['status'] == 'partial'
     assert result['associations'] == []
+
+
+def test_irsa_matching_deny_veto_but_unrelated_deny_does_not():
+    issuer = 'https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLE'
+    provider = 'arn:aws:iam::123456789012:oidc-provider/' + issuer[8:]
+    trust = {'Effect': 'Allow', 'Principal': {'Federated': provider},
+             'Action': 'sts:AssumeRoleWithWebIdentity',
+             'Condition': {'StringEquals': {
+                 issuer[8:] + ':aud': 'sts.amazonaws.com',
+                 issuer[8:] + ':sub': 'system:serviceaccount:team:api'}}}
+    target = role('Priv', admin=True, trust=[trust])
+    cluster = {'cluster_arn': 'arn:aws:eks:eu-central-1:123456789012:cluster/test',
+               'oidc_issuer': issuer, 'pod_identity_inventory_status': 'complete',
+               'pod_identity_associations': {}}
+    eks = {'regions': {'eu-central-1': {'clusters': {'test': cluster}}}}
+    unrelated = {'Effect': 'Deny', 'Action': 'sts:AssumeRole',
+                 'Principal': {'Federated': provider}}
+    target['assume_role_policy']['PolicyDocument']['Statement'].append(unrelated)
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert len(edges(graph, 'eks_irsa_role')) == 1
+    unrelated['Action'] = 'sts:AssumeRoleWithWebIdentity'
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert not edges(graph, 'eks_irsa_role')
+
+
+def test_pod_identity_matching_deny_and_notprincipal_veto():
+    target = role('Priv', admin=True, trust=[
+        trust_service('pods.eks.amazonaws.com', ['sts:AssumeRole', 'sts:TagSession'])])
+    cluster = {'cluster_arn': 'arn:aws:eks:eu-central-1:123456789012:cluster/test',
+               'oidc_issuer': 'https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLE',
+               'pod_identity_inventory_status': 'complete',
+               'pod_identity_associations': {'p': {
+                   'namespace': 'team', 'service_account': 'api',
+                   'role_arn': target['arn']}}}
+    eks = {'regions': {'eu-central-1': {'clusters': {'c': cluster}}}}
+    deny = {'Effect': 'Deny', 'Action': 'sts:TagSession',
+            'Principal': {'Service': 'pods.eks.amazonaws.com'}}
+    target['assume_role_policy']['PolicyDocument']['Statement'].append(deny)
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert not edges(graph, 'eks_pod_identity')
+    deny['Action'] = 'ec2:RunInstances'
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert len(edges(graph, 'eks_pod_identity')) == 1
+    deny['Action'] = 'sts:TagSession'
+    deny.pop('Principal')
+    deny['NotPrincipal'] = {'Service': 'ec2.amazonaws.com'}
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert not edges(graph, 'eks_pod_identity')
