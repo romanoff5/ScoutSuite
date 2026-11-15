@@ -82,3 +82,8 @@ References:
 - EKS modal counts now distinguish **retained association summaries**,
   **successfully described associations** and **unresolved associations**;
   partial evidence must not be labelled as successfully described.
+
+- IAM role trust grants for `sts:AssumeRole` and `sts:TagSession` may be
+  provided by two separate unconditional `Allow` statements. Both are
+  independently checked, with matching/uncertain explicit Deny precedence;
+  unknown trust conditions remain unsupported rather than assumed true.

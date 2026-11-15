@@ -47,12 +47,15 @@ def role():
                 'Action': ['sts:AssumeRole', 'sts:TagSession']}]}}}
 
 
-def graph(assoc):
+def graph(assoc, trust=None):
     cluster = {'cluster_arn': CLUSTER, 'oidc_issuer': None,
                'pod_identity_inventory_status': 'complete',
                'pod_identity_associations': {'pa-1': assoc}}
+    target_role = role()
+    if trust is not None:
+        target_role['assume_role_policy']['PolicyDocument']['Statement'] = trust
     services = {
-        'iam': {'roles': {'r': role()}, 'users': {}, 'groups': {}, 'policies': {}},
+        'iam': {'roles': {'r': target_role}, 'users': {}, 'groups': {}, 'policies': {}},
         'eks': {'regions': {'eu-central-1': {'clusters': {'sample': cluster}}}},
     }
     paths = annotate_p5d_attack_paths(services, ['iam', 'eks'], ACCOUNT)
@@ -317,3 +320,28 @@ def test_p5d2_cluster_modal_shows_distinct_describe_and_census_counts():
     assert 'descriptions verified: {{pod_identity_described_count}}' in modal
     assert 'unresolved: {{pod_identity_unresolved_count}}' in modal
     assert 'described: {{pod_identity_associations_count}}' not in modal
+
+
+
+def test_p5d2_separate_trust_allow_statements_are_valid_with_deny_precedence():
+    assoc = {'id': 'pa-1', 'role_arn': ROLE, 'namespace': 'team',
+             'service_account': 'api', 'association_arn': ASSOC,
+             'detail_collection_status': 'complete',
+             'session_policy_present': False, 'target_role_arn': None}
+    def statement(action, effect='Allow', condition=None):
+        row = {'Effect': effect,
+               'Principal': {'Service': 'pods.eks.amazonaws.com'},
+               'Action': action}
+        if condition is not None:
+            row['Condition'] = condition
+        return row
+    split = [statement('sts:AssumeRole'), statement('sts:TagSession')]
+    assert len(pod_edges(graph(assoc, trust=split)[0])) == 1
+    assert not pod_edges(graph(assoc, trust=split[:1])[0])
+    assert not pod_edges(graph(assoc, trust=split + [
+        statement('sts:TagSession', effect='Deny')])[0])
+    # An unmodelled condition must not become a confirmed trust Allow.
+    conditional = [statement('sts:AssumeRole'),
+                   statement('sts:TagSession', condition={
+                       'StringEquals': {'aws:RequestTag/unknown': 'x'}})]
+    assert not pod_edges(graph(assoc, trust=conditional)[0])

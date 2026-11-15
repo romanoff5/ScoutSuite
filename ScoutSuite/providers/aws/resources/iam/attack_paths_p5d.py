@@ -348,6 +348,25 @@ def _trust_blocked(statements, action, principal, principal_kind):
     return False
 
 
+def _pod_trust_allow(statements, action):
+    """Find one unconditional, explicit service Allow for this STS action.
+
+    Separate trust Allow statements are combined by IAM policy evaluation;
+    requiring AssumeRole and TagSession in the same statement creates false
+    negatives. Unknown conditions, NotAction and wildcard principals do not
+    count as confirmed Allows. Explicit Deny is checked separately.
+    """
+    return any(
+        row.get('Effect') == 'Allow' and row.get('Condition') is None
+        and isinstance(row.get('Principal'), dict)
+        and 'pods.eks.amazonaws.com' in (
+            _values(row['Principal'].get('Service')) or [])
+        and any(fnmatch.fnmatchcase(action.lower(), pattern.lower())
+                for pattern in (_values(row.get('Action')) or []))
+        for row in statements
+    )
+
+
 def _eks_routes(services, iam, emit):
     roles = [r for r in (iam.get('roles') or {}).values()
              if isinstance(r, dict) and r.get('p4b_admin_policy_status') == 'admin_policy_candidate']
@@ -441,14 +460,8 @@ def _eks_routes(services, iam, emit):
                 if _trust_blocked(trust, 'sts:TagSession',
                                   'pods.eks.amazonaws.com', 'Service'):
                     continue
-                if any(
-                    row.get('Effect') == 'Allow' and row.get('Condition') is None
-                    and isinstance(row.get('Principal'), dict)
-                    and 'pods.eks.amazonaws.com' in (_values(row['Principal'].get('Service')) or [])
-                    and all(any(fnmatch.fnmatchcase(action.lower(), pattern.lower())
-                                for pattern in (_values(row.get('Action')) or []))
-                            for action in ('sts:AssumeRole', 'sts:TagSession'))
-                    for row in trust):
+                if (_pod_trust_allow(trust, 'sts:AssumeRole')
+                        and _pod_trust_allow(trust, 'sts:TagSession')):
                     emit(cluster_arn + '/' + namespace + '/' + service_account,
                          target, 'eks_pod_identity', 'sts:AssumeRole+TagSession',
                          'observed Pod Identity association + compatible trust; pod execution unverified',
