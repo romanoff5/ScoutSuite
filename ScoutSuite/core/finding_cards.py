@@ -19,6 +19,10 @@ POLICY_FIELDS = {
     'iam-p4b2-group-passrole-v1': ('p4b2_group_passrole_status', ('candidate',)),
     'iam-p4b2-oidc-audience-v1': ('p4b2_oidc_audience_status', ('review',)),
     'iam-p4b2-oidc-subject-v1': ('p4b2_oidc_subject_status', ('review',)),
+    'p5d-iam-delegation-v1': ('p5d_service_delegation_status', ('candidate',)),
+    'p5d-eks-role-v1': ('p5d_eks_identity_status', ('candidate',)),
+    'p5d-eks-cluster-v1': ('p5d_workload_identity_status', ('candidate',)),
+    'p5d-cross-account-v1': ('p5d_cross_account_status', ('candidate',)),
     'backup-workload-arn-evidence-v1': ('p1_backup_evidence_status', ('not_reported',)),
     'backup-latest-restore-failure-v1': ('latest_restore_job_status', ('failed',)),
     'backup-latest-validation-failure-v1': ('latest_validation_status', ('failed',)),
@@ -35,6 +39,8 @@ IAM_CANDIDATE_POLICIES = frozenset((
     'iam-p4b-passrole-v1', 'iam-p4b-privileged-oidc-v1',
     'iam-p4b2-user-passrole-v1', 'iam-p4b2-user-assumerole-v1',
     'iam-p4b2-role-assumerole-v1', 'iam-p4b2-group-passrole-v1',
+    'p5d-iam-delegation-v1', 'p5d-eks-role-v1', 'p5d-eks-cluster-v1',
+    'p5d-cross-account-v1',
 ))
 
 
@@ -178,6 +184,18 @@ def build_observation_checks(policy, resource, services, path, outcome):
                          'CONFIRMED' if outcome == 'insecure' else 'UNKNOWN',
                          'evidence_policy={}'.format(policy), path)]
 
+    if policy == 'p5d-iam-delegation-v1' or (
+            policy == 'p5d-cross-account-v1' and path.startswith('s3.buckets.')):
+        links_field = ('p5d_service_delegation_edges' if policy == 'p5d-iam-delegation-v1'
+                       else 'p5d_cross_account_edges')
+        links = resource.get(links_field)
+        valid_links = (isinstance(links, list) and bool(links) and
+                       all(isinstance(x, str) and len(x) == 24 and
+                           all(ch in '0123456789abcdef' for ch in x) for x in links))
+        checks.append(_check('Linked attack-path graph edges',
+                             'CONFIRMED' if valid_links else 'UNKNOWN',
+                             ', '.join(links) if valid_links else 'No verified graph edge identifiers',
+                             path + '.' + links_field))
     if policy == 'p3b-alb-backend-bypass-v1':
         matches = resource.get('backend_bypass_evidence')
         if isinstance(matches, list) and matches:
@@ -273,7 +291,10 @@ def build_resource_cards(finding):
         outcome = observation.get('outcome')
         attrs = observation.get('observed_attributes') or {}
         classifier_only = (len(required) == 1 and
-                           required[0].get('label') == 'Versioned classifier observation')
+                           (required[0].get('label') == 'Versioned classifier observation'
+                            or observation.get('evidence_policy') in (
+                                'p5d-iam-delegation-v1', 'p5d-eks-role-v1',
+                                'p5d-eks-cluster-v1', 'p5d-cross-account-v1')))
         reasons = []
         if outcome != 'insecure':
             reasons.append('RESOURCE_EVIDENCE_UNKNOWN')
