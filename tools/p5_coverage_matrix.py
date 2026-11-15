@@ -60,7 +60,11 @@ def discover_edge_kinds(code):
         else:
             raise AssertionError("Unrecognized P5-D workload emitter: "
                                  + ast.dump(expression))
-    for function in ("_eks_routes", "_resource_routes"):
+    # Discover every callsite, including direct emitters added to the main
+    # graph function. Do not silently omit a future new detector there.
+    bridges = 0
+    for function in ("_eks_routes", "_resource_routes",
+                     "annotate_p5d_attack_paths"):
         for node in ast.walk(functions[function]):
             if not (isinstance(node, ast.Call)
                     and isinstance(node.func, ast.Name)
@@ -68,17 +72,20 @@ def discover_edge_kinds(code):
                 continue
             assert len(node.args) >= 3, "P5-D emit without graph kind"
             expr = node.args[2]
-            assert isinstance(expr, ast.Constant) and isinstance(expr.value, str), (
-                "Unreviewed dynamic P5-D graph kind in " + function)
-            kinds.add(expr.value)
-    # The only supported dynamic bridge from workload paths to graph kinds:
-    caller = functions["annotate_p5d_attack_paths"]
-    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-               and node.func.id == "emit" and len(node.args) >= 3
-               and isinstance(node.args[2], ast.BinOp)
-               and isinstance(node.args[2].left, ast.Constant)
-               and node.args[2].left.value == "iam_"
-               for node in ast.walk(caller)), "Workload->IAM edge binding changed"
+            if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
+                kinds.add(expr.value)
+            elif (function == "annotate_p5d_attack_paths"
+                  and isinstance(expr, ast.BinOp)
+                  and isinstance(expr.op, ast.Add)
+                  and isinstance(expr.left, ast.Constant)
+                  and expr.left.value == "iam_"
+                  and isinstance(expr.right, ast.Name)
+                  and expr.right.id == "service"):
+                bridges += 1
+            else:
+                raise AssertionError(
+                    "Unreviewed dynamic P5-D graph kind in " + function)
+    assert bridges == 1, "Workload->IAM edge binding changed"
     assert len(kinds) > 0, "No P5-D detectors discovered"
     return kinds
 
