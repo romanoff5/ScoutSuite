@@ -112,3 +112,12 @@ def test_kms_graph_marks_denied_or_truncated_key_grants_partial():
     key['policy_collection_status'] = 'failed'
     graph, _ = scan(kms=kms)
     assert graph['status'] == 'partial'
+
+
+def test_kms_collection_status_is_visible_without_raw_grants():
+    from pathlib import Path
+    template = (Path(__file__).resolve().parents[1] /
+        'ScoutSuite/output/data/html/partials/aws/services.kms.regions.id.keys.html').read_text()
+    assert '{{policy_collection_status}}' in template
+    assert '{{grants_collection_status}}' in template
+    assert '{{{' not in template

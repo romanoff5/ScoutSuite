@@ -49,3 +49,20 @@ Test with `python -m pytest tests/test_p5d_attack_paths.py -q` and the repositor
 - P5-D2 retains real ARNs in confidential reports, while replay export
   remains anonymized. EKS Pod Identity List→Describe trust/denial/session
   restrictions are unchanged.
+
+### KMS grant API status fidelity
+
+Previously the generic AWS paginator returned an empty list after some
+`AccessDenied` or malformed responses, so an unreadable KMS grants
+inventory could be indistinguishable from a legitimately empty one.
+Read-only `ListGrants` now uses bounded 100-item pages and at most 20
+pages per key, with explicit `Truncated/NextMarker` validation. Errors,
+duplicate grant IDs, malformed pages and page-limit overruns yield
+`grants_collection_status=partial`, not a verified empty list. Successful
+policy reads separately record `policy_collection_status=complete`.
+Both states appear on KMS report details and in P5-D service coverage.
+Missing account IDs in malformed grant entries no longer crash parsing.
+
+These are collection facts and do not prove the external principal can
+decrypt: KMS key policy/grants, external IAM, constraints and AWS
+Organizations restrictions remain separate authorization checks.
