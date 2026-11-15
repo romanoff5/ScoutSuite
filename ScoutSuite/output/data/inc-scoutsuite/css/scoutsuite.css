@@ -100,6 +100,10 @@ body {
     content: '\f059';
     color: #7d8590;
 }
+/* Preserve navigation and severity metadata while avoiding a red/yellow
+   verified-finding highlight when AWS evidence was denied or incomplete. */
+.finding-title-incomplete { border-left: 3px solid #7d8590; }
+.finding-incomplete { color: #6c757d; }
 
 .finding-badge-notused:before {
     content: '\f056';

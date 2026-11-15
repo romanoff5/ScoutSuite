@@ -237,6 +237,11 @@ function dashboardColor (level, checked, flagged, assessment) {
     // incomplete_rules count. Zero flagged items on incomplete evidence is
     // not a verified pass, so it must not be rendered as "good".
     const incomplete = assessment === 'incomplete' || (typeof assessment === 'number' && assessment > 0)
+    // A flagged but unverified legacy result is not a confirmed danger/warning.
+    // Keep it clickable to inspect its original severity and evidence.
+    if (assessment === 'incomplete') {
+        return flagged > 0 ? 'incomplete' : 'incomplete disabled-link'
+    }
     if (checked === 0) {
         return 'unknown disabled-link'
     } else if (flagged === 0) {

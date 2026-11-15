@@ -30,6 +30,9 @@
                     <div class="col-sm-11">
                         <i class="fa finding-badge finding-badge-{{dashboard_color level checked_items flagged_items assessment_status}}"></i>
                         <a href="#services.{{../service_name}}.findings.{{key}}.items">{{description}}</a>
+                        {{#ifEqual assessment_status "incomplete"}}
+                        <span class="badge badge-secondary" title="The evidence is incomplete; this is not a verified configuration finding">INCOMPLETE · UNVERIFIED</span>
+                        {{/ifEqual}}
                         {{#if finding_disposition}}
                         <span class="badge badge-secondary">{{finding_disposition}}</span>
                         {{/if}}
