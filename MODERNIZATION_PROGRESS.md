@@ -1096,3 +1096,49 @@ calls. See `docs/modernization/M10_WAFV2.md`.
   history rewrite, upstream PR, real cloud scan or credential use.
   Details: docs/modernization/P5B2_FINDING_EVIDENCE_CARDS.md.
   Roll back this task's commits to restore the previous P5-B presentation.
+
+
+## Offline CI concurrency and verified Windows installation speedup (2026-11-15)
+
+- Replaced serial post-build checks in .github/workflows/offline.yml with
+  one fail-closed tools/ci.py verify orchestrator. Every independent gate
+  (dependency check, lint, full guarded pytest, P3-C quality gate,
+  SQLite loopback HTTP on Linux, XSS/browser, report E2E on supported
+  combinations, packaging) remains required and individually reported
+  via phase-*.json with duration. Linux uses up to three parallel workers;
+  Windows uses two. Every worker retains a fresh phase context and
+  existing offline OS network isolation / sanitization.
+- The exact real Windows/Python 3.11 wheel installation smoke was moved
+  from inline workflow YAML into tools/ci_verify_install.ps1, launched
+  as an independent gate immediately after build. It still validates
+  artifact SHA-256, exact Git commit, pinned offline wheelhouse,
+  installation provenance, selected launcher, CLI and AWS CLI help.
+  It does not run an AWS scan. Windows PowerShell parser and fail-closed
+  selection tests still execute separately.
+- The Windows CI install alone sets PIP_NO_COMPILE=1 to avoid eager .pyc
+  creation; installed package imports, pip check, launcher smoke and
+  hash/provenance checks remain mandatory. The production installer
+  and installed scanner behavior are unchanged. No credential use,
+  new AWS permissions, live APIs, fixture skips, new warning exclusions
+  or weakened regression checks were introduced.
+- Added CI scheduling/status tests; updated legacy Task 14 regression
+  to inspect the relocated installation script rather than require
+  implementation details to stay in YAML.
+- Verified [Offline CI #43660691179](https://github.com/romanoff5/ScoutSuite/actions/runs/43660691179)
+  passed all four Ubuntu 24.04 / Windows 2022 Python 3.11 / 3.14
+  jobs at the exact tested implementation SHA
+  88b8d84d67b3b49a83226bcb2bc606003fd4c710.
+  Windows Python 3.11: 1257 tests plus 35 subtests passed, all
+  expected gates and real wheel installation verified.
+- Measured end-to-end runner elapsed time for baseline successful
+  [#43658228198](https://github.com/romanoff5/ScoutSuite/actions/runs/43658228198):
+  253 seconds versus 205 seconds for the final optimized validation,
+  a 48-second / ~19% reduction. These are two hosted-runner observations,
+  not a guaranteed future speedup. Variation in queue, caching, host
+  load and Windows installer workload can affect future timings.
+- The existing RC8 Windows/Python 3.11 browser E2E exception is unchanged:
+  other combinations still run report E2E, and Windows 3.11 still
+  runs XSS parser/browser verification.
+- Integrated the four CI commits by fast-forward on top of P5-D master
+  c5051a9631a2926febf0b1fb0a5027afbd2d54e7. Rollback is to
+  revert the CI-only changes; prior AWS findings and reports are intact.
