@@ -286,3 +286,27 @@ def test_kms_cross_account_policy_adversarial_replay(scope):
     if scope == 'denied_api':
         assert graph['collection']['kms_inventory'] == 'partial'
         assert graph['status'] == 'partial'
+
+
+@pytest.mark.parametrize('scope', ('complete', 'grants_denied', 'context_limited'))
+def test_kms_external_grant_requires_complete_listgrants(scope):
+    """Previously visible grants must not survive ListGrants AccessDenied."""
+    external = f'arn:aws:iam::{OTHER}:role/Reader'
+    grant = {'grantee_principal': external, 'operations': ['Decrypt'],
+             'constraints': {}}
+    if scope == 'context_limited':
+        grant['constraints'] = {
+            'EncryptionContextEquals': {'purpose': 'synthetic'}}
+    key = {'arn': f'arn:aws:kms:eu-central-1:{ACCOUNT}:key/key-uuid',
+           'key_manager': 'CUSTOMER', 'key_enabled': True,
+           'policy': {'Statement': []},
+           'policy_collection_status': 'complete',
+           'grants_collection_status': (
+               'denied' if scope == 'grants_denied' else 'complete'),
+           'grants': {'grant-one': grant}}
+    graph, _ = scan(kms={'regions': {'eu-central-1': {'keys': {'key': key}}}})
+    assert len(_candidate_edges(graph, 'kms_cross_account_grant')) == (
+        1 if scope == 'complete' else 0)
+    if scope == 'grants_denied':
+        assert graph['collection']['kms_inventory'] == 'partial'
+        assert graph['status'] == 'partial'
