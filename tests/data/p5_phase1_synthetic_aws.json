@@ -1,0 +1,1513 @@
+{
+  "schema": "scoutsuite-p5-synthetic-aws-v1",
+  "description": "Self-contained, synthetic AWS collection facts and independent expected P5-D attack-path oracles. No live AWS calls, secrets or customer reports.",
+  "account_id": "123456789012",
+  "region": "eu-central-1",
+  "templates": {
+    "iam_lambda": {
+      "services": {
+        "iam": {
+          "roles": {
+            "priv": {
+              "id": "Priv",
+              "name": "Priv",
+              "arn": "arn:aws:iam::123456789012:role/Priv",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": []
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "lambda.amazonaws.com"
+                      },
+                      "Action": "sts:AssumeRole"
+                    }
+                  ]
+                }
+              },
+              "p4b_admin_policy_status": "admin_policy_candidate"
+            },
+            "operator": {
+              "id": "Operator",
+              "name": "Operator",
+              "arn": "arn:aws:iam::123456789012:role/Operator",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:PassRole",
+                        "Resource": "arn:aws:iam::123456789012:role/Priv"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "lambda:CreateFunction",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "lambda:InvokeFunction",
+                        "Resource": "*"
+                      }
+                    ]
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": []
+                }
+              },
+              "p4b_admin_policy_status": "no_admin_grant_observed"
+            }
+          },
+          "users": {},
+          "groups": {},
+          "policies": {}
+        }
+      }
+    },
+    "iam_ec2": {
+      "services": {
+        "iam": {
+          "roles": {
+            "priv": {
+              "id": "Priv",
+              "name": "Priv",
+              "arn": "arn:aws:iam::123456789012:role/Priv",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": []
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {
+                "ip-1": {
+                  "arn": "arn:aws:iam::123456789012:instance-profile/Priv"
+                }
+              },
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                      },
+                      "Action": "sts:AssumeRole"
+                    }
+                  ]
+                }
+              },
+              "p4b_admin_policy_status": "admin_policy_candidate"
+            },
+            "operator": {
+              "id": "Operator",
+              "name": "Operator",
+              "arn": "arn:aws:iam::123456789012:role/Operator",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:PassRole",
+                        "Resource": "arn:aws:iam::123456789012:role/Priv"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*"
+                      }
+                    ]
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": []
+                }
+              },
+              "p4b_admin_policy_status": "no_admin_grant_observed"
+            }
+          },
+          "users": {},
+          "groups": {},
+          "policies": {}
+        }
+      }
+    },
+    "ecs_task": {
+      "services": {
+        "iam": {
+          "roles": {
+            "priv": {
+              "id": "Priv",
+              "name": "Priv",
+              "arn": "arn:aws:iam::123456789012:role/Priv",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": []
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "ecs-tasks.amazonaws.com"
+                      },
+                      "Action": "sts:AssumeRole"
+                    }
+                  ]
+                }
+              },
+              "p4b_admin_policy_status": "admin_policy_candidate"
+            },
+            "operator": {
+              "id": "Operator",
+              "name": "Operator",
+              "arn": "arn:aws:iam::123456789012:role/Operator",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:PassRole",
+                        "Resource": "arn:aws:iam::123456789012:role/Priv"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ecs:RunTask",
+                        "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7"
+                      }
+                    ]
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": []
+                }
+              },
+              "p4b_admin_policy_status": "no_admin_grant_observed"
+            }
+          },
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "ecs": {
+          "regions": {
+            "eu-central-1": {
+              "task_definitions": {
+                "example": {
+                  "task_definition_arn": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7",
+                  "task_role_arn": "arn:aws:iam::123456789012:role/Priv",
+                  "execution_role_arn": "arn:aws:iam::123456789012:role/Other"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "eks_irsa": {
+      "services": {
+        "iam": {
+          "roles": {
+            "priv": {
+              "id": "Priv",
+              "name": "Priv",
+              "arn": "arn:aws:iam::123456789012:role/Priv",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": []
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC"
+                      },
+                      "Action": "sts:AssumeRoleWithWebIdentity",
+                      "Condition": {
+                        "StringEquals": {
+                          "oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC:aud": "sts.amazonaws.com",
+                          "oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC:sub": "system:serviceaccount:team:api"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "p4b_admin_policy_status": "admin_policy_candidate"
+            }
+          },
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "eks": {
+          "regions": {
+            "eu-central-1": {
+              "clusters": {
+                "sample": {
+                  "cluster_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample",
+                  "oidc_issuer": "https://oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC",
+                  "pod_identity_inventory_status": "complete",
+                  "pod_identity_associations": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "eks_pod": {
+      "services": {
+        "iam": {
+          "roles": {
+            "priv": {
+              "id": "Priv",
+              "name": "Priv",
+              "arn": "arn:aws:iam::123456789012:role/Priv",
+              "inline_policies": {
+                "p": {
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": []
+                  }
+                }
+              },
+              "inline_policy_collection_status": "complete",
+              "attached_managed_policy_collection_status": "complete",
+              "attached_managed_policy_arns": [],
+              "role_boundary_collection_status": "complete",
+              "permissions_boundary": null,
+              "instance_profiles": {},
+              "assume_role_policy": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "pods.eks.amazonaws.com"
+                      },
+                      "Action": [
+                        "sts:AssumeRole",
+                        "sts:TagSession"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "p4b_admin_policy_status": "admin_policy_candidate"
+            }
+          },
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "eks": {
+          "regions": {
+            "eu-central-1": {
+              "clusters": {
+                "sample": {
+                  "cluster_arn": "arn:aws:eks:eu-central-1:123456789012:cluster/sample",
+                  "oidc_issuer": null,
+                  "pod_identity_inventory_status": "unknown",
+                  "pod_identity_associations": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "api": {
+        "list": {
+          "associations": [
+            {
+              "associationId": "pa-1",
+              "associationArn": "arn:aws:eks:eu-central-1:123456789012:podidentityassociation/sample/pa-1",
+              "clusterName": "sample",
+              "namespace": "team",
+              "serviceAccount": "api"
+            }
+          ]
+        },
+        "describe": {
+          "association": {
+            "associationId": "pa-1",
+            "associationArn": "arn:aws:eks:eu-central-1:123456789012:podidentityassociation/sample/pa-1",
+            "clusterName": "sample",
+            "namespace": "team",
+            "serviceAccount": "api",
+            "roleArn": "arn:aws:iam::123456789012:role/Priv",
+            "disableSessionTags": false
+          }
+        },
+        "failure": null
+      }
+    },
+    "s3_bucket": {
+      "services": {
+        "iam": {
+          "roles": {},
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "s3": {
+          "buckets": {
+            "audit": {
+              "name": "audit-reports",
+              "arn": "arn:aws:s3:::audit-reports/*",
+              "policy_collection_status": "success",
+              "policy": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": "arn:aws:iam::999999999999:role/Reader"
+                    },
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::audit-reports/reports/*"
+                  }
+                ]
+              },
+              "policy_is_public": false,
+              "public_access_block_configuration": {
+                "RestrictPublicBuckets": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "s3_gov": {
+      "services": {
+        "iam": {
+          "roles": {},
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "s3": {
+          "buckets": {
+            "audit": {
+              "name": "audit-reports",
+              "arn": "arn:aws-us-gov:s3:::audit-reports/*",
+              "policy_collection_status": "success",
+              "policy": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": "arn:aws-us-gov:iam::999999999999:role/Reader"
+                    },
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws-us-gov:s3:::audit-reports/reports/*"
+                  }
+                ]
+              },
+              "policy_is_public": false,
+              "public_access_block_configuration": {
+                "RestrictPublicBuckets": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "kms_policy": {
+      "services": {
+        "iam": {
+          "roles": {},
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "kms": {
+          "regions": {
+            "eu-central-1": {
+              "keys": {
+                "example": {
+                  "arn": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
+                  "key_enabled": true,
+                  "key_manager": "CUSTOMER",
+                  "policy_collection_status": "complete",
+                  "grants_collection_status": "complete",
+                  "policy": {
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "AWS": "arn:aws:iam::999999999999:role/Reader"
+                        },
+                        "Action": "kms:Decrypt",
+                        "Resource": "*"
+                      }
+                    ]
+                  },
+                  "grants": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "kms_grant": {
+      "services": {
+        "iam": {
+          "roles": {},
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "kms": {
+          "regions": {
+            "eu-central-1": {
+              "keys": {
+                "example": {
+                  "arn": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
+                  "key_enabled": true,
+                  "key_manager": "CUSTOMER",
+                  "policy_collection_status": "complete",
+                  "grants_collection_status": "complete",
+                  "policy": {
+                    "Statement": []
+                  },
+                  "grants": {
+                    "synthetic-grant-1": {
+                      "grant_id": "synthetic-grant-1",
+                      "grantee_principal": "arn:aws:iam::999999999999:role/Reader",
+                      "operations": [
+                        "Decrypt"
+                      ],
+                      "constraints": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "lambda_invoke": {
+      "services": {
+        "iam": {
+          "roles": {},
+          "users": {},
+          "groups": {},
+          "policies": {}
+        },
+        "awslambda": {
+          "regions": {
+            "eu-central-1": {
+              "functions": {
+                "example": {
+                  "arn": "arn:aws:lambda:eu-central-1:123456789012:function:Example",
+                  "role_arn": "arn:aws:iam::123456789012:role/Priv",
+                  "access_policy": {
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "AWS": "arn:aws:iam::999999999999:role/Reader"
+                        },
+                        "Action": "lambda:InvokeFunction",
+                        "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:Example"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "iam-lambda-passrole-allow",
+      "template": "iam_lambda",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_lambda_create",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-lambda-passrole-explicit-deny",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::123456789012:role/Priv"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-lambda-unrelated-deny",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "s3:DeleteObject",
+            "Resource": "*"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_lambda_create",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-lambda-missing-invoke",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:CreateFunction",
+              "Resource": "*"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-lambda-boundary-unverified",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Limited"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial"
+        }
+      }
+    },
+    {
+      "id": "iam-ec2-profile-present",
+      "template": "iam_ec2",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_ec2_create",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-ec2-profile-missing",
+      "template": "iam_ec2",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "instance_profiles"
+          ],
+          "value": {}
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-ec2-runinstances-denied",
+      "template": "iam_ec2",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "ec2:RunInstances",
+            "Resource": "*"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {}
+      }
+    },
+    {
+      "id": "ecs-task-role-candidate",
+      "template": "ecs_task",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_ecs_run_task",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "ecs-task-run-deny",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "ecs:RunTask",
+            "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "ecs-agent-execution-role-review",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "task_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "execution_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Priv"
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_ecs_execution_role_review",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "REVIEW"
+          }
+        ],
+        "collection": {
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "eks-irsa-exact-issuer-aud-sub",
+      "template": "eks_irsa",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "eks_irsa_role",
+            "source": "arn:aws:eks:eu-central-1:123456789012:cluster/sample",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "eks-irsa-wrong-audience",
+      "template": "eks_irsa",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "assume_role_policy",
+            "PolicyDocument",
+            "Statement",
+            "0",
+            "Condition",
+            "StringEquals",
+            "oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC:aud"
+          ],
+          "value": "not-sts.amazonaws.com"
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "eks-irsa-denied-trust",
+      "template": "eks_irsa",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "assume_role_policy",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Principal": {
+              "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "eks-podidentity-list-describe-complete",
+      "template": "eks_pod",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "eks_pod_identity",
+            "source": "arn:aws:eks:eu-central-1:123456789012:cluster/sample/team/api",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        },
+        "api_status": "complete"
+      }
+    },
+    {
+      "id": "eks-podidentity-describe-accessdenied",
+      "template": "eks_pod",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "api",
+            "failure"
+          ],
+          "value": "describe_denied"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        },
+        "api_status": "partial"
+      }
+    },
+    {
+      "id": "eks-podidentity-list-accessdenied",
+      "template": "eks_pod",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "api",
+            "failure"
+          ],
+          "value": "list_denied"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        },
+        "api_status": "partial"
+      }
+    },
+    {
+      "id": "eks-podidentity-session-policy",
+      "template": "eks_pod",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "api",
+            "describe",
+            "association",
+            "policy"
+          ],
+          "value": "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        },
+        "api_status": "complete"
+      }
+    },
+    {
+      "id": "eks-podidentity-target-role",
+      "template": "eks_pod",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "api",
+            "describe",
+            "association",
+            "targetRoleArn"
+          ],
+          "value": "arn:aws:iam::999999999999:role/External"
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        },
+        "api_status": "complete"
+      }
+    },
+    {
+      "id": "eks-podidentity-tag-session-denied",
+      "template": "eks_pod",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "assume_role_policy",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Principal": {
+              "Service": "pods.eks.amazonaws.com"
+            },
+            "Action": "sts:TagSession"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "eks_inventory": "observed_bounded"
+        },
+        "api_status": "complete"
+      }
+    },
+    {
+      "id": "s3-cross-account-prefix-get",
+      "template": "s3_bucket",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "s3_cross_account_resource_policy",
+            "source": "arn:aws:iam::999999999999:role/Reader",
+            "target": "arn:aws:s3:::audit-reports",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "s3_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "s3-cross-account-explicit-deny",
+      "template": "s3_bucket",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Principal": {
+              "AWS": "arn:aws:iam::999999999999:role/Reader"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::audit-reports/reports/*"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "s3_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "s3-bucket-policy-accessdenied",
+      "template": "s3_bucket",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy_collection_status"
+          ],
+          "value": "failed"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy"
+          ],
+          "value": null
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "s3_inventory": "partial"
+        }
+      }
+    },
+    {
+      "id": "s3-object-source-vpce-conditional",
+      "template": "s3_bucket",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy",
+            "Statement",
+            "0",
+            "Condition"
+          ],
+          "value": {
+            "StringEquals": {
+              "aws:SourceVpce": "vpce-synthetic"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "s3_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "s3-govcloud-partition",
+      "template": "s3_gov",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "s3_cross_account_resource_policy",
+            "source": "arn:aws-us-gov:iam::999999999999:role/Reader",
+            "target": "arn:aws-us-gov:s3:::audit-reports",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "s3_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "kms-key-policy-external-decrypt",
+      "template": "kms_policy",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "kms_cross_account_key_policy",
+            "source": "arn:aws:iam::999999999999:role/Reader",
+            "target": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "kms_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "kms-key-policy-explicit-deny",
+      "template": "kms_policy",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "kms",
+            "regions",
+            "eu-central-1",
+            "keys",
+            "example",
+            "policy",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Principal": {
+              "AWS": "arn:aws:iam::999999999999:role/Reader"
+            },
+            "Action": "kms:Decrypt",
+            "Resource": "*"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "kms_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "kms-key-policy-accessdenied",
+      "template": "kms_policy",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "kms",
+            "regions",
+            "eu-central-1",
+            "keys",
+            "example",
+            "policy_collection_status"
+          ],
+          "value": "failed"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "kms",
+            "regions",
+            "eu-central-1",
+            "keys",
+            "example",
+            "policy"
+          ],
+          "value": null
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "kms_inventory": "partial"
+        }
+      }
+    },
+    {
+      "id": "kms-grant-unconstrained",
+      "template": "kms_grant",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "kms_cross_account_grant",
+            "source": "arn:aws:iam::999999999999:role/Reader",
+            "target": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "kms_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "kms-grant-encryption-context",
+      "template": "kms_grant",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "kms",
+            "regions",
+            "eu-central-1",
+            "keys",
+            "example",
+            "grants",
+            "synthetic-grant-1",
+            "constraints"
+          ],
+          "value": {
+            "EncryptionContextEquals": {
+              "purpose": "audit"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "kms_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "kms-grants-list-accessdenied",
+      "template": "kms_grant",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "kms",
+            "regions",
+            "eu-central-1",
+            "keys",
+            "example",
+            "grants_collection_status"
+          ],
+          "value": "partial"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "kms",
+            "regions",
+            "eu-central-1",
+            "keys",
+            "example",
+            "grants"
+          ],
+          "value": {}
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "kms_inventory": "partial"
+        }
+      }
+    },
+    {
+      "id": "lambda-external-invoke-review",
+      "template": "lambda_invoke",
+      "patches": [],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "lambda_external_invoke_review",
+            "source": "arn:aws:iam::999999999999:role/Reader",
+            "target": "arn:aws:lambda:eu-central-1:123456789012:function:Example",
+            "verification": "REVIEW"
+          }
+        ],
+        "collection": {
+          "awslambda_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "lambda-external-invoke-deny",
+      "template": "lambda_invoke",
+      "patches": [
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "awslambda",
+            "regions",
+            "eu-central-1",
+            "functions",
+            "example",
+            "access_policy",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Principal": {
+              "AWS": "arn:aws:iam::999999999999:role/Reader"
+            },
+            "Action": "lambda:InvokeFunction",
+            "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:Example"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "awslambda_inventory": "observed_bounded"
+        }
+      }
+    }
+  ]
+}
