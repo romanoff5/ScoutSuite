@@ -191,13 +191,14 @@ def _assert_assembled(case, provider, graph, expected):
         # The legacy confidence model may label a *truly empty resource
         # scope* NOT_APPLICABLE/HIGH; that never means an attack path was
         # verified safe. Flagged or UNKNOWN P5-D scopes must not claim HIGH.
-        if expected_paths or summary['counts']['unknown'] or graph['status'] == 'partial':
+        if sum(summary['counts'].values()) == 0:
+            assert not expected_paths
+            assert confidence['verification_status'] == 'NOT_APPLICABLE'
+        elif expected_paths or summary['counts']['unknown'] or graph['status'] == 'partial':
             assert confidence['confidence'] != 'HIGH', (
                 case['id'], key, confidence)
-        else:
-            if confidence['confidence'] == 'HIGH':
-                assert confidence['verification_status'] == 'NOT_APPLICABLE'
-                assert sum(summary['counts'].values()) == 0
+        elif confidence['confidence'] == 'HIGH':
+            assert confidence['verification_status'] == 'NOT_APPLICABLE'
         if expected_paths:
             verification = ('REVIEW' if service == 'awslambda' else 'POTENTIAL')
             assert confidence['claim_type'] == (
