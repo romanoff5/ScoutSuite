@@ -50,9 +50,11 @@ def _check(label, state, detail, source, required=True):
 
 def _field(resource, field, expected, path, label=None):
     value = resource.get(field) if isinstance(resource, dict) else None
-    state = ('UNKNOWN' if value is None else
+    known = isinstance(value, str) and value not in ('unknown', 'unavailable', 'incomplete')
+    state = ('UNKNOWN' if not known else
              'CONFIRMED' if value in expected else 'CONTRADICTED')
-    detail = ('Not collected' if value is None else '{}={}'.format(field, value))
+    detail = ('{}={}'.format(field, value) if known else
+              'Classifier state not collected or unsupported')
     return _check(label or field, state, detail, path + '.' + field)
 
 
@@ -181,10 +183,13 @@ def _p5d_checks(policy, resource, services, path):
     """Bind a P5-D finding to exact serializable graph edge witnesses."""
     field, expected = POLICY_FIELDS[policy]
     state = resource.get(field)
-    verdict = ('UNKNOWN' if state in (None, 'unknown', 'partial') else
+    known = isinstance(state, str) and state not in ('unknown', 'partial', 'unavailable')
+    verdict = ('UNKNOWN' if not known else
                'CONFIRMED' if state in expected else 'CONTRADICTED')
     checks = [_check('P5-D resource verdict', verdict,
-                     '{}={}'.format(field, state or 'not collected'), path + '.' + field)]
+                     '{}={}'.format(field, state) if known
+                     else 'Classifier state not collected or unsupported',
+                     path + '.' + field)]
     graph = (services.get('iam') or {}).get('attack_paths_p5d') or {}
     edges = graph.get('edges') if isinstance(graph, dict) else None
     details = resource.get('p5d_attack_path_details')
@@ -193,7 +198,10 @@ def _p5d_checks(policy, resource, services, path):
         for item in details[:80]:
             if not isinstance(item, dict):
                 continue
-            edge = edges.get(item.get('id'))
+            edge_id = item.get('id')
+            if not isinstance(edge_id, str):
+                continue
+            edge = edges.get(edge_id)
             if (not isinstance(edge, dict) or edge.get('type') not in P5D_EDGE_TYPES[policy]
                     or any(edge.get(k) != item.get(k) for k in ('source', 'target', 'action'))
                     or edge.get('verification') not in ('POTENTIAL', 'REVIEW')
