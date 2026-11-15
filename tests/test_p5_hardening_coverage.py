@@ -42,7 +42,7 @@ def test_missing_or_wrong_unknown_case_fails_even_when_detector_is_listed():
     with pytest.raises(AssertionError):
         validate(bad, catalog, code, rules)
     bad = copy.deepcopy(manifest)
-    bad["detectors"]["iam_ec2_profile_mutation"][2] = "iam-ec2-profile-mutation-deny"
+    bad["detectors"]["iam_ec2_profile_mutation"][2] = "iam-ec2-profile-missing"
     with pytest.raises(AssertionError, match="unsafe unknown graph status"):
         validate(bad, catalog, code, rules)
 

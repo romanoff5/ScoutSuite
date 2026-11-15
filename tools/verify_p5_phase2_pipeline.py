@@ -215,7 +215,9 @@ def _assert_assembled(case, provider, graph, expected):
             assert len(flagged_cards) == len(expected_paths), (
                 case['id'], key, cards)
             for card in flagged_cards:
-                assert card['verification_status'] == verification
+                assert card['verification_status'] == verification, (
+                    case['id'], rule_name, card['resource_arn'],
+                    card['verification_status'], verification)
                 assert card['confidence'] in ('LOW', 'MEDIUM')
                 assert card['collection'] in ('COMPLETE', 'PARTIAL')
                 assert any(check['label'] == 'Cross-service graph witness'

@@ -170,7 +170,7 @@ def _ec2_direct_checks(instance, services, path):
 P5D_EDGE_TYPES = {
     'p5d-iam-delegation-v1': frozenset((
         'iam_lambda_create', 'iam_lambda_update', 'iam_ec2_create',
-        'iam_ecs_run_task', 'iam_ecs_register_run')),
+        'iam_ec2_profile_mutation', 'iam_ecs_run_task', 'iam_ecs_register_run')),
     'p5d-eks-role-v1': frozenset(('eks_irsa_role', 'eks_pod_identity')),
     'p5d-eks-cluster-v1': frozenset(('eks_irsa_role', 'eks_pod_identity')),
     'p5d-cross-account-v1': frozenset((

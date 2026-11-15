@@ -2888,6 +2888,19 @@
             "permissions_boundary"
           ],
           "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "eks",
+            "regions",
+            "eu-central-1",
+            "clusters",
+            "sample",
+            "oidc_issuer"
+          ],
+          "value": null
         }
       ],
       "expected": {
