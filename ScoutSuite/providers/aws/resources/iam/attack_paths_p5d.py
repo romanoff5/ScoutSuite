@@ -311,9 +311,14 @@ def _eks_routes(services, iam, emit):
         issuer = cluster.get('oidc_issuer')
         cluster_arn = cluster.get('cluster_arn')
         account = _arn_account(cluster_arn)
-        if not isinstance(issuer, str) or not issuer.startswith('https://') or not account:
+        if not account:
             cluster['p5d_workload_identity_status'] = 'unknown'
             continue
+        # Pod Identity is independent of IRSA/OIDC: a cluster without an
+        # observed OIDC issuer may still have verified EKS Pod Identity roles.
+        has_issuer = isinstance(issuer, str) and issuer.startswith('https://')
+        if not has_issuer:
+            issuer = 'https://missing-oidc-issuer.invalid'
         issuer_host = issuer[len('https://'):].rstrip('/')
         partition = cluster_arn.split(':')[1]
         provider = 'arn:' + partition + ':iam::' + account + ':oidc-provider/' + issuer_host
@@ -325,8 +330,9 @@ def _eks_routes(services, iam, emit):
             statements = _statements((role.get('assume_role_policy') or {}).get('PolicyDocument'))
             if statements is None:
                 continue
-            if _trust_blocked(statements, 'sts:AssumeRoleWithWebIdentity',
-                              provider, 'Federated'):
+            if not has_issuer or _trust_blocked(
+                    statements, 'sts:AssumeRoleWithWebIdentity',
+                    provider, 'Federated'):
                 continue
             for row in statements:
                 principal = row.get('Principal')
@@ -361,6 +367,13 @@ def _eks_routes(services, iam, emit):
         associations = cluster.get('pod_identity_associations')
         if cluster.get('pod_identity_inventory_status') == 'complete' and isinstance(associations, dict):
             for assoc in associations.values():
+                if not isinstance(assoc, dict) or assoc.get('detail_collection_status', 'complete') != 'complete':
+                    continue
+                # Role chaining or a restrictive association session policy
+                # changes effective permissions. Do not label the first role
+                # as an exploitable privilege destination in this case.
+                if assoc.get('target_role_arn') or assoc.get('session_policy_present') is not False:
+                    continue
                 target = assoc.get('role_arn')
                 role = next((x for x in roles if x.get('arn') == target), None)
                 if role is None:
