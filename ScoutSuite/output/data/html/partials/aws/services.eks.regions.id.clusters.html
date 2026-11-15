@@ -24,6 +24,30 @@
     <h4>Tags</h4>
     {{#each tags}}<p>{{@key}}: {{this}}</p>{{/each}}
   </div>
+  <div class="list-group-item scout-p5d-pod-associations">
+    <h4>EKS Pod Identity association evidence (AWS API)</h4>
+    <p>Inventory: <samp>{{pod_identity_inventory_status}}</samp>;
+       described: {{pod_identity_associations_count}}; issuer: <samp>{{oidc_issuer}}</samp></p>
+    <p><small>Pod Identity is independent of IRSA. Association configuration is not proof
+      that its ServiceAccount or Pod exists or currently obtains credentials.</small></p>
+    {{#each pod_identity_associations}}
+      <div class="scout-p5d-association">
+        <div>Association: <samp>{{association_arn}}</samp></div>
+        <div>Namespace/service account: <samp>{{namespace}}/{{service_account}}</samp></div>
+        <div>Primary role: <samp>{{role_arn}}</samp></div>
+        {{#if target_role_arn}}<div>Chained target role: <samp>{{target_role_arn}}</samp></div>{{/if}}
+        <div>Describe: <samp>{{detail_collection_status}}</samp>;
+          session policy: <samp>{{session_policy_status}}</samp>;
+          session tags disabled: {{disable_session_tags}}</div>
+      </div>
+    {{/each}}
+    {{#unless pod_identity_associations_count}}
+      <p><small>Zero described associations may indicate a verified empty inventory
+        or unavailable collection; inspect inventory status above.</small></p>
+    {{/unless}}
+  </div>
+
+  {{> p5d.attack_paths}}
 </script>
 <script>
   Handlebars.registerPartial("services.eks.regions.id.clusters",

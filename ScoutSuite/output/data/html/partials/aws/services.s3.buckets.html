@@ -101,6 +101,8 @@
             {{#each m10q_backup.recovery_point_arns}}<p>Recovery point resource: <samp>{{this}}</samp></p>{{/each}}
             {{#each m10q_backup.reasons}}<p>Reason: {{this}}</p>{{/each}}
         </div>
+
+  {{> p5d.attack_paths}}
 </script>
     <script>
       Handlebars.registerPartial("services.s3.buckets", $("#services\\.s3\\.buckets\\.partial").html());
