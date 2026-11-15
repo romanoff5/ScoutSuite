@@ -196,9 +196,12 @@ def _assert_assembled(case, provider, graph, expected):
                 else 'POTENTIAL_ATTACK_PATH')
             assert confidence['verification_status'] == verification
             cards = finding['finding_cards']
-            assert len(cards) == len(expected_paths), (case['id'], key, cards)
-            for card in cards:
-                assert card['outcome'] == 'insecure'
+            # P5-B2 also creates UNKNOWN cards for uninvolved roles. Those
+            # are valuable, but are not flagged candidate findings.
+            flagged_cards = [card for card in cards if card['outcome'] == 'insecure']
+            assert len(flagged_cards) == len(expected_paths), (
+                case['id'], key, cards)
+            for card in flagged_cards:
                 assert card['verification_status'] == verification
                 assert card['confidence'] in ('LOW', 'MEDIUM')
                 assert card['collection'] in ('COMPLETE', 'PARTIAL')
@@ -374,9 +377,8 @@ def run():
                         assert finding['confidence_assessment'] == (
                             prepare_results(item['provider'])['services'][service]
                             ['findings'][key]['confidence_assessment'])
-                        assert len(finding['finding_cards']) == len(paths) or (
-                            not paths and all(c['outcome'] == 'unknown'
-                                              for c in finding['finding_cards']))
+                        assert sum(c['outcome'] == 'insecure'
+                                   for c in finding['finding_cards']) == len(paths)
                     roles = _request(opener, url, 'page', {
                         'key': 'services¤iam¤roles', 'page': 0, 'pagesize': 100})
                     assert isinstance(roles, dict)
