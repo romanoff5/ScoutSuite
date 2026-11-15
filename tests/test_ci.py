@@ -168,18 +168,18 @@ def test_pip_disables_eager_bytecode_compilation_only_for_installs(tmp_path):
 
 def test_ci_independent_gates_preserve_cross_platform_matrix():
     assert set(Pipeline.independent_gates('Linux', (3, 11))) == {
-        'dependencies', 'lint', 'tests', 'p3c', 'sqlite_http',
+        'dependencies', 'lint', 'tests', 'p3c', 'p5_coverage', 'sqlite_http',
         'xss_browser', 'report_e2e', 'packaging',
     }
     assert set(Pipeline.independent_gates('Linux', (3, 14))) == set(
         Pipeline.independent_gates('Linux', (3, 11)))
     assert set(Pipeline.independent_gates('Windows', (3, 14))) == {
-        'dependencies', 'lint', 'tests', 'p3c', 'xss_browser',
+        'dependencies', 'lint', 'tests', 'p3c', 'p5_coverage', 'xss_browser',
         'report_e2e', 'packaging',
     }
     # Historical RC8 exception stays specific to Windows Python 3.11 E2E.
     assert set(Pipeline.independent_gates('Windows', (3, 11))) == {
-        'windows_install', 'dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging',
+        'windows_install', 'dependencies', 'lint', 'tests', 'p3c', 'p5_coverage', 'xss_browser', 'packaging',
     }
 
 

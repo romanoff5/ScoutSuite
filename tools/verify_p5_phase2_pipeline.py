@@ -47,6 +47,7 @@ EDGE_RULES = {
     'iam_lambda_create': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_lambda_update': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_ec2_create': ('iam-p5d-role-workload-delegation.json', 'source'),
+    'iam_ec2_profile_mutation': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_ecs_run_task': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_ecs_register_run': ('iam-p5d-role-workload-delegation.json', 'source'),
     'eks_irsa_role': ('eks-p5d-workload-identity.json', 'source'),
@@ -145,6 +146,8 @@ def _expected_findings(case, services):
         if kind == GRAPH_ONLY_REVIEW:
             continue
         rule, role = EDGE_RULES[kind]
+        if kind.startswith('iam_') and ':user/' in edge['source']:
+            rule = 'iam-p5d-user-workload-delegation.json'
         principal = (edge['source'] if role == 'source' else
                      edge['source'].rsplit('/', 2)[0] if role == 'pod_source'
                      else edge['target'])
@@ -345,7 +348,7 @@ def _browser_check(url, expected_arn, profile):
 
 
 def run():
-    assert len(CASES) == 33
+    assert len(CASES) >= 53
     ruleset = _ruleset()
     cases = {}
     with tempfile.TemporaryDirectory(prefix='scoutsuite-p5-pipeline-') as folder:
@@ -431,7 +434,7 @@ def run():
                 for api in mounted:
                     api.results.close()
                 assert not thread.is_alive()
-    print('P5 full pipeline: PASS (33 pinned cases; IAM graph -> real rule '
+    print('P5 full pipeline: PASS (53+ pinned cases; IAM graph -> real rule '
           'engine -> B/B2 evidence -> SQLite -> HTTP -> live HTML browser)',
           flush=True)
 
