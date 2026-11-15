@@ -705,17 +705,23 @@ def _resource_routes(services, own_account, emit):
             arn = key.get('arn')
             if not isinstance(arn, str):
                 continue
-            policy = key.get('policy')
-            principals, _ = _external_principals(policy, own_account)
-            for principal in principals:
-                if principal.endswith(':root'):
-                    continue
-                if _resource_permission(policy, principal, 'kms:Decrypt', arn) == 'yes':
-                    emit(principal, arn, 'kms_cross_account_key_policy', 'kms:Decrypt',
-                         'explicit key policy; remote IAM Allow, key context and SCP/RCP unknown',
-                         key, 'p5d_cross_account_status')
+            # Do not trust a stale/partially collected key policy. A denied
+            # GetKeyPolicy cannot be treated as a verified cross-account Allow.
+            # Grant results are independently checked below: their existence
+            # may still be observed even when the key policy is unreadable.
+            if key.get('policy_collection_status') == 'complete':
+                policy = key.get('policy')
+                principals, _ = _external_principals(policy, own_account)
+                for principal in principals:
+                    if principal.endswith(':root'):
+                        continue
+                    if _resource_permission(policy, principal, 'kms:Decrypt', arn) == 'yes':
+                        emit(principal, arn, 'kms_cross_account_key_policy', 'kms:Decrypt',
+                             'explicit key policy; remote IAM Allow, key context and SCP/RCP unknown',
+                             key, 'p5d_cross_account_status')
             grants = key.get('grants')
-            if isinstance(grants, dict):
+            if (key.get('grants_collection_status') == 'complete'
+                    and isinstance(grants, dict)):
                 for grant in list(grants.values())[:MAX_RESOURCES]:
                     if not isinstance(grant, dict):
                         continue
