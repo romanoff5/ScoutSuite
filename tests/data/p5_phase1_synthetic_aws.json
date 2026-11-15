@@ -1588,6 +1588,1384 @@
           "awslambda_inventory": "observed_bounded"
         }
       }
+    },
+    {
+      "id": "iam-lambda-update-positive",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:UpdateFunctionConfiguration",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:UpdateFunctionCode",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:InvokeFunction",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "awslambda"
+          ],
+          "value": {
+            "regions": {
+              "eu-central-1": {
+                "functions": {
+                  "updated": {
+                    "arn": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated",
+                    "role_arn": "arn:aws:iam::123456789012:role/Priv",
+                    "access_policy": {
+                      "Statement": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_lambda_update",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "awslambda_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "iam-lambda-update-scoped-deny",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:UpdateFunctionConfiguration",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:UpdateFunctionCode",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:InvokeFunction",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "awslambda"
+          ],
+          "value": {
+            "regions": {
+              "eu-central-1": {
+                "functions": {
+                  "updated": {
+                    "arn": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated",
+                    "role_arn": "arn:aws:iam::123456789012:role/Priv",
+                    "access_policy": {
+                      "Statement": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "lambda:UpdateFunctionCode",
+            "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "awslambda_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "iam-lambda-update-boundary-unknown",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:UpdateFunctionConfiguration",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:UpdateFunctionCode",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:InvokeFunction",
+              "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "awslambda"
+          ],
+          "value": {
+            "regions": {
+              "eu-central-1": {
+                "functions": {
+                  "updated": {
+                    "arn": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated",
+                    "role_arn": "arn:aws:iam::123456789012:role/Priv",
+                    "access_policy": {
+                      "Statement": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial",
+          "awslambda_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "iam-ec2-profile-mutation-positive",
+      "template": "iam_ec2",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "instance_profiles"
+          ],
+          "value": {}
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "instance_profiles"
+          ],
+          "value": {
+            "occupied": {
+              "arn": "arn:aws:iam::123456789012:instance-profile/Occupied",
+              "name": "Occupied"
+            }
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Allow",
+            "Action": [
+              "iam:RemoveRoleFromInstanceProfile",
+              "iam:AddRoleToInstanceProfile"
+            ],
+            "Resource": "arn:aws:iam::123456789012:instance-profile/Occupied"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_ec2_profile_mutation",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-ec2-profile-mutation-deny",
+      "template": "iam_ec2",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "instance_profiles"
+          ],
+          "value": {}
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "instance_profiles"
+          ],
+          "value": {
+            "occupied": {
+              "arn": "arn:aws:iam::123456789012:instance-profile/Occupied",
+              "name": "Occupied"
+            }
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Allow",
+            "Action": [
+              "iam:RemoveRoleFromInstanceProfile",
+              "iam:AddRoleToInstanceProfile"
+            ],
+            "Resource": "arn:aws:iam::123456789012:instance-profile/Occupied"
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "iam:AddRoleToInstanceProfile",
+            "Resource": "arn:aws:iam::123456789012:instance-profile/Occupied"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-ec2-profile-mutation-boundary-unknown",
+      "template": "iam_ec2",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "instance_profiles"
+          ],
+          "value": {}
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "instance_profiles"
+          ],
+          "value": {
+            "occupied": {
+              "arn": "arn:aws:iam::123456789012:instance-profile/Occupied",
+              "name": "Occupied"
+            }
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Allow",
+            "Action": [
+              "iam:RemoveRoleFromInstanceProfile",
+              "iam:AddRoleToInstanceProfile"
+            ],
+            "Resource": "arn:aws:iam::123456789012:instance-profile/Occupied"
+          }
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial"
+        }
+      }
+    },
+    {
+      "id": "ecs-register-run-positive",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ecs:RegisterTaskDefinition",
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ecs:RunTask",
+              "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:*"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "task_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "execution_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_ecs_register_run",
+            "source": "arn:aws:iam::123456789012:role/Operator",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "ecs-register-run-deny",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ecs:RegisterTaskDefinition",
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ecs:RunTask",
+              "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:*"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "task_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "execution_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "ecs:RegisterTaskDefinition",
+            "Resource": "*"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "ecs-register-run-boundary-unknown",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": [
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "arn:aws:iam::123456789012:role/Priv"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ecs:RegisterTaskDefinition",
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ecs:RunTask",
+              "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:*"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "task_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "execution_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial",
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "s3-access-point-external-positive",
+      "template": "s3_bucket",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy",
+            "Statement"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "advanced"
+          ],
+          "value": {
+            "regions": {
+              "eu-central-1": {
+                "access_points": {
+                  "synthetic": {
+                    "AccessPointArn": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic",
+                    "policy_status": "verified",
+                    "detail_complete": true,
+                    "policy_document": {
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": "s3:GetObject",
+                          "Principal": {
+                            "AWS": "arn:aws:iam::999999999999:role/Reader"
+                          },
+                          "Resource": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic/object/*"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "s3_access_point_cross_account",
+            "source": "arn:aws:iam::999999999999:role/Reader",
+            "target": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {
+          "s3_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "s3-access-point-external-deny",
+      "template": "s3_bucket",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy",
+            "Statement"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "advanced"
+          ],
+          "value": {
+            "regions": {
+              "eu-central-1": {
+                "access_points": {
+                  "synthetic": {
+                    "AccessPointArn": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic",
+                    "policy_status": "verified",
+                    "detail_complete": true,
+                    "policy_document": {
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": "s3:GetObject",
+                          "Principal": {
+                            "AWS": "arn:aws:iam::999999999999:role/Reader"
+                          },
+                          "Resource": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic/object/*"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "s3",
+            "advanced",
+            "regions",
+            "eu-central-1",
+            "access_points",
+            "synthetic",
+            "policy_document",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "s3:GetObject",
+            "Principal": {
+              "AWS": "arn:aws:iam::999999999999:role/Reader"
+            },
+            "Resource": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic/object/*"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {
+          "s3_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "s3-access-point-policy-unknown",
+      "template": "s3_bucket",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "buckets",
+            "audit",
+            "policy",
+            "Statement"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "advanced"
+          ],
+          "value": {
+            "regions": {
+              "eu-central-1": {
+                "access_points": {
+                  "synthetic": {
+                    "AccessPointArn": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic",
+                    "policy_status": "verified",
+                    "detail_complete": true,
+                    "policy_document": {
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": "s3:GetObject",
+                          "Principal": {
+                            "AWS": "arn:aws:iam::999999999999:role/Reader"
+                          },
+                          "Resource": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic/object/*"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "advanced",
+            "regions",
+            "eu-central-1",
+            "access_points",
+            "synthetic",
+            "policy_status"
+          ],
+          "value": "denied"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "s3",
+            "advanced",
+            "regions",
+            "eu-central-1",
+            "access_points",
+            "synthetic",
+            "detail_complete"
+          ],
+          "value": false
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "s3_inventory": "partial"
+        }
+      }
+    },
+    {
+      "id": "iam-user-lambda-delegation-positive",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "users",
+            "builder"
+          ],
+          "value": {
+            "id": "Builder",
+            "name": "Builder",
+            "arn": "arn:aws:iam::123456789012:user/Builder",
+            "inline_policies": {
+              "p": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "iam:PassRole",
+                      "Resource": "arn:aws:iam::123456789012:role/Priv"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": "lambda:CreateFunction",
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": "lambda:InvokeFunction",
+                      "Resource": "*"
+                    }
+                  ]
+                }
+              }
+            },
+            "inline_policy_collection_status": "complete",
+            "p4b2_managed_status": "complete",
+            "p4b2_managed_arns": [],
+            "p4b2_boundary_status": "complete",
+            "p4b2_boundary": null,
+            "p4b2_membership_status": "complete",
+            "groups": []
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [
+          {
+            "type": "iam_lambda_create",
+            "source": "arn:aws:iam::123456789012:user/Builder",
+            "target": "arn:aws:iam::123456789012:role/Priv",
+            "verification": "POTENTIAL"
+          }
+        ],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-user-lambda-delegation-deny",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "users",
+            "builder"
+          ],
+          "value": {
+            "id": "Builder",
+            "name": "Builder",
+            "arn": "arn:aws:iam::123456789012:user/Builder",
+            "inline_policies": {
+              "p": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "iam:PassRole",
+                      "Resource": "arn:aws:iam::123456789012:role/Priv"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": "lambda:CreateFunction",
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": "lambda:InvokeFunction",
+                      "Resource": "*"
+                    }
+                  ]
+                }
+              }
+            },
+            "inline_policy_collection_status": "complete",
+            "p4b2_managed_status": "complete",
+            "p4b2_managed_arns": [],
+            "p4b2_boundary_status": "complete",
+            "p4b2_boundary": null,
+            "p4b2_membership_status": "complete",
+            "groups": []
+          }
+        },
+        {
+          "op": "append",
+          "path": [
+            "services",
+            "iam",
+            "users",
+            "builder",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": {
+            "Effect": "Deny",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::123456789012:role/Priv"
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "complete",
+        "edges": [],
+        "collection": {}
+      }
+    },
+    {
+      "id": "iam-user-lambda-delegation-unknown",
+      "template": "iam_lambda",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "inline_policies",
+            "p",
+            "PolicyDocument",
+            "Statement"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "users",
+            "builder"
+          ],
+          "value": {
+            "id": "Builder",
+            "name": "Builder",
+            "arn": "arn:aws:iam::123456789012:user/Builder",
+            "inline_policies": {
+              "p": {
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "iam:PassRole",
+                      "Resource": "arn:aws:iam::123456789012:role/Priv"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": "lambda:CreateFunction",
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": "lambda:InvokeFunction",
+                      "Resource": "*"
+                    }
+                  ]
+                }
+              }
+            },
+            "inline_policy_collection_status": "complete",
+            "p4b2_managed_status": "complete",
+            "p4b2_managed_arns": [],
+            "p4b2_boundary_status": "complete",
+            "p4b2_boundary": null,
+            "p4b2_membership_status": "complete",
+            "groups": []
+          }
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "users",
+            "builder",
+            "p4b2_boundary_status"
+          ],
+          "value": "denied"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial"
+        }
+      }
+    },
+    {
+      "id": "iam-ec2-boundary-unknown",
+      "template": "iam_ec2",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial"
+        }
+      }
+    },
+    {
+      "id": "ecs-task-boundary-unknown",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial",
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "ecs-agent-boundary-unknown",
+      "template": "ecs_task",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "task_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Other"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "ecs",
+            "regions",
+            "eu-central-1",
+            "task_definitions",
+            "example",
+            "execution_role_arn"
+          ],
+          "value": "arn:aws:iam::123456789012:role/Priv"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "operator",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial",
+          "ecs_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "eks-irsa-boundary-unknown",
+      "template": "eks_irsa",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "priv",
+            "permissions_boundary"
+          ],
+          "value": "arn:aws:iam::123456789012:policy/Uncollected"
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "eks",
+            "regions",
+            "eu-central-1",
+            "clusters",
+            "sample",
+            "oidc_issuer"
+          ],
+          "value": null
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial",
+          "eks_inventory": "observed_bounded"
+        }
+      }
+    },
+    {
+      "id": "lambda-invoke-collector-unknown",
+      "template": "lambda_invoke",
+      "patches": [
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "awslambda",
+            "regions",
+            "eu-central-1",
+            "functions",
+            "example",
+            "access_policy"
+          ],
+          "value": {
+            "Statement": []
+          }
+        },
+        {
+          "op": "set",
+          "path": [
+            "services",
+            "iam",
+            "roles",
+            "incomplete"
+          ],
+          "value": {
+            "id": "Incomplete",
+            "name": "Incomplete",
+            "arn": "arn:aws:iam::123456789012:role/Incomplete",
+            "inline_policies": {},
+            "inline_policy_collection_status": "unknown",
+            "attached_managed_policy_collection_status": "unknown",
+            "attached_managed_policy_arns": [],
+            "role_boundary_collection_status": "unknown",
+            "permissions_boundary": null,
+            "instance_profiles": {},
+            "assume_role_policy": {
+              "PolicyDocument": {
+                "Statement": []
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "graph_status": "partial",
+        "edges": [],
+        "collection": {
+          "iam": "partial",
+          "awslambda_inventory": "observed_bounded"
+        }
+      }
     }
   ]
 }

@@ -122,7 +122,7 @@ def _p5_fixture(case):
 def test_p5_phase1_fixture_catalog_contract():
     assert CATALOG["schema"] == "scoutsuite-p5-synthetic-aws-v1"
     assert CATALOG["account_id"] == ACCOUNT
-    assert len(CASES) == 33
+    assert len(CASES) >= 53
     assert len(CATALOG["templates"]) == 10
     ids = [case["id"] for case in CASES]
     assert len(ids) == len(set(ids))

@@ -47,6 +47,7 @@ EDGE_RULES = {
     'iam_lambda_create': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_lambda_update': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_ec2_create': ('iam-p5d-role-workload-delegation.json', 'source'),
+    'iam_ec2_profile_mutation': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_ecs_run_task': ('iam-p5d-role-workload-delegation.json', 'source'),
     'iam_ecs_register_run': ('iam-p5d-role-workload-delegation.json', 'source'),
     'eks_irsa_role': ('eks-p5d-workload-identity.json', 'source'),
@@ -145,6 +146,8 @@ def _expected_findings(case, services):
         if kind == GRAPH_ONLY_REVIEW:
             continue
         rule, role = EDGE_RULES[kind]
+        if kind.startswith('iam_') and ':user/' in edge['source']:
+            rule = 'iam-p5d-user-workload-delegation.json'
         principal = (edge['source'] if role == 'source' else
                      edge['source'].rsplit('/', 2)[0] if role == 'pod_source'
                      else edge['target'])
@@ -212,7 +215,9 @@ def _assert_assembled(case, provider, graph, expected):
             assert len(flagged_cards) == len(expected_paths), (
                 case['id'], key, cards)
             for card in flagged_cards:
-                assert card['verification_status'] == verification
+                assert card['verification_status'] == verification, (
+                    case['id'], rule_name, card['resource_arn'],
+                    card['verification_status'], verification)
                 assert card['confidence'] in ('LOW', 'MEDIUM')
                 assert card['collection'] in ('COMPLETE', 'PARTIAL')
                 assert any(check['label'] == 'Cross-service graph witness'
@@ -239,8 +244,12 @@ def _processed_case(case, ruleset):
     iam['relationship_graph'] = role_graph
     for role in iam.get('roles', {}).values():
         if role.get('name') == 'Priv':
-            assert role['p4b_admin_policy_status'] == 'admin_policy_candidate', (
-                case['id'], role['p4b_admin_policy_status'])
+            # Missing permissions-boundary evidence is deliberately UNKNOWN,
+            # never a confirmed admin target. Both branches must be tested.
+            expected_hint = ('unknown' if role.get('permissions_boundary')
+                             else 'admin_policy_candidate')
+            assert role['p4b_admin_policy_status'] == expected_hint, (
+                case['id'], role['p4b_admin_policy_status'], expected_hint)
     graph = annotate_p5d_attack_paths(services, sorted(services), CATALOG['account_id'])
     expected = _expected_findings(case, services)
     # Phase-1 facts are minimal and omit normal AWS collector count metadata.
@@ -345,7 +354,7 @@ def _browser_check(url, expected_arn, profile):
 
 
 def run():
-    assert len(CASES) == 33
+    assert len(CASES) >= 53
     ruleset = _ruleset()
     cases = {}
     with tempfile.TemporaryDirectory(prefix='scoutsuite-p5-pipeline-') as folder:
@@ -431,7 +440,7 @@ def run():
                 for api in mounted:
                     api.results.close()
                 assert not thread.is_alive()
-    print('P5 full pipeline: PASS (33 pinned cases; IAM graph -> real rule '
+    print('P5 full pipeline: PASS (53+ pinned cases; IAM graph -> real rule '
           'engine -> B/B2 evidence -> SQLite -> HTTP -> live HTML browser)',
           flush=True)
 

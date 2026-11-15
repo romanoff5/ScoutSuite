@@ -18,7 +18,7 @@ import zipfile
 
 
 SOURCE = Path(__file__).resolve().parents[1]
-PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'p3c',
+PHASES = ('acquire', 'workflows', 'build', 'dependencies', 'lint', 'tests', 'p3c', 'p5_coverage',
           'sqlite_http', 'xss_browser', 'report_e2e', 'packaging', 'windows_install')
 CLI_CASES = {'test_empty', 'test_aws_provider', 'test_gcp_provider', 'test_azure_provider',
              'test_unauthenticated', 'test_keyboardinterrupted'}
@@ -257,7 +257,8 @@ class Pipeline:
         # On Windows/3.11 the full real wheel installer is the expensive
         # independent gate. Start it first to overlap with the existing suite.
         phases = ['windows_install'] if system == 'Windows' and python_version == (3, 11) else []
-        phases += ['dependencies', 'lint', 'tests', 'p3c', 'xss_browser', 'packaging']
+        phases += ['dependencies', 'lint', 'tests', 'p3c', 'p5_coverage',
+                   'xss_browser', 'packaging']
         if system == 'Linux':
             phases.append('sqlite_http')
         # The Windows 3.11 browser E2E exception is narrowly documented in
@@ -373,6 +374,11 @@ class Pipeline:
         """Network-isolated quality gate in the pinned test venv, never system Python."""
         self.run([python_at(self.root, 'test'), '-B', '-m', 'tools.p3c_quality', '--check'],
                  cwd=SOURCE)
+
+    def p5_coverage(self):
+        """Fail CI when any production P5 detector/rule lacks P/N/UNKNOWN tests."""
+        self.run([python_at(self.root, 'test'), '-I', '-B',
+                  SOURCE / 'tools/p5_coverage_matrix.py', '--check'], cwd=SOURCE)
 
     def sqlite_http(self):
         """Run true HTTP/TCP integration inside a loopback-only net namespace.

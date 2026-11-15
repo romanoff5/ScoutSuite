@@ -1,0 +1,93 @@
+{
+  "schema": "scoutsuite-p5-detector-coverage-v1",
+  "description": "Independently pinned regression case IDs for all production P5-D edge types. All three classes required on every change.",
+  "detectors": {
+    "iam_lambda_create": [
+      "iam-lambda-passrole-allow",
+      "iam-lambda-passrole-explicit-deny",
+      "iam-lambda-boundary-unverified"
+    ],
+    "iam_lambda_update": [
+      "iam-lambda-update-positive",
+      "iam-lambda-update-scoped-deny",
+      "iam-lambda-update-boundary-unknown"
+    ],
+    "iam_ec2_create": [
+      "iam-ec2-profile-present",
+      "iam-ec2-runinstances-denied",
+      "iam-ec2-boundary-unknown"
+    ],
+    "iam_ec2_profile_mutation": [
+      "iam-ec2-profile-mutation-positive",
+      "iam-ec2-profile-mutation-deny",
+      "iam-ec2-profile-mutation-boundary-unknown"
+    ],
+    "iam_ecs_run_task": [
+      "ecs-task-role-candidate",
+      "ecs-task-run-deny",
+      "ecs-task-boundary-unknown"
+    ],
+    "iam_ecs_execution_role_review": [
+      "ecs-agent-execution-role-review",
+      "ecs-task-run-deny",
+      "ecs-agent-boundary-unknown"
+    ],
+    "iam_ecs_register_run": [
+      "ecs-register-run-positive",
+      "ecs-register-run-deny",
+      "ecs-register-run-boundary-unknown"
+    ],
+    "eks_irsa_role": [
+      "eks-irsa-exact-issuer-aud-sub",
+      "eks-irsa-wrong-audience",
+      "eks-irsa-boundary-unknown"
+    ],
+    "eks_pod_identity": [
+      "eks-podidentity-list-describe-complete",
+      "eks-podidentity-tag-session-denied",
+      "eks-podidentity-describe-accessdenied"
+    ],
+    "s3_cross_account_resource_policy": [
+      "s3-cross-account-prefix-get",
+      "s3-cross-account-explicit-deny",
+      "s3-bucket-policy-accessdenied"
+    ],
+    "s3_access_point_cross_account": [
+      "s3-access-point-external-positive",
+      "s3-access-point-external-deny",
+      "s3-access-point-policy-unknown"
+    ],
+    "kms_cross_account_key_policy": [
+      "kms-key-policy-external-decrypt",
+      "kms-key-policy-explicit-deny",
+      "kms-key-policy-accessdenied"
+    ],
+    "kms_cross_account_grant": [
+      "kms-grant-unconstrained",
+      "kms-grant-encryption-context",
+      "kms-grants-list-accessdenied"
+    ],
+    "lambda_external_invoke_review": [
+      "lambda-external-invoke-review",
+      "lambda-external-invoke-deny",
+      "lambda-invoke-collector-unknown"
+    ]
+  },
+  "finding_rules": {
+    "iam-p5d-user-workload-delegation.json": "iam-user-lambda-delegation-positive",
+    "iam-p5d-role-workload-delegation.json": "iam-lambda-passrole-allow",
+    "iam-p5d-eks-role-identity.json": "eks-irsa-exact-issuer-aud-sub",
+    "eks-p5d-workload-identity.json": "eks-irsa-exact-issuer-aud-sub",
+    "s3-p5d-cross-account-bucket.json": "s3-cross-account-prefix-get",
+    "s3-p5d-cross-account-access-point.json": "s3-access-point-external-positive",
+    "kms-p5d-cross-account-key.json": "kms-key-policy-external-decrypt",
+    "awslambda-p5d-external-privileged-invoke-review.json": "lambda-external-invoke-review"
+  },
+  "negative_semantics": "No oracle edge of this kind and complete graph collection",
+  "unknown_semantics": "No oracle edge of this kind, partial graph collection, never verified safe",
+  "orders": [
+    "positive",
+    "negative",
+    "unknown"
+  ]
+}

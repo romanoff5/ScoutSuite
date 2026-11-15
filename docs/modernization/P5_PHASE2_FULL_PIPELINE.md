@@ -8,7 +8,7 @@ P5-B confidence, P5-B2 resource cards, versioned RESULTS SQLite database,
 true HTTP/TCP API, and SQLite-backed HTML report.
 
 The source oracle remains the checked-in independent
-tests/data/p5_phase1_synthetic_aws.json: 33 cases and ten collection templates.
+tests/data/p5_phase1_synthetic_aws.json: 53 cases and ten collection templates.
 No AWS credentials, customer snapshots, cloud requests, nonlocal hosts,
 IAM exploitation, mutation or outside URL downloads.
 
@@ -35,7 +35,7 @@ AWS credentials, production scan files or Internet. Ubuntu/Python 3.11 and
 3.14 on PRs and master pushes enforce the gate. Socket-blocked pytest and
 Windows platform gates remain unchanged.
 
-Each of the 33 independent scenarios:
+Each of the 53 independent scenarios:
 1. Applies synthetic AWS fact changes, with real List->Describe collector code
    and a deterministic SDK stub for EKS Pod Identity.
 2. Runs the production IAM relationship and P5-D attack path correlators,
@@ -66,3 +66,11 @@ authorization, exploitation or real-account detection precision. SCP/RCP,
 actual reachability and live Kubernetes Pods remain unverified. Phase 3
 can pin golden card/API snapshots, add mutation checks, and run an optional
 Docker packaging smoke independent from the detector correctness oracle.
+
+## Mandatory detector coverage
+
+The independent `p5_coverage` CI phase statically derives all 14 graph
+emitter kinds and checks a pinned positive/negative/UNKNOWN scenario for
+each, as well as positive witnesses for all eight enabled P5 finding rules.
+New cases also run through this full SQLite/HTTP pipeline. See
+`P5_HARDENING_COVERAGE_MATRIX.md`.
