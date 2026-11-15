@@ -150,7 +150,8 @@ def test_pod_identity_association_and_trust_and_missing_inventory():
                'oidc_issuer': 'https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLE',
                'pod_identity_inventory_status': 'complete',
                'pod_identity_associations': {'pa': {'namespace': 'team',
-                  'service_account': 'api', 'role_arn': target['arn']}}}
+                  'service_account': 'api', 'role_arn': target['arn'],
+                  'session_policy_present': False, 'detail_collection_status': 'complete'}}}
     eks = {'regions': {'eu-central-1': {'clusters': {'test': cluster}}}}
     graph, _ = scan(roles={'p': target}, eks=eks)
     assert len(edges(graph, 'eks_pod_identity')) == 1
@@ -281,7 +282,8 @@ def test_pod_identity_matching_deny_and_notprincipal_veto():
                'pod_identity_inventory_status': 'complete',
                'pod_identity_associations': {'p': {
                    'namespace': 'team', 'service_account': 'api',
-                   'role_arn': target['arn']}}}
+                   'role_arn': target['arn'], 'session_policy_present': False,
+                   'detail_collection_status': 'complete'}}}
     eks = {'regions': {'eu-central-1': {'clusters': {'c': cluster}}}}
     deny = {'Effect': 'Deny', 'Action': 'sts:TagSession',
             'Principal': {'Service': 'pods.eks.amazonaws.com'}}
