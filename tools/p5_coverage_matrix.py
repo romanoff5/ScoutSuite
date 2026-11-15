@@ -1,0 +1,182 @@
+"""P5-Hardening: offline, fail-closed detector/fixture coverage gate.
+
+Independent inputs: Python AST of the production correlator, AWS ruleset
+definitions, checked-in case oracles and a reviewed case-ID matrix.
+No AWS credentials, network access, or importing production detectors.
+"""
+import argparse
+import ast
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CORRELATOR = ROOT / "ScoutSuite/providers/aws/resources/iam/attack_paths_p5d.py"
+CATALOG = ROOT / "tests/data/p5_phase1_synthetic_aws.json"
+MATRIX = ROOT / "tests/data/p5_detector_coverage.json"
+RULESET = ROOT / "ScoutSuite/providers/aws/rules/rulesets/default.json"
+STATUSES = ("positive", "negative", "unknown")
+
+
+def discover_edge_kinds(code):
+    """Read all statically enumerable P5-D emitters without executing AWS code.
+
+    A new dynamic/unparseable emitter is a gate failure, never silently omitted.
+    """
+    tree = ast.parse(code)
+    functions = {node.name: node for node in tree.body
+                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    required = {"_workload_routes", "_eks_routes", "_resource_routes",
+                "annotate_p5d_attack_paths"}
+    assert required <= functions.keys(), "P5-D emitter entrypoint changed"
+    routes = functions["_workload_routes"]
+    services = set()
+    for node in ast.walk(routes):
+        if isinstance(node, ast.For) and isinstance(node.target, ast.Tuple):
+            names = [part.id for part in node.target.elts if isinstance(part, ast.Name)]
+            if names == ["service", "principal", "action"]:
+                values = ast.literal_eval(node.iter)
+                services.update(row[0] for row in values)
+    assert services, "No service creation emitters found"
+
+    kinds = set()
+    dynamic = 0
+    for node in ast.walk(routes):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "paths" and node.func.attr == "append"):
+            continue
+        assert len(node.args) == 1 and isinstance(node.args[0], ast.Tuple)
+        expression = node.args[0].elts[0]
+        if isinstance(expression, ast.Constant) and isinstance(expression.value, str):
+            kinds.add("iam_" + expression.value)
+        elif (isinstance(expression, ast.BinOp) and isinstance(expression.op, ast.Add)
+              and isinstance(expression.left, ast.Name)
+              and expression.left.id == "service"
+              and isinstance(expression.right, ast.Constant)
+              and isinstance(expression.right.value, str)):
+            kinds.update("iam_" + service + expression.right.value
+                         for service in services)
+        else:
+            raise AssertionError("Unrecognized P5-D workload emitter: "
+                                 + ast.dump(expression))
+    for function in ("_eks_routes", "_resource_routes"):
+        for node in ast.walk(functions[function]):
+            if not (isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id == "emit"):
+                continue
+            assert len(node.args) >= 3, "P5-D emit without graph kind"
+            expr = node.args[2]
+            assert isinstance(expr, ast.Constant) and isinstance(expr.value, str), (
+                "Unreviewed dynamic P5-D graph kind in " + function)
+            kinds.add(expr.value)
+    # The only supported dynamic bridge from workload paths to graph kinds:
+    caller = functions["annotate_p5d_attack_paths"]
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "emit" and len(node.args) >= 3
+               and isinstance(node.args[2], ast.BinOp)
+               and isinstance(node.args[2].left, ast.Constant)
+               and node.args[2].left.value == "iam_"
+               for node in ast.walk(caller)), "Workload->IAM edge binding changed"
+    assert len(kinds) > 0, "No P5-D detectors discovered"
+    return kinds
+
+
+def validate(matrix, catalog, code, ruleset):
+    """Reject any missing detector, state, case, rule or contradictory oracle."""
+    assert matrix.get("schema") == "scoutsuite-p5-detector-coverage-v1"
+    assert catalog.get("schema") == "scoutsuite-p5-synthetic-aws-v1"
+    cases = catalog.get("cases", [])
+    assert isinstance(cases, list) and cases
+    by_id = {row["id"]: row for row in cases}
+    assert len(by_id) == len(cases), "Duplicate P5 scenario IDs"
+    expected_types = discover_edge_kinds(code)
+    detectors = matrix.get("detectors")
+    assert isinstance(detectors, dict) and set(detectors) == expected_types, (
+        "P5 detector coverage drift; uncovered=" +
+        str(sorted(expected_types - set(detectors or {}))) + " obsolete=" +
+        str(sorted(set(detectors or {}) - expected_types)))
+    for kind, witness_ids in sorted(detectors.items()):
+        assert isinstance(witness_ids, list) and len(witness_ids) == 3, (
+            kind + " must pin positive/negative/unknown")
+        assert len(set(witness_ids)) == 3, kind + " reuses a witness"
+        for state, case_id in zip(STATUSES, witness_ids):
+            assert case_id in by_id, kind + " missing " + state + " fixture " + case_id
+            case = by_id[case_id]
+            actual = case["expected"]
+            linked = [row for row in actual["edges"] if row["type"] == kind]
+            assert (bool(linked) if state == "positive" else not linked), (
+                kind + " bad " + state + " edge oracle in " + case_id)
+            assert actual["graph_status"] == (
+                "partial" if state == "unknown" else "complete"), (
+                kind + " unsafe " + state + " graph status in " + case_id)
+            assert state == "positive" or case["patches"], (
+                kind + " requires independently changed negative/unknown facts")
+
+    enabled = {name for name, definitions in ruleset["rules"].items()
+               if "-p5d-" in name and any(item.get("enabled") is True
+                                            for item in definitions)}
+    all_p5 = {name for name in ruleset["rules"] if "-p5d-" in name}
+    rules = matrix.get("finding_rules")
+    assert isinstance(rules, dict) and set(rules) == all_p5 == enabled, (
+        "P5 finding rule missing/disabled/uncovered: " + repr(
+            (all_p5 - set(rules or {}), set(rules or {}) - all_p5,
+             all_p5 - enabled)))
+    for rule, case_id in sorted(rules.items()):
+        assert case_id in by_id, rule + " has no positive case"
+        links = by_id[case_id]["expected"]["edges"]
+        assert links, rule + " does not lead to a finding"
+        assert (
+            any(e["type"].startswith("iam_") and ":user/" in e["source"]
+                and e["type"] != "iam_ecs_execution_role_review" for e in links)
+            if rule == "iam-p5d-user-workload-delegation.json" else
+            any(e["type"].startswith("iam_") and ":role/" in e["source"]
+                and e["type"] != "iam_ecs_execution_role_review" for e in links)
+            if rule == "iam-p5d-role-workload-delegation.json" else
+            any(e["type"].startswith("eks_") for e in links)
+            if rule in ("iam-p5d-eks-role-identity.json",
+                        "eks-p5d-workload-identity.json") else
+            any(e["type"] == "s3_cross_account_resource_policy" for e in links)
+            if rule == "s3-p5d-cross-account-bucket.json" else
+            any(e["type"] == "s3_access_point_cross_account" for e in links)
+            if rule == "s3-p5d-cross-account-access-point.json" else
+            any(e["type"].startswith("kms_") for e in links)
+            if rule == "kms-p5d-cross-account-key.json" else
+            any(e["type"] == "lambda_external_invoke_review" for e in links)
+            if rule == "awslambda-p5d-external-privileged-invoke-review.json"
+            else False
+        ), rule + " incorrectly assigned positive fixture " + case_id
+    # Reject silently introduced oracle detector kinds, even when unrelated
+    # to this gate's explicit witness case selection.
+    observed = {edge["type"] for case in cases for edge in case["expected"]["edges"]}
+    assert observed <= expected_types, "Orphan or obsolete fixture kinds"
+    return {
+        "detectors": len(detectors),
+        "finding_rules": len(rules),
+        "scenarios": len(cases),
+        "checked_states": len(detectors) * len(STATUSES),
+    }
+
+
+def check():
+    result = validate(
+        json.loads(MATRIX.read_text(encoding="utf-8")),
+        json.loads(CATALOG.read_text(encoding="utf-8")),
+        CORRELATOR.read_text(encoding="utf-8"),
+        json.loads(RULESET.read_text(encoding="utf-8")))
+    print("P5 detector coverage: PASS (" +
+          ", ".join(str(value) + " " + key for key, value in result.items()) +
+          ")", flush=True)
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", required=True)
+    parser.parse_args()
+    check()
+
+
+if __name__ == "__main__":
+    main()
