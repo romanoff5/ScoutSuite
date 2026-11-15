@@ -10,6 +10,7 @@ import re
 
 from ScoutSuite.providers.aws.resources.iam.policy_accuracy import (
     identity_permission, creation_permission, _statement_scope,
+    _regions as creation_regions, _suffixes as creation_suffixes,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
     _role_documents, _service_trust, _statements, _matches_action,
@@ -180,6 +181,23 @@ def _regions(services, service, subkey):
     return objects[:MAX_RESOURCES]
 
 
+def _invokable_lambda_creation(docs, source_arn):
+    """One concrete witness must satisfy both creation and execution grants."""
+    account = _arn_account(source_arn)
+    if not account:
+        return False
+    partition = source_arn.split(':')[1]
+    suffixes = creation_suffixes(docs, 'lambda:CreateFunction',
+                                'lambda', 'function')
+    for region in creation_regions(docs, 'lambda:CreateFunction', 'lambda'):
+        for suffix in suffixes:
+            arn = f'arn:{partition}:lambda:{region}:{account}:function:{suffix}'
+            if (identity_permission(docs, 'lambda:CreateFunction', arn) == 'yes'
+                    and identity_permission(docs, 'lambda:InvokeFunction', arn) == 'yes'):
+                return True
+    return False
+
+
 def _workload_routes(docs, source_arn, target, services):
     target_arn = target['arn']
     paths = []
@@ -194,7 +212,9 @@ def _workload_routes(docs, source_arn, target, services):
         if service == 'ec2' and not target.get('instance_profiles'):
             # RunInstances accepts an instance profile, not a bare IAM role.
             continue
-        if creation_permission(docs, action, source_arn) == 'yes':
+        viable = (_invokable_lambda_creation(docs, source_arn) if service == 'lambda'
+                  else creation_permission(docs, action, source_arn) == 'yes')
+        if viable:
             paths.append((service + '_create', action, 'identity Allow + compatible service trust; synthetic creation witness'))
     if (_service_trust(target, 'lambda.amazonaws.com') == 'yes'
             and identity_permission(docs, 'iam:PassRole', target_arn,
@@ -204,7 +224,8 @@ def _workload_routes(docs, source_arn, target, services):
             if _arn_account(arn) != _arn_account(source_arn):
                 continue
             if (identity_permission(docs, 'lambda:UpdateFunctionConfiguration', arn) == 'yes'
-                    and identity_permission(docs, 'lambda:UpdateFunctionCode', arn) == 'yes'):
+                    and identity_permission(docs, 'lambda:UpdateFunctionCode', arn) == 'yes'
+                    and identity_permission(docs, 'lambda:InvokeFunction', arn) == 'yes'):
                 paths.append(('lambda_update', 'lambda:UpdateFunctionConfiguration+UpdateFunctionCode',
                               'observed function ' + arn + '; role replacement and code control candidate'))
                 break
