@@ -63,6 +63,7 @@ def test_all_denied_and_unobserved_have_separate_unknown_states():
     annotate_p5d_attack_paths(services, ['iam'], '123456789012')
     assert services['iam']['attack_paths_p5d']['collection']['iam'] == 'denied'
     assert services['iam']['attack_paths_p5d']['status'] == 'unknown'
+    assert services['iam']['attack_paths_p5d']['collection']['lambda_ecs_ec2'] == 'partial'
 
 
 def test_genuine_empty_census_requires_four_successful_operations():

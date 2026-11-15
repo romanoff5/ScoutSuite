@@ -886,7 +886,7 @@ def annotate_p5d_attack_paths(services, selected, account_id):
     if s3_scope in ('partial', 'unknown'):
         graph['status'] = 'partial'
     graph['collection']['lambda_ecs_ec2'] = (
-        'partial' if graph['status'] == 'partial' else 'candidate_only')
+        'partial' if graph['status'] != 'complete' else 'candidate_only')
     if 'eks' in selected:
         _eks_routes(services, iam, emit)
         # List/Describe denied, partial or malformed on any EKS cluster
@@ -930,7 +930,7 @@ def annotate_p5d_attack_paths(services, selected, account_id):
         census = graph['collection'].get(service + '_inventory', 'not_selected')
         graph['collection'][service] = (
             'not_selected' if service not in selected else
-            'partial' if graph['status'] == 'partial' or census in ('partial', 'unknown')
+            'partial' if graph['status'] != 'complete' or census in ('partial', 'unknown')
             else 'candidate_only')
     graph['edges_count'] = len(graph['edges'])
     graph['nodes_count'] = len(graph['nodes'])
