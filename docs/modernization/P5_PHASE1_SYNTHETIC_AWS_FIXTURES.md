@@ -1,13 +1,13 @@
 # P5 regression harness — Phase 1: synthetic AWS facts and pinned oracles
 
 **Scope:** reproducible, read-only AWS service/policy fixtures and independent
-expected attack-path results. No SQLite, HTTP, HTML report, Docker container,
+expected attack-path results. No SQLite, HTTP, HTML report or Docker container in this Phase-1 pytest test file,
 network access, cloud credentials or IAM exploitation is part of Phase 1.
 
 ## Files and CI
 
 - `tests/data/p5_phase1_synthetic_aws.json`: 10 named normalized AWS inventory
-  templates and 33 independently pinned positive/negative/partial scenarios.
+  templates and 53 independently pinned positive/negative/partial scenarios.
 - `tests/test_p5_phase1_synthetic_aws.py`: loads and deep-copies fixture
   templates, applies strictly defined `set`, `append` and `delete` edits,
   exercises the production P5-D cross-service correlator and checks **exact**
@@ -63,3 +63,11 @@ live Pod authorization, reachable services) remain unobserved.
 - **Phase 3:** pin golden full-report/card/HTTP assertions and browser security
   checks. Compare detector changes against expected UNKNOWN/POTENTIAL/REVIEW
   classifications; add an optional, separate Docker packaging smoke check.
+
+## P5-Hardening extension
+
+Now 53 cases: 14 graph detectors with positive/negative/UNKNOWN coverage,
+including all IAM user, Lambda update, EC2 profile mutation, ECS register/run,
+and S3 Access Point paths. See `P5_HARDENING_COVERAGE_MATRIX.md`.
+The original Phase-1 isolated pytest is still socket-free; the same fixtures
+are also processed by the Phase-2 SQLite/HTTP harness in Linux CI.

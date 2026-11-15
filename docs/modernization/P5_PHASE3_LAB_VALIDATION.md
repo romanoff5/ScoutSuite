@@ -45,7 +45,7 @@ All tests are automatically collected by the existing offline `tests` gate:
 
     python -m pytest -q tests/test_p5_phase3_lab_cases.py
 
-They run alongside Phase-1 33-fixture graph checks and Phase-2 mandatory
+They run alongside Phase-1 53-fixture graph checks and Phase-2 mandatory
 SQLite -> loopback HTTP -> HTML browser integration. No Docker dependency is
 needed for correctness checks.
 
