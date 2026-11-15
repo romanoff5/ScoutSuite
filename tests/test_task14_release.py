@@ -80,8 +80,13 @@ def test_selection_keeps_stable_and_every_rc_environment_for_rollback():
 
 def test_ci_exercises_the_installer_and_fail_closed_selection_on_windows():
     flow = (ROOT / ".github/workflows/offline.yml").read_text(encoding="utf-8")
-    assert "./scripts/install-fork.ps1 -WheelPath" in flow
-    assert "'*romanoff5.main*.whl'" in flow
+    orchestrator = (ROOT / "tools/ci.py").read_text(encoding="utf-8")
+    installer = (ROOT / "tools/ci_verify_install.ps1").read_text(encoding="utf-8")
+    assert "python -B tools/ci.py verify" in flow
+    assert "tools/ci_verify_install.ps1" in orchestrator
+    assert "windows_install" in orchestrator
+    assert "./scripts/install-fork.ps1 -WheelPath" in installer
+    assert "'*romanoff5.main*.whl'" in installer
     assert "Selector did not pick the newest master install" in flow
     assert "Modified fork executable was not rejected" in flow
     assert "Stable rollback selection failed" in flow
