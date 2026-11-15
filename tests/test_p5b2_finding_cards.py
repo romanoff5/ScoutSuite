@@ -133,7 +133,7 @@ def test_alb_bypass_preserves_instance_sg_target_and_arn():
                 'target_group_arn': 'arn:aws:elasticloadbalancing:eu-west-1:123456789012:targetgroup/tg/abc',
                 'target_port': 443, 'target_health': 'healthy'}],
         }},
-    }}}}}
+    }}}}}}
     _, cards = assess('p3b-alb-backend-bypass-v1',
                       'elbv2.regions.id.vpcs.id.lbs.id', services)
     assert cards[0]['confidence'] == 'MEDIUM'
