@@ -12,7 +12,7 @@ from ScoutSuite.providers.aws.resources.iam.policy_accuracy import (
     identity_permission, creation_permission, _statement_scope,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
-    _role_documents, _service_trust, _statements,
+    _role_documents, _service_trust, _statements, _matches_action,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph_b2 import (
     _entity_documents, _policy_index,
@@ -241,6 +241,28 @@ def _workload_routes(docs, source_arn, target, services):
     return paths
 
 
+def _trust_blocked(statements, action, principal, principal_kind):
+    """Reject a matching or uncertain explicit trust Deny, not unrelated Denies."""
+    if not isinstance(statements, list):
+        return True
+    for row in statements:
+        if row.get('Effect') != 'Deny':
+            continue
+        match = _matches_action(row, action)
+        if match == 'no':
+            continue
+        if match == 'unknown' or 'NotPrincipal' in row:
+            return True
+        who = row.get('Principal')
+        if who == '*':
+            return True
+        scoped = _values(who.get(principal_kind)) if isinstance(who, dict) else None
+        if scoped is not None and (principal in scoped or '*' in scoped):
+            # Even conditional Deny may apply. We do not simulate request context.
+            return True
+    return False
+
+
 def _eks_routes(services, iam, emit):
     roles = [r for r in (iam.get('roles') or {}).values()
              if isinstance(r, dict) and r.get('p4b_admin_policy_status') == 'admin_policy_candidate']
@@ -261,6 +283,9 @@ def _eks_routes(services, iam, emit):
                 continue
             statements = _statements((role.get('assume_role_policy') or {}).get('PolicyDocument'))
             if statements is None:
+                continue
+            if _trust_blocked(statements, 'sts:AssumeRoleWithWebIdentity',
+                              provider, 'Federated'):
                 continue
             for row in statements:
                 principal = row.get('Principal')
@@ -302,10 +327,16 @@ def _eks_routes(services, iam, emit):
                 trust = _statements((role.get('assume_role_policy') or {}).get('PolicyDocument'))
                 if trust is None:
                     continue
+                if _trust_blocked(trust, 'sts:AssumeRole',
+                                  'pods.eks.amazonaws.com', 'Service'):
+                    continue
+                if _trust_blocked(trust, 'sts:TagSession',
+                                  'pods.eks.amazonaws.com', 'Service'):
+                    continue
                 if any(
                     row.get('Effect') == 'Allow' and row.get('Condition') is None
                     and isinstance(row.get('Principal'), dict)
-                    and row['Principal'].get('Service') == 'pods.eks.amazonaws.com'
+                    and 'pods.eks.amazonaws.com' in (_values(row['Principal'].get('Service')) or [])
                     and all(any(fnmatch.fnmatchcase(action.lower(), pattern.lower())
                                 for pattern in (_values(row.get('Action')) or []))
                             for action in ('sts:AssumeRole', 'sts:TagSession'))
