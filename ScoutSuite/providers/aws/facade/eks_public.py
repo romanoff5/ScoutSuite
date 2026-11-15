@@ -216,3 +216,61 @@ class EKSPublicFacade(AWSBaseFacade):
         return {'status': 'complete' if complete else 'partial',
                 'entries': entries}
 
+
+    async def get_pod_identity_associations(self, region, cluster_name):
+        """P5-D: bounded, read-only Pod Identity association census."""
+        client = AWSFacadeUtils.get_client('eks', self.session, region)
+        if client is None:
+            self.issue('failed', 'PodIdentityClientUnavailable')
+            return {'status': 'unknown', 'associations': []}
+        seen_tokens, seen_ids, token, rows = set(), set(), None, []
+        complete = True
+        for _ in range(MAX_PAGES):
+            args = {'clusterName': cluster_name, 'maxResults': PAGE_SIZE}
+            if token:
+                args['nextToken'] = token
+            try:
+                page = await run_concurrently(
+                    lambda args=args: client.list_pod_identity_associations(**args))
+            except Exception as error:
+                self.error('ListPodIdentityAssociations', error, partial=bool(rows))
+                complete = False
+                break
+            items = page.get('associations') if isinstance(page, dict) else None
+            if not isinstance(items, list) or len(items) > PAGE_SIZE:
+                self.issue('partial', 'MalformedPodIdentityAssociations')
+                complete = False
+                break
+            for item in items:
+                if not isinstance(item, dict):
+                    complete = False
+                    continue
+                ident = item.get('associationId')
+                role = item.get('roleArn')
+                namespace = item.get('namespace')
+                sa = item.get('serviceAccount')
+                if (not isinstance(ident, str) or not ident or ident in seen_ids
+                        or not isinstance(role, str) or not role.startswith('arn:')
+                        or not all(isinstance(x, str) and x for x in (namespace, sa))
+                        or len(rows) >= MAX_CLUSTERS):
+                    self.issue('partial', 'InvalidPodIdentityAssociation')
+                    complete = False
+                    continue
+                seen_ids.add(ident)
+                rows.append({'id': ident, 'role_arn': role, 'namespace': namespace,
+                             'service_account': sa,
+                             'association_arn': item.get('associationArn')})
+            following = page.get('nextToken') if isinstance(page, dict) else None
+            if following in (None, ''):
+                break
+            if (not isinstance(following, str) or len(following) > 4096
+                    or following in seen_tokens):
+                self.issue('partial', 'InvalidPodIdentityPagination')
+                complete = False
+                break
+            seen_tokens.add(following)
+            token = following
+        else:
+            self.issue('partial', 'PodIdentityPageLimit')
+            complete = False
+        return {'status': 'complete' if complete else 'partial', 'associations': rows}
