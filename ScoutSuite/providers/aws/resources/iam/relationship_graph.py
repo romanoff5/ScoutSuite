@@ -306,7 +306,7 @@ def _edge_id(source, target, kind, service):
     return hashlib.sha256(value).hexdigest()[:24]
 
 
-def build_relationship_graph(roles, policies):
+def build_relationship_graph(roles, policies, inventory_status=None):
     """Annotate roles and return a deterministic, bounded, read-only graph."""
     graph = {'schema': 'iam-relationships-p4b-v1', 'status': 'complete',
              'nodes': {}, 'edges': {}, 'nodes_count': 0,
@@ -315,6 +315,11 @@ def build_relationship_graph(roles, policies):
                  'SCP/RCP, session policies, resource policies, boundaries and simulation not evaluated',
                  'role principals only in first P4-B phase',
              ]}
+    # IAM.finalize supplies a telemetry-derived census. Direct synthetic
+    # callers without an explicit census retain the historical graph API.
+    if inventory_status is not None and inventory_status != 'complete':
+        graph['status'] = ('unknown' if inventory_status in ('denied', 'unknown')
+                           else 'partial')
     if not isinstance(roles, dict) or not isinstance(policies, dict):
         graph['status'] = 'unknown'
         return graph

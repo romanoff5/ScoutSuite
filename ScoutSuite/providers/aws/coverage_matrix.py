@@ -16,6 +16,9 @@ SCOPE_ALIASES = {
     's3control': 's3',
     'logs': 'cloudwatch',
     'elasticloadbalancing': 'elbv2',
+    # Rule metadata uses display names, while the collector uses service IDs.
+    'secrets manager': 'secretsmanager',
+    'systems manager': 'ssm',
 }
 
 UNKNOWN_STATES = frozenset((
@@ -23,7 +26,11 @@ UNKNOWN_STATES = frozenset((
 
 
 def _canonical(value):
-    return SCOPE_ALIASES.get(value, value)
+    """Canonical provider ID for AWS collector scopes and rule display labels."""
+    if not isinstance(value, str):
+        return value
+    key = value.strip().casefold()
+    return SCOPE_ALIASES.get(key, key)
 
 
 def _reported_inventory_count(region):
@@ -137,13 +144,29 @@ def build_aws_coverage_matrix(service_list, services, context,
 
     issues = [issue for issue in list(context.collection_issues) + list(extra_issues)
               if isinstance(issue, dict)]
-    enabled_rule_counts = enabled_rule_counts or {}
+    # Aggregate aliases before union. Otherwise rule labels like IAM/Lambda
+    # fabricate SKIPPED rows beside the actually collected iam/awslambda rows.
+    normalized_rules = defaultdict(int)
+    for name, count in (enabled_rule_counts or {}).items():
+        if isinstance(name, str) and type(count) is int and count >= 0:
+            normalized_rules[_canonical(name)] += count
+    enabled_rule_counts = dict(normalized_rules)
+    selected = {_canonical(service) for service in service_list if isinstance(service, str)}
+    skipped_services = {_canonical(service) for service in skipped_services
+                        if isinstance(service, str)}
+    # Prefer native provider IDs if an external caller supplies mixed keys.
+    normalized_services = {}
+    for name, data in (services or {}).items():
+        if isinstance(name, str):
+            normalized_services.setdefault(_canonical(name), data)
+    for name, data in (services or {}).items():
+        if isinstance(name, str) and name == _canonical(name):
+            normalized_services[name] = data
     rows = []
-    selected = sorted(set(service_list))
-    # Explicitly skipped services remain visible, without fabricated API calls.
-    for service in sorted(set(selected) | set(skipped_services) | set(enabled_rule_counts)):
+    # Explicitly excluded and genuinely out-of-scope rules remain SKIPPED.
+    for service in sorted(selected | skipped_services | set(enabled_rule_counts)):
         service_skipped = service not in selected
-        data = services.get(service) if isinstance(services, dict) else None
+        data = normalized_services.get(service)
         regions = (['not_scanned'] if service_skipped
                    else _regions(data, requested_regions, excluded_regions))
         for region in regions:

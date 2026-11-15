@@ -7,6 +7,8 @@ from ScoutSuite.providers.aws.resources.iam.roles import Roles
 from ScoutSuite.providers.aws.resources.iam.passwordpolicy import PasswordPolicy
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import build_relationship_graph
 from ScoutSuite.providers.aws.resources.iam.relationship_graph_b2 import extend_relationship_graph_b2
+from ScoutSuite.providers.aws.resources.iam.collection_completeness import iam_identity_inventory
+from ScoutSuite.core.run_context import get_current_run_context
 from ScoutSuite.providers.aws.facade.base import AWSFacade
 from ScoutSuite.core.console import print_exception
 
@@ -75,11 +77,15 @@ class IAM(AWSCompositeResources):
         except Exception as e:
             print_exception(f'Error finalizing IAM service: {e}')
 
+        # A valid empty dict is not proof that ListUsers/ListRoles/ListGroups
+        # or ListPolicies succeeded. Carry operation-level census into graphs.
+        self['identity_inventory'] = iam_identity_inventory(get_current_run_context())
         # The derived graph is produced after managed policy attachments have
         # been associated with their IAM roles. It does not make AWS API calls.
         try:
             self['relationship_graph'] = build_relationship_graph(
-                self.get('roles'), self.get('policies'))
+                self.get('roles'), self.get('policies'),
+                inventory_status=self['identity_inventory']['status'])
         except Exception as exc:
             print_exception(f'Error building IAM relationship candidates: {type(exc).__name__}')
             self['relationship_graph'] = {

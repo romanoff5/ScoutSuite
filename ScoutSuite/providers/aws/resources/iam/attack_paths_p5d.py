@@ -788,9 +788,21 @@ def annotate_p5d_attack_paths(services, selected, account_id):
     }
     iam['attack_paths_p5d'] = graph
     source_rows, source_complete = _sources(iam)
-    graph['collection']['iam'] = 'complete' if source_complete else 'partial'
-    if not source_complete:
-        graph['status'] = 'partial'
+    identity_inventory = iam.get('identity_inventory')
+    # Offline synthetic fixtures predate the explicit IAM census. Live
+    # IAM.finalize always supplies it, so denied empty lists cannot pass.
+    census_status = (identity_inventory.get('status', 'unknown')
+                     if isinstance(identity_inventory, dict) else None)
+    if census_status is None:
+        iam_status = 'complete' if source_complete else 'partial'
+    elif census_status != 'complete':
+        iam_status = census_status
+    else:
+        iam_status = 'complete' if source_complete else 'partial'
+    graph['collection']['iam'] = iam_status
+    if iam_status != 'complete':
+        graph['status'] = ('unknown' if iam_status in ('denied', 'unknown')
+                           else 'partial')
     def emit(source, target, kind, action, evidence, resource=None,
              status_field=None, review=False):
         if len(graph['edges']) >= MAX_EDGES:
