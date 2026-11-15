@@ -5,8 +5,6 @@ Run OUTSIDE socket-blocked pytest, in the existing loopback-only sqlite_http
 CI namespace. No AWS credentials, external network or real account artifacts.
 The checked-in 33 independently pinned Phase-1 cases remain the source oracle.
 """
-import asyncio
-import copy
 from datetime import datetime, timezone
 import json
 from pathlib import Path
