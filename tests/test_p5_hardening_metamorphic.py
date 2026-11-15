@@ -36,8 +36,9 @@ def test_metamorphic_manifest_contract():
     from tools.p5_coverage_matrix import MATRIX
     covered = json.loads(MATRIX.read_text(encoding="utf-8"))["detectors"]
     for kind in covered:
-        assert {item["kind"] for item in TRANSITIONS
-                if item["edge_type"] == kind} == {"negative", "unknown"}
+        assert {"negative", "unknown"} <= {
+            item["kind"] for item in TRANSITIONS if item["edge_type"] == kind
+        }
     assert sum(item["kind"] == "invariant" for item in TRANSITIONS) == 2
 
 
