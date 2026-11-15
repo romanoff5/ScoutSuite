@@ -117,6 +117,51 @@ def _resource_permission(policy, principal, action, resource):
     return 'yes' if allowed else 'no'
 
 
+def _s3_object_witnesses(policy, bucket_name, principal, action):
+    """Construct bounded existing-policy prefix witnesses, not a fixed key.
+
+    A bucket policy restricted to reports/* must not be tested only against
+    P5DObjectWitness at the bucket root. All witnesses remain hypothetical;
+    neither object existence nor external IAM authorization is inferred.
+    """
+    candidates = ['arn:aws:s3:::' + bucket_name + '/P5DObjectWitness']
+    rows = _statements(policy)
+    if rows is None:
+        return candidates
+    for row in rows:
+        if row.get('Effect') != 'Allow' or _principal_scope(row, principal) != 'yes':
+            continue
+        # NotAction and Action are evaluated with the same IAM scope semantics.
+        action_test = _statement_scope(
+            {**row, 'Resource': '*', **({'NotResource': '*'} if False else {})},
+            action, 'arn:aws:s3:::' + bucket_name + '/P5DObjectWitness')
+        # Conditions are intentionally left for _resource_permission below.
+        if action_test == 'no':
+            continue
+        resources = _values(row.get('Resource'))
+        if not resources:
+            continue
+        for pattern in resources:
+            parts = pattern.split(':', 5)
+            if (len(parts) != 6 or parts[0] != 'arn'
+                    or parts[2] != 's3' or parts[3] or parts[4]
+                    or not parts[5].startswith(bucket_name + '/')):
+                continue
+            suffix = parts[5][len(bucket_name) + 1:]
+            if not suffix or len(suffix) > 400:
+                continue
+            # Literal keys and folder/extension patterns both get a witness.
+            key = suffix.replace('*', 'P5DObjectWitness').replace('?', 'X')
+            arn = ':'.join(parts[:5]) + ':' + bucket_name + '/' + key
+            if fnmatch.fnmatchcase(arn, pattern):
+                candidates.append(arn)
+            if len(candidates) >= 24:
+                break
+        if len(candidates) >= 24:
+            break
+    return list(dict.fromkeys(candidates))[:24]
+
+
 def _sources(iam):
     policies = iam.get('policies')
     roles = iam.get('roles')
@@ -340,12 +385,19 @@ def _eks_routes(services, iam, emit):
                 if not isinstance(condition, dict):
                     continue
                 keys = {}
+                ambiguous = False
                 if any(op not in ('StringEquals', 'StringLike') or not isinstance(values, dict)
                        for op, values in condition.items()):
                     continue
                 for op, values in condition.items():
                     for key, valueset in values.items():
+                        if key in keys:
+                            # AWS ANDs distinct condition operators; overwriting
+                            # a repeated aud/sub key would drop a restriction.
+                            ambiguous = True
                         keys[key] = (op, _values(valueset))
+                if ambiguous:
+                    continue
                 aud = keys.get(issuer_host + ':aud')
                 sub = keys.get(issuer_host + ':sub')
                 if (not aud or aud[0] != 'StringEquals' or aud[1] != ['sts.amazonaws.com']
@@ -361,6 +413,15 @@ def _eks_routes(services, iam, emit):
         associations = cluster.get('pod_identity_associations')
         if cluster.get('pod_identity_inventory_status') == 'complete' and isinstance(associations, dict):
             for assoc in associations.values():
+                if not isinstance(assoc, dict):
+                    continue
+                namespace = assoc.get('namespace')
+                service_account = assoc.get('service_account')
+                if (not isinstance(namespace, str) or not namespace or
+                        not isinstance(service_account, str) or not service_account):
+                    # Never create a plausible-looking path for a partial
+                    # EKS association that did not identify its workload.
+                    continue
                 target = assoc.get('role_arn')
                 role = next((x for x in roles if x.get('arn') == target), None)
                 if role is None:
@@ -382,7 +443,7 @@ def _eks_routes(services, iam, emit):
                                 for pattern in (_values(row.get('Action')) or []))
                             for action in ('sts:AssumeRole', 'sts:TagSession'))
                     for row in trust):
-                    emit(cluster_arn + '/' + str(assoc.get('namespace')) + '/' + str(assoc.get('service_account')),
+                    emit(cluster_arn + '/' + namespace + '/' + service_account,
                          target, 'eks_pod_identity', 'sts:AssumeRole+TagSession',
                          'observed Pod Identity association + compatible trust; pod execution unverified',
                          role, 'p5d_eks_identity_status')
@@ -413,9 +474,11 @@ def _resource_routes(services, own_account, emit):
                 if bucket.get('policy_is_public') is True and pab.get('RestrictPublicBuckets') is True:
                     continue
                 for action in READ_ACTIONS:
-                    resource = ('arn:aws:s3:::' + name if action == 's3:ListBucket'
-                                else 'arn:aws:s3:::' + name + '/P5DObjectWitness')
-                    if _resource_permission(policy, principal, action, resource) != 'yes':
+                    resources = (['arn:aws:s3:::' + name] if action == 's3:ListBucket'
+                                 else _s3_object_witnesses(policy, name, principal, action))
+                    witness = next((r for r in resources
+                                    if _resource_permission(policy, principal, action, r) == 'yes'), None)
+                    if witness is None:
                         continue
                     if principal.endswith(':root'):
                         continue  # Account root principal delegates to remote IAM.
@@ -423,7 +486,8 @@ def _resource_routes(services, own_account, emit):
                         continue
                     edge_id = emit(principal, 'arn:aws:s3:::' + name,
                                    's3_cross_account_resource_policy', action,
-                                   'explicit external principal + action/resource; remote identity policy and object existence unknown',
+                                   'explicit external principal + scoped policy witness ' + witness
+                                   + '; remote identity policy and object existence unknown',
                                    bucket, 'p5d_cross_account_status')
                     if edge_id:
                         bucket['p5d_cross_account_edges'].append(edge_id)
