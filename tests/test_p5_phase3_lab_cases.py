@@ -12,6 +12,9 @@ import pytest
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
     build_relationship_graph,
 )
+from ScoutSuite.providers.aws.resources.iam.attack_paths_p5d import (
+    annotate_p5d_attack_paths,
+)
 from ScoutSuite.core.processingengine import ProcessingEngine
 from tests.test_p5d_attack_paths import ACCOUNT, OTHER, allow, edges, role, scan, trust_service
 from tools.verify_p5_phase2_pipeline import _aws_provider, _ruleset
@@ -21,11 +24,16 @@ PROFILE = f'arn:aws:iam::{ACCOUNT}:instance-profile/cg-ec2-meek'
 ADMIN_ROLE = f'arn:aws:iam::{ACCOUNT}:role/cg-ec2-mighty'
 
 
-def _graph_from_roles(roles, *, s3=None, kms=None, ecs=None):
-    # Use production admin inference on real collected policy-shaped documents;
+def _graph_from_roles(roles, *, users=None, s3=None, kms=None, ecs=None):
+    # Use production admin inference on collected policy-shaped documents;
     # never set the privileged-role status by test fixture fiat.
     relationship = build_relationship_graph(roles, {})
     graph, services = scan(roles=roles, s3=s3, kms=kms, ecs=ecs)
+    if users is not None:
+        # CloudGoat kerrigan is an IAM *user*, not a role. Run correlator
+        # again with actual user memberships and complete policy census.
+        services['iam']['users'] = users
+        graph = annotate_p5d_attack_paths(services, list(services), ACCOUNT)
     services['iam']['relationship_graph'] = relationship
     return graph, services
 
@@ -83,32 +91,44 @@ def _cloudgoat_ec2_attachments():
     meek = role('cg-ec2-meek', [allow('*', effect='Deny')],
                 trust=[trust_service('ec2.amazonaws.com')],
                 profiles={'profile-meek': {'arn': PROFILE, 'name': 'cg-ec2-meek'}})
-    user = role('cg-kerrigan', [
-        allow(['iam:AddRoleToInstanceProfile',
-               'iam:RemoveRoleFromInstanceProfile',
-               'iam:PassRole']),
-        allow('ec2:RunInstances'),
-    ])
-    return {'mighty': target, 'meek': meek, 'kerrigan': user}
+    user = {
+        'id': 'cg-kerrigan', 'name': 'kerrigan',
+        'arn': f'arn:aws:iam::{ACCOUNT}:user/kerrigan',
+        'inline_policies': {'policy': {'PolicyDocument': {'Statement': [
+            allow(['iam:AddRoleToInstanceProfile',
+                   'iam:RemoveRoleFromInstanceProfile', 'iam:PassRole']),
+            allow('ec2:RunInstances'),
+        ]}}},
+        # Equivalently inlined for replay; actual CloudGoat attaches its
+        # synthetic kerrigan policy as a managed policy.
+        'inline_policy_collection_status': 'complete',
+        'p4b2_managed_status': 'complete',
+        'p4b2_managed_arns': [],
+        'p4b2_boundary_status': 'complete',
+        'p4b2_boundary': None,
+        'p4b2_membership_status': 'complete',
+        'groups': [],
+    }
+    return {'mighty': target, 'meek': meek}, {'kerrigan': user}
 
 
 def test_cloudgoat_attachment_path_without_privileged_profile():
     """CloudGoat's mighty role has NO profile; the existing meek profile is mutable."""
-    roles = _cloudgoat_ec2_attachments()
-    graph, services = _graph_from_roles(roles)
+    roles, users = _cloudgoat_ec2_attachments()
+    graph, services = _graph_from_roles(roles, users=users)
     assert roles['mighty']['instance_profiles'] == {}
     assert roles['meek']['instance_profiles']
     assert roles['mighty']['p4b_admin_policy_status'] == 'admin_policy_candidate'
     assert _candidate_edges(graph, 'iam_ec2_create') == []
     found = _candidate_edges(graph, 'iam_ec2_profile_mutation')
     assert len(found) == 1, graph
-    assert found[0]['source'] == roles['kerrigan']['arn']
+    assert found[0]['source'] == users['kerrigan']['arn']
     assert found[0]['target'] == roles['mighty']['arn']
     assert PROFILE in found[0]['evidence']['basis']
     assert graph['status'] == 'complete'
     provider = _aws_provider(services)
     ProcessingEngine(_ruleset()).run(provider)
-    finding = provider.services['iam']['findings']['iam-p5d-role-workload-delegation']
+    finding = provider.services['iam']['findings']['iam-p5d-user-workload-delegation']
     assert finding['flagged_items'] == 1
     assert finding['confidence_assessment']['verification_status'] == 'POTENTIAL'
     assert finding['confidence_assessment']['effective_permission_verified'] is False
@@ -122,9 +142,9 @@ def test_cloudgoat_attachment_path_without_privileged_profile():
     'trust_missing', 'boundary_unverified', 'profile_cross_account',
 ))
 def test_cloudgoat_attachment_single_mutation_blocks_candidate(mutation):
-    roles = _cloudgoat_ec2_attachments()
-    source = roles['kerrigan']
-    statements = source['inline_policies']['p']['PolicyDocument']['Statement']
+    roles, users = _cloudgoat_ec2_attachments()
+    source = users['kerrigan']
+    statements = source['inline_policies']['policy']['PolicyDocument']['Statement']
     if mutation in ('remove_permission', 'add_permission', 'passrole_permission'):
         action = {'remove_permission': 'iam:RemoveRoleFromInstanceProfile',
                   'add_permission': 'iam:AddRoleToInstanceProfile',
@@ -144,7 +164,7 @@ def test_cloudgoat_attachment_single_mutation_blocks_candidate(mutation):
     elif mutation == 'profile_cross_account':
         roles['meek']['instance_profiles']['profile-meek']['arn'] = (
             f'arn:aws:iam::{OTHER}:instance-profile/cg-ec2-meek')
-    graph, _ = _graph_from_roles(roles)
+    graph, _ = _graph_from_roles(roles, users=users)
     assert not edges(graph, 'iam_ec2_profile_mutation'), mutation
     assert not edges(graph, 'iam_ec2_create'), mutation
     if mutation == 'boundary_unverified':
