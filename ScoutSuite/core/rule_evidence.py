@@ -1580,7 +1580,7 @@ P5B_EVIDENCE_FIELDS = {
             'p4b2_group_passrole_status', 'p4b2_oidc_audience_status',
             'p4b2_oidc_subject_status', 'p4b2_access_analyzer_status',
             'p5d_service_delegation_status', 'p5d_service_delegation_edges',
-            'p5d_eks_identity_status'),
+            'p5d_ecs_execution_review_status', 'p5d_eks_identity_status'),
     's3': ('name', 'arn', 'p5d_cross_account_status', 'p5d_cross_account_edges'),
     'kms': ('arn', 'p5d_cross_account_status', 'key_enabled'),
     'eks': ('cluster_arn', 'oidc_issuer', 'p5d_workload_identity_status',

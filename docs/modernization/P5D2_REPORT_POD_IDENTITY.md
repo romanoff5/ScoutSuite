@@ -91,3 +91,12 @@ References:
 - Fail closed for legacy/incomplete Pod Identity records: an omitted
   `detail_collection_status` is `UNKNOWN`, never an implicit successful
   `DescribePodIdentityAssociation`.
+
+## Cross-phase audit and report evidence
+
+The resource modal includes a separate **ECS execution-role review** field
+when an observed task definition references a role passed to ECS for agent
+operations. This is not a verified workload/container role credential path,
+nor a confirmed privilege escalation. Findings for actual task roles still
+use POTENTIAL evidence. Every service inventory cap or failed collection is
+recorded as partial graph coverage rather than inferred absence.
