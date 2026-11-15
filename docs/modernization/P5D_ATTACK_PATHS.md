@@ -4,7 +4,7 @@ This phase adds a deterministic, bounded, read-only cross-service graph under `i
 
 ## Paths
 
-- IAM identity Allow + `iam:PassRole` + Lambda `CreateFunction` or controlled `UpdateFunctionConfiguration` and `UpdateFunctionCode`, with a compatible service trust.
+- IAM identity Allow + `iam:PassRole` + Lambda `CreateFunction` and `InvokeFunction` on the same resource witness, or controlled `UpdateFunctionConfiguration`, `UpdateFunctionCode` and `InvokeFunction` on one observed function, with a compatible service trust.
 - IAM + compatible EC2 trust + verified instance profile association + `ec2:RunInstances` scoped six-resource synthetic witness.
 - IAM + ECS task service trust + `iam:PassRole` + `ecs:RunTask` on an observed task definition using the target role, or `ecs:RegisterTaskDefinition` with a separately tested synthetic next-revision RunTask witness.
 - IRSA: EKS cluster OIDC issuer correlated to role Federated trust, exact `aud=sts.amazonaws.com` and `system:serviceaccount:namespace:name` subject; **service account or Pod existence is not asserted**.
