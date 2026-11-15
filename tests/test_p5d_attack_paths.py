@@ -61,7 +61,7 @@ def test_lambda_creation_with_unrelated_deny_is_a_candidate():
     target = role('Priv', admin=True, trust=[trust_service('lambda.amazonaws.com')])
     src = role('Operator', [
         allow('iam:PassRole', target['arn']),
-        allow('lambda:CreateFunction'),
+        allow('lambda:CreateFunction'), allow('lambda:InvokeFunction'),
         allow('s3:DeleteObject', effect='Deny'),
     ])
     graph, _ = scan(roles={'a': target, 'b': src})
@@ -77,6 +77,7 @@ def test_scoped_passrole_deny_blocks_candidate_not_an_unrelated_action():
     target = role('Priv', admin=True, trust=[trust_service('lambda.amazonaws.com')])
     src = role('Operator', [
         allow('iam:PassRole', '*'), allow('lambda:CreateFunction'),
+        allow('lambda:InvokeFunction'),
         allow('iam:PassRole', target['arn'], effect='Deny'),
     ])
     graph, _ = scan(roles={'a': target, 'b': src})
@@ -295,3 +296,15 @@ def test_pod_identity_matching_deny_and_notprincipal_veto():
     deny['NotPrincipal'] = {'Service': 'ec2.amazonaws.com'}
     graph, _ = scan(roles={'t': target}, eks=eks)
     assert not edges(graph, 'eks_pod_identity')
+
+
+def test_create_only_without_invoke_does_not_prove_lambda_execution():
+    target = role('Priv', admin=True, trust=[trust_service('lambda.amazonaws.com')])
+    src = role('Builder', [allow('iam:PassRole'), allow('lambda:CreateFunction')])
+    graph, _ = scan(roles={'t': target, 's': src})
+    assert not edges(graph, 'iam_lambda_create')
+    src['inline_policies']['p']['PolicyDocument']['Statement'].append(
+        allow('lambda:InvokeFunction',
+              'arn:aws:lambda:eu-central-1:123456789012:function:Different'))
+    graph, _ = scan(roles={'t': target, 's': src})
+    assert not edges(graph, 'iam_lambda_create')
