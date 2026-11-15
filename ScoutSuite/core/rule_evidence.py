@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from ScoutSuite.core.run_context import get_current_run_context
+from ScoutSuite.core.finding_cards import build_observation_checks, resource_identity
 
 
 def _walk_resources(current, parts, prefix=()):
@@ -1640,6 +1641,9 @@ def evaluate_rule_evidence(rule, services):
                 'outcome': status,
                 'evidence_policy': policy,
                 'observed_attributes': _p5b_facts(resource, path.split('.')[0]),
+                'resource_identity': resource_identity(resource, path),
+                'predicate_checks': build_observation_checks(
+                    policy, resource, services, path, status),
             })
         if status == 'unknown':
             unknown_paths.append(path)

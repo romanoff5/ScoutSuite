@@ -100,6 +100,59 @@
                                 {{/if}}
                             </ul>
                         </div>
+                        {{#if finding_cards}}
+                        <div class="col-sm-12 scout-evidence-cards">
+                            <h4>Per-resource evidence and confidence</h4>
+                            {{#each finding_cards}}
+                            <div class="card scout-evidence-card" style="margin-bottom: 12px">
+                                <div class="card-header">
+                                    <strong>Severity: {{severity}}</strong>
+                                    <span class="badge badge-secondary">Confidence: {{confidence}}</span>
+                                    <span class="badge badge-light">Evidence: {{evidence_quality}}</span>
+                                    <div><strong>Resource:</strong> {{resource_name}} ({{resource_id}})</div>
+                                    {{#if resource_arn}}<div><strong>ARN:</strong> <samp>{{resource_arn}}</samp></div>{{/if}}
+                                    {{#if account_id}}<div><strong>Account:</strong> <samp>{{account_id}}</samp></div>{{/if}}
+                                    {{#if owner_id}}<div><strong>Owner:</strong> <samp>{{owner_id}}</samp></div>{{/if}}
+                                    <small>Resource path: <samp>{{resource_path}}</samp></small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-sm-3"><strong>Severity</strong><div>{{severity}}</div></div>
+                                        <div class="col-sm-3"><strong>Confidence</strong><div>{{confidence}}</div></div>
+                                        <div class="col-sm-3"><strong>Collection</strong><div>{{collection}}</div></div>
+                                        <div class="col-sm-3"><strong>Reachability</strong><div>{{reachability}}</div></div>
+                                    </div>
+                                    <p><strong>Claim:</strong> {{claim_type}};
+                                        <strong>Verification:</strong> {{verification_status}};
+                                        <strong>Mandatory predicates:</strong>
+                                        {{confirmed_required_conditions}}/{{required_conditions}}
+                                    </p>
+                                    <strong>Supporting evidence</strong>
+                                    <ul>
+                                    {{#each supporting_evidence}}
+                                        <li><strong>{{state}}</strong> — {{label}}: {{detail}}
+                                            <small>(source: <samp>{{source}}</samp>{{#if required}}, required{{/if}})</small>
+                                        </li>
+                                    {{/each}}
+                                    </ul>
+                                    {{#if technical_attributes}}
+                                    <details>
+                                        <summary>Observed diagnostic attributes</summary>
+                                        <ul>{{#each technical_attributes}}
+                                            <li><samp>{{name}}</samp>: <samp>{{value}}</samp></li>
+                                        {{/each}}</ul>
+                                    </details>
+                                    {{/if}}
+                                    {{#if reason_codes}}
+                                    <div><strong>Confidence rationale:</strong>
+                                        {{#each reason_codes}}<samp>{{this}}</samp> {{/each}}
+                                    </div>
+                                    {{/if}}
+                                </div>
+                            </div>
+                            {{/each}}
+                        </div>
+                        {{/if}}
                     </div>
                 </div>
             </div>
