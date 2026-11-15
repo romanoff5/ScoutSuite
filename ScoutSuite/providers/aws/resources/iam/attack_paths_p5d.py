@@ -201,6 +201,7 @@ def _sources(iam):
                         missing |= incomplete
             obj['p5d_service_delegation_status'] = 'unknown'
             obj['p5d_service_delegation_edges'] = []
+            obj['p5d_ecs_execution_review_status'] = 'unknown'
             obj['p5d_attack_path_details'] = []
             result.append((arn, kind, obj, docs, missing))
             complete &= not missing
@@ -291,18 +292,31 @@ def _workload_routes(docs, source_arn, target, services, cache):
                                     'ecs-tasks.amazonaws.com') == 'yes'):
         if 'ecs_run_by_role' not in cache:
             cache['ecs_run_by_role'] = {}
+            cache['ecs_execution_by_role'] = {}
             for task in _regions(services, 'ecs', 'task_definitions'):
                 arn = task.get('task_definition_arn')
-                role = task.get('task_role_arn')
-                if (_arn_account(arn) == _arn_account(source_arn)
-                        and isinstance(role, str)
-                        and identity_permission(docs, 'ecs:RunTask', arn) == 'yes'):
-                    cache['ecs_run_by_role'].setdefault(role, arn)
+                if (_arn_account(arn) != _arn_account(source_arn)
+                        or identity_permission(docs, 'ecs:RunTask', arn) != 'yes'):
+                    continue
+                task_role = task.get('task_role_arn')
+                if isinstance(task_role, str):
+                    cache['ecs_run_by_role'].setdefault(task_role, arn)
+                execution_role = task.get('execution_role_arn')
+                if isinstance(execution_role, str):
+                    cache['ecs_execution_by_role'].setdefault(execution_role, arn)
         arn = cache['ecs_run_by_role'].get(target_arn)
         if arn:
             paths.append(('ecs_run_task', 'ecs:RunTask',
-                          'observed task definition ' + arn
+                          'observed task-role definition ' + arn
                           + '; cluster/network execution unverified'))
+        execution_arn = cache['ecs_execution_by_role'].get(target_arn)
+        if execution_arn:
+            # The ECS agent uses execution-role credentials; they are NOT
+            # exposed to application containers. Never treat this as
+            # container task-role privilege escalation.
+            paths.append(('ecs_execution_role_review', 'ecs:RunTask',
+                          'observed ECS agent execution role in ' + execution_arn
+                          + '; agent permissions only, container access NOT proven'))
         if 'ecs_register_witness' not in cache:
             cache['ecs_register_witness'] = None
             if identity_permission(docs, 'ecs:RegisterTaskDefinition', '*') == 'yes':
@@ -671,9 +685,12 @@ def annotate_p5d_attack_paths(services, selected, account_id):
             if source_arn == target['arn']:
                 continue
             for service, action, basis in _workload_routes(docs, source_arn, target, services, capability_cache):
+                review = service == 'ecs_execution_role_review'
+                status_field = ('p5d_ecs_execution_review_status' if review
+                                else 'p5d_service_delegation_status')
                 edge = emit(source_arn, target['arn'], 'iam_' + service, action,
-                            basis, source, 'p5d_service_delegation_status')
-                if edge:
+                            basis, source, status_field, review=review)
+                if edge and not review:
                     source['p5d_service_delegation_edges'].append(edge)
         if graph['status'] == 'partial' and graph['scenarios_checked'] > MAX_PAIRS:
             break
