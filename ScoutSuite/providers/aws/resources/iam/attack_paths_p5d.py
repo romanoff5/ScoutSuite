@@ -9,7 +9,7 @@ import hashlib
 import re
 
 from ScoutSuite.providers.aws.resources.iam.policy_accuracy import (
-    identity_permission, creation_permission, _statement_scope,
+    identity_permission, creation_permission, _statement_scope, _scope,
     _regions as creation_regions, _suffixes as creation_suffixes,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
@@ -131,12 +131,9 @@ def _s3_object_witnesses(policy, bucket_name, principal, action):
     for row in rows:
         if row.get('Effect') != 'Allow' or _principal_scope(row, principal) != 'yes':
             continue
-        # NotAction and Action are evaluated with the same IAM scope semantics.
-        action_test = _statement_scope(
-            {**row, 'Resource': '*', **({'NotResource': '*'} if False else {})},
-            action, 'arn:aws:s3:::' + bucket_name + '/P5DObjectWitness')
-        # Conditions are intentionally left for _resource_permission below.
-        if action_test == 'no':
+        # Test Action/NotAction without changing the source statement.
+        # Unknown conditions remain for _resource_permission to reject.
+        if _scope(row, 'Action', 'NotAction', action, ignore_case=True) != 'yes':
             continue
         resources = _values(row.get('Resource'))
         if not resources:
