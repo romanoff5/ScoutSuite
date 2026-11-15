@@ -6,6 +6,7 @@ those are the separate Phase 2/3 acceptance stages.
 """
 import asyncio
 import copy
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -142,6 +143,53 @@ def test_p5_phase1_fixture_catalog_contract():
     assert any(not case["expected"]["edges"] for case in CASES)
 
 
+def assert_p5_graph_goldens(graph, case):
+    """Compare the full observable edge, not just type/source/target.
+
+    These expected values are checked-in fixture data, independent of the
+    production graph emitter. Action, exact textual provenance, verification,
+    confidence, bounded collection, and non-exploitation flags are immutable.
+    """
+    expected = case["expected"]
+    assert graph["status"] == expected["graph_status"], case["id"]
+    for name, status in expected["collection"].items():
+        assert graph["collection"][name] == status, (case["id"], name)
+    expected_edges = {}
+    required = {
+        "type", "source", "target", "action", "verification", "confidence",
+        "collection", "effective_permission_verified", "execution_verified",
+        "evidence",
+    }
+    for oracle in expected["edges"]:
+        assert set(oracle) == required, (case["id"], oracle)
+        assert oracle["evidence"] == {
+            "source": oracle["source"], "resource": oracle["target"],
+            "basis": oracle["evidence"]["basis"],
+        }, (case["id"], "provenance")
+        assert isinstance(oracle["evidence"]["basis"], str)
+        assert oracle["evidence"]["basis"], case["id"]
+        assert oracle["confidence"] == (
+            "LOW" if oracle["verification"] == "REVIEW" else "MEDIUM")
+        assert oracle["collection"] == "complete"
+        assert oracle["effective_permission_verified"] is False
+        assert oracle["execution_verified"] is False
+        ident = hashlib.sha256("|".join(
+            (oracle["source"], oracle["target"], oracle["type"],
+             oracle["action"])).encode("utf-8")).hexdigest()[:24]
+        assert ident not in expected_edges, case["id"]
+        expected_edges[ident] = {"id": ident, **oracle}
+    # Exact equality detects changed actions, edge IDs, provenance, confidence,
+    # unexpected findings, omitted fields and future accidentally "verified"
+    # claims. No expected values are inferred from actual graph output.
+    assert graph["edges"] == expected_edges, (
+        case["id"], graph["edges"], expected_edges)
+    assert graph["edges_count"] == len(expected_edges)
+    assert graph["nodes_count"] == len(graph["nodes"])
+    expected_nodes = {value for edge in expected["edges"]
+                      for value in (edge["source"], edge["target"])}
+    assert set(graph["nodes"]) == expected_nodes, case["id"]
+
+
 @pytest.mark.parametrize("case", CASES, ids=[case["id"] for case in CASES])
 def test_p5_phase1_normalized_facts_and_independent_attack_path_oracle(case):
     services = _p5_fixture(case)
@@ -149,34 +197,7 @@ def test_p5_phase1_normalized_facts_and_independent_attack_path_oracle(case):
     graph = annotate_p5d_attack_paths(
         services, sorted(services), CATALOG["account_id"]
     )
-    expected = case["expected"]
-    assert graph["status"] == expected["graph_status"]
-    for name, state in expected["collection"].items():
-        assert graph["collection"][name] == state
-    assert graph["edges_count"] == len(expected["edges"])
-
-    actual = {
-        (edge["type"], edge["source"], edge["target"], edge["verification"])
-        for edge in graph["edges"].values()
-    }
-    wanted = {
-        (edge["type"], edge["source"], edge["target"], edge["verification"])
-        for edge in expected["edges"]
-    }
-    assert len(actual) == len(graph["edges"]), "Graph contains duplicate edge keys"
-    assert actual == wanted  # Negative oracles also exclude *unexpected* paths.
-    for edge in graph["edges"].values():
-        assert edge["effective_permission_verified"] is False
-        assert edge["execution_verified"] is False
-        assert edge["confidence"] == (
-            "LOW" if edge["verification"] == "REVIEW" else "MEDIUM"
-        )
-        assert edge["collection"] == "complete"
-        assert edge["id"] in graph["edges"]
-        assert edge["source"] in graph["nodes"]
-        assert edge["target"] in graph["nodes"]
-        assert isinstance(edge["evidence"]["basis"], str)
-        assert edge["evidence"]["basis"]
+    assert_p5_graph_goldens(graph, case)
 
 
 def test_p5_phase1_fixture_objects_are_not_mutated_across_test_cases():
