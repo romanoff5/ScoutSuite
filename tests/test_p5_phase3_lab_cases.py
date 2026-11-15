@@ -160,7 +160,9 @@ def test_cloudgoat_attachment_single_mutation_blocks_candidate(mutation):
     elif mutation == 'trust_missing':
         roles['mighty']['assume_role_policy']['PolicyDocument']['Statement'].clear()
     elif mutation == 'boundary_unverified':
-        source['permissions_boundary'] = f'arn:aws:iam::{ACCOUNT}:policy/Unknown'
+        # IAM users expose their boundary through the P4-B2 user census,
+        # unlike roles which use the GetRole permissions_boundary field.
+        source['p4b2_boundary'] = f'arn:aws:iam::{ACCOUNT}:policy/Unknown'
     elif mutation == 'profile_cross_account':
         roles['meek']['instance_profiles']['profile-meek']['arn'] = (
             f'arn:aws:iam::{OTHER}:instance-profile/cg-ec2-meek')
