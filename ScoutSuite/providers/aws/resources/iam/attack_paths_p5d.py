@@ -226,6 +226,61 @@ def _regions(services, service, subkey):
     return objects[:MAX_RESOURCES]
 
 
+def _regional_inventory_scope(services, service, subkey):
+    """State whether a selected regional inventory is bounded and well-formed.
+
+    _regions intentionally caps its output. Without checking the original
+    source, a 3,001st resource can be silently skipped while the graph says
+    complete and a clean finding incorrectly suggests full coverage.
+    """
+    root = services.get(service)
+    regions = root.get('regions') if isinstance(root, dict) else None
+    if not isinstance(regions, dict):
+        return 'unknown'
+    count = 0
+    for region in regions.values():
+        if not isinstance(region, dict):
+            return 'partial'
+        items = region.get(subkey)
+        if not isinstance(items, dict):
+            return 'unknown'
+        count += len(items)
+        if count > MAX_RESOURCES or any(not isinstance(item, dict)
+                                        for item in items.values()):
+            return 'partial'
+    return 'observed_bounded'
+
+
+def _s3_inventory_scope(s3):
+    """Treat denied or truncated bucket policies as incomplete, not empty."""
+    buckets = s3.get('buckets') if isinstance(s3, dict) else None
+    if not isinstance(buckets, dict):
+        return 'unknown'
+    if len(buckets) > MAX_RESOURCES:
+        return 'partial'
+    for bucket in buckets.values():
+        if not isinstance(bucket, dict):
+            return 'partial'
+        if bucket.get('policy_collection_status') not in ('success', 'absent'):
+            return 'partial'
+    advanced = s3.get('advanced')
+    if advanced is not None:
+        regions = advanced.get('regions') if isinstance(advanced, dict) else None
+        if not isinstance(regions, dict):
+            return 'unknown'
+        count = 0
+        for region in regions.values():
+            if not isinstance(region, dict):
+                return 'partial'
+            points = region.get('access_points')
+            if not isinstance(points, dict):
+                return 'unknown'
+            count += len(points)
+            if count > MAX_RESOURCES:
+                return 'partial'
+    return 'observed_bounded'
+
+
 def _invokable_lambda_creation(docs, source_arn):
     """One concrete witness must satisfy both creation and execution grants."""
     account = _arn_account(source_arn)
@@ -704,10 +759,31 @@ def annotate_p5d_attack_paths(services, selected, account_id):
                     source['p5d_service_delegation_edges'].append(edge)
         if graph['status'] == 'partial' and graph['scenarios_checked'] > MAX_PAIRS:
             break
+    # Correlate only the bounded prefix of each AWS inventory, but make
+    # incomplete/denied/truncated collection explicit. No resource omission
+    # may appear as a fully observed empty attack-path graph.
+    for service, subkey in (('ecs', 'task_definitions'),
+                            ('awslambda', 'functions'),
+                            ('eks', 'clusters'), ('kms', 'keys')):
+        census = (_regional_inventory_scope(services, service, subkey)
+                  if service in selected else 'not_selected')
+        graph['collection'][service + '_inventory'] = census
+        if census in ('partial', 'unknown'):
+            graph['status'] = 'partial'
+    s3_scope = (_s3_inventory_scope(services.get('s3'))
+                if 's3' in selected else 'not_selected')
+    graph['collection']['s3_inventory'] = s3_scope
+    if s3_scope in ('partial', 'unknown'):
+        graph['status'] = 'partial'
     graph['collection']['lambda_ecs_ec2'] = (
         'partial' if graph['status'] == 'partial' else 'candidate_only')
     if 'eks' in selected:
         _eks_routes(services, iam, emit)
+        # List/Describe denied, partial or malformed on any EKS cluster
+        # invalidates the coverage census even if unrelated IRSA edges exist.
+        if any(cluster.get('pod_identity_inventory_status') != 'complete'
+               for cluster in _regions(services, 'eks', 'clusters')):
+            graph['status'] = 'partial'
         graph['collection']['eks'] = 'partial_workload_scope'
     else:
         graph['collection']['eks'] = 'not_selected'
@@ -741,7 +817,11 @@ def annotate_p5d_attack_paths(services, selected, account_id):
         else:
             cluster['p5d_attack_path_details_truncated'] = True
     for service in ('s3', 'kms', 'awslambda'):
-        graph['collection'][service] = 'candidate_only' if service in selected else 'not_selected'
+        census = graph['collection'].get(service + '_inventory', 'not_selected')
+        graph['collection'][service] = (
+            'not_selected' if service not in selected else
+            'partial' if graph['status'] == 'partial' or census in ('partial', 'unknown')
+            else 'candidate_only')
     graph['edges_count'] = len(graph['edges'])
     graph['nodes_count'] = len(graph['nodes'])
     return graph
