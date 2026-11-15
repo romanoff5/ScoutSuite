@@ -45,9 +45,14 @@ def _check(label, state, detail, source, required=True):
 
 def _field(resource, field, expected, path, label=None):
     value = resource.get(field) if isinstance(resource, dict) else None
-    state = ('UNKNOWN' if value is None else
+    # Classifier outputs are finite string states. Unknown or malformed
+    # values are NOT contradictions, and raw objects must never be rendered
+    # into report evidence (they might contain confidential fields).
+    known = isinstance(value, str) and value not in ('unknown', 'unavailable', 'incomplete')
+    state = ('UNKNOWN' if not known else
              'CONFIRMED' if value in expected else 'CONTRADICTED')
-    detail = ('Not collected' if value is None else '{}={}'.format(field, value))
+    detail = ('{}={}'.format(field, value) if known else
+              'Classifier state not collected or unsupported')
     return _check(label or field, state, detail, path + '.' + field)
 
 
