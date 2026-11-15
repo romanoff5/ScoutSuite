@@ -697,7 +697,17 @@
             "type": "iam_lambda_create",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "lambda:CreateFunction",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "scoped identity grant + service trust; creation witness and execution grant verified as candidate"
+            }
           }
         ],
         "collection": {}
@@ -762,7 +772,17 @@
             "type": "iam_lambda_create",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "lambda:CreateFunction",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "scoped identity grant + service trust; creation witness and execution grant verified as candidate"
+            }
           }
         ],
         "collection": {}
@@ -839,7 +859,17 @@
             "type": "iam_ec2_create",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "ec2:RunInstances",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "scoped identity grant + service trust; creation witness and execution grant verified as candidate"
+            }
           }
         ],
         "collection": {}
@@ -907,7 +937,17 @@
             "type": "iam_ecs_run_task",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "ecs:RunTask",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "observed task-role definition arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7; cluster/network execution unverified"
+            }
           }
         ],
         "collection": {
@@ -984,7 +1024,17 @@
             "type": "iam_ecs_execution_role_review",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "REVIEW"
+            "verification": "REVIEW",
+            "action": "ecs:RunTask",
+            "confidence": "LOW",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "observed ECS agent execution role in arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7; agent permissions only, container access NOT proven"
+            }
           }
         ],
         "collection": {
@@ -1003,7 +1053,17 @@
             "type": "eks_irsa_role",
             "source": "arn:aws:eks:eu-central-1:123456789012:cluster/sample",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "sts:AssumeRoleWithWebIdentity",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:eks:eu-central-1:123456789012:cluster/sample",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "observed EKS issuer + exact audience/subject; ServiceAccount existence not verified"
+            }
           }
         ],
         "collection": {
@@ -1084,7 +1144,17 @@
             "type": "eks_pod_identity",
             "source": "arn:aws:eks:eu-central-1:123456789012:cluster/sample/team/api",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "sts:AssumeRole+TagSession",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:eks:eu-central-1:123456789012:cluster/sample/team/api",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "observed Pod Identity association + compatible trust; pod execution unverified"
+            }
           }
         ],
         "collection": {
@@ -1229,7 +1299,17 @@
             "type": "s3_cross_account_resource_policy",
             "source": "arn:aws:iam::999999999999:role/Reader",
             "target": "arn:aws:s3:::audit-reports",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "s3:GetObject",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::999999999999:role/Reader",
+              "resource": "arn:aws:s3:::audit-reports",
+              "basis": "explicit external principal + scoped policy witness arn:aws:s3:::audit-reports/reports/P5DObjectWitness; remote identity policy and object existence unknown"
+            }
           }
         ],
         "collection": {
@@ -1346,7 +1426,17 @@
             "type": "s3_cross_account_resource_policy",
             "source": "arn:aws-us-gov:iam::999999999999:role/Reader",
             "target": "arn:aws-us-gov:s3:::audit-reports",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "s3:GetObject",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws-us-gov:iam::999999999999:role/Reader",
+              "resource": "arn:aws-us-gov:s3:::audit-reports",
+              "basis": "explicit external principal + scoped policy witness arn:aws-us-gov:s3:::audit-reports/reports/P5DObjectWitness; remote identity policy and object existence unknown"
+            }
           }
         ],
         "collection": {
@@ -1365,7 +1455,17 @@
             "type": "kms_cross_account_key_policy",
             "source": "arn:aws:iam::999999999999:role/Reader",
             "target": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "kms:Decrypt",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::999999999999:role/Reader",
+              "resource": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
+              "basis": "explicit key policy; remote IAM Allow, key context and SCP/RCP unknown"
+            }
           }
         ],
         "collection": {
@@ -1457,7 +1557,17 @@
             "type": "kms_cross_account_grant",
             "source": "arn:aws:iam::999999999999:role/Reader",
             "target": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "kms:Decrypt",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::999999999999:role/Reader",
+              "resource": "arn:aws:kms:eu-central-1:123456789012:key/synthetic-uuid",
+              "basis": "observed unconstrained KMS grant; key usability and external context unverified"
+            }
           }
         ],
         "collection": {
@@ -1547,7 +1657,17 @@
             "type": "lambda_external_invoke_review",
             "source": "arn:aws:iam::999999999999:role/Reader",
             "target": "arn:aws:lambda:eu-central-1:123456789012:function:Example",
-            "verification": "REVIEW"
+            "verification": "REVIEW",
+            "action": "lambda:InvokeFunction",
+            "confidence": "LOW",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::999999999999:role/Reader",
+              "resource": "arn:aws:lambda:eu-central-1:123456789012:function:Example",
+              "basis": "observed invocation grant to function with execution role arn:aws:iam::123456789012:role/Priv; invocation is NOT role assumption or code execution control"
+            }
           }
         ],
         "collection": {
@@ -1658,7 +1778,17 @@
             "type": "iam_lambda_update",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "lambda:UpdateFunctionConfiguration+UpdateFunctionCode+InvokeFunction",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "observed function arn:aws:lambda:eu-central-1:123456789012:function:P5Updated; role replacement + code control + invocation candidate"
+            }
           }
         ],
         "collection": {
@@ -1896,7 +2026,17 @@
             "type": "iam_ec2_profile_mutation",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "iam:RemoveRoleFromInstanceProfile+AddRoleToInstanceProfile+ec2:RunInstances",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "observed occupied instance profile arn:aws:iam::123456789012:instance-profile/Occupied; profile replacement, propagation, EC2 launch and runtime credential access NOT verified"
+            }
           }
         ],
         "collection": {}
@@ -2119,7 +2259,17 @@
             "type": "iam_ecs_register_run",
             "source": "arn:aws:iam::123456789012:role/Operator",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "ecs:RegisterTaskDefinition+RunTask",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:role/Operator",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "synthetic revision witness arn:aws:ecs:eu-central-1:123456789012:task-definition/example:99999; workload launch unverified"
+            }
           }
         ],
         "collection": {
@@ -2352,7 +2502,17 @@
             "type": "s3_access_point_cross_account",
             "source": "arn:aws:iam::999999999999:role/Reader",
             "target": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "s3:GetObject",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::999999999999:role/Reader",
+              "resource": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic",
+              "basis": "explicit AP policy; bucket policy, network origin and remote IAM unverified"
+            }
           }
         ],
         "collection": {
@@ -2597,7 +2757,17 @@
             "type": "iam_lambda_create",
             "source": "arn:aws:iam::123456789012:user/Builder",
             "target": "arn:aws:iam::123456789012:role/Priv",
-            "verification": "POTENTIAL"
+            "verification": "POTENTIAL",
+            "action": "lambda:CreateFunction",
+            "confidence": "MEDIUM",
+            "collection": "complete",
+            "effective_permission_verified": false,
+            "execution_verified": false,
+            "evidence": {
+              "source": "arn:aws:iam::123456789012:user/Builder",
+              "resource": "arn:aws:iam::123456789012:role/Priv",
+              "basis": "scoped identity grant + service trust; creation witness and execution grant verified as candidate"
+            }
           }
         ],
         "collection": {}

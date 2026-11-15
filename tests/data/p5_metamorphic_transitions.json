@@ -1,0 +1,670 @@
+{
+  "schema": "scoutsuite-p5-metamorphic-v1",
+  "description": "One and only one fixture patch per transition. Positive baseline comes from reviewed Phase-1 independent golden; negative/unknown/invariant outcomes are statically pinned.",
+  "transitions": [
+    {
+      "id": "meta-iam_lambda_create-deny",
+      "base_case": "iam-lambda-passrole-allow",
+      "edge_type": "iam_lambda_create",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "iam:PassRole",
+          "Resource": "arn:aws:iam::123456789012:role/Priv"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_lambda_create-incomplete",
+      "base_case": "iam-lambda-passrole-allow",
+      "edge_type": "iam_lambda_create",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam_lambda_update-deny",
+      "base_case": "iam-lambda-update-positive",
+      "edge_type": "iam_lambda_update",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "lambda:UpdateFunctionCode",
+          "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:P5Updated"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_lambda_update-incomplete",
+      "base_case": "iam-lambda-update-positive",
+      "edge_type": "iam_lambda_update",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam_ec2_create-deny",
+      "base_case": "iam-ec2-profile-present",
+      "edge_type": "iam_ec2_create",
+      "kind": "negative",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "priv",
+          "instance_profiles"
+        ],
+        "value": {}
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_ec2_create-incomplete",
+      "base_case": "iam-ec2-profile-present",
+      "edge_type": "iam_ec2_create",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam_ec2_profile_mutation-deny",
+      "base_case": "iam-ec2-profile-mutation-positive",
+      "edge_type": "iam_ec2_profile_mutation",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "iam:AddRoleToInstanceProfile",
+          "Resource": "arn:aws:iam::123456789012:instance-profile/Occupied"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_ec2_profile_mutation-incomplete",
+      "base_case": "iam-ec2-profile-mutation-positive",
+      "edge_type": "iam_ec2_profile_mutation",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam_ecs_run_task-deny",
+      "base_case": "ecs-task-role-candidate",
+      "edge_type": "iam_ecs_run_task",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "ecs:RunTask",
+          "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_ecs_run_task-incomplete",
+      "base_case": "ecs-task-role-candidate",
+      "edge_type": "iam_ecs_run_task",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam_ecs_execution_role_review-deny",
+      "base_case": "ecs-agent-execution-role-review",
+      "edge_type": "iam_ecs_execution_role_review",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "ecs:RunTask",
+          "Resource": "arn:aws:ecs:eu-central-1:123456789012:task-definition/example:7"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_ecs_execution_role_review-incomplete",
+      "base_case": "ecs-agent-execution-role-review",
+      "edge_type": "iam_ecs_execution_role_review",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam_ecs_register_run-deny",
+      "base_case": "ecs-register-run-positive",
+      "edge_type": "iam_ecs_register_run",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "ecs:RegisterTaskDefinition",
+          "Resource": "*"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-iam_ecs_register_run-incomplete",
+      "base_case": "ecs-register-run-positive",
+      "edge_type": "iam_ecs_register_run",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "permissions_boundary"
+        ],
+        "value": "arn:aws:iam::123456789012:policy/UncollectedBoundary"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-eks_irsa_role-deny",
+      "base_case": "eks-irsa-exact-issuer-aud-sub",
+      "edge_type": "eks_irsa_role",
+      "kind": "negative",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "priv",
+          "assume_role_policy",
+          "PolicyDocument",
+          "Statement",
+          "0",
+          "Condition",
+          "StringEquals",
+          "oidc.eks.eu-central-1.amazonaws.com/id/SYNTHETIC:aud"
+        ],
+        "value": "unauthorized.example"
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-eks_irsa_role-incomplete",
+      "base_case": "eks-irsa-exact-issuer-aud-sub",
+      "edge_type": "eks_irsa_role",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "eks",
+          "regions",
+          "eu-central-1",
+          "clusters",
+          "sample"
+        ],
+        "value": null
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-eks_pod_identity-deny",
+      "base_case": "eks-podidentity-list-describe-complete",
+      "edge_type": "eks_pod_identity",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "priv",
+          "assume_role_policy",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Principal": {
+            "Service": "pods.eks.amazonaws.com"
+          },
+          "Action": "sts:TagSession"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-eks_pod_identity-incomplete",
+      "base_case": "eks-podidentity-list-describe-complete",
+      "edge_type": "eks_pod_identity",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "api",
+          "failure"
+        ],
+        "value": "describe_denied"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-s3_cross_account_resource_policy-deny",
+      "base_case": "s3-cross-account-prefix-get",
+      "edge_type": "s3_cross_account_resource_policy",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "s3",
+          "buckets",
+          "audit",
+          "policy",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Principal": {
+            "AWS": "arn:aws:iam::999999999999:role/Reader"
+          },
+          "Action": "s3:GetObject",
+          "Resource": "arn:aws:s3:::audit-reports/reports/*"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-s3_cross_account_resource_policy-incomplete",
+      "base_case": "s3-cross-account-prefix-get",
+      "edge_type": "s3_cross_account_resource_policy",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "s3",
+          "buckets",
+          "audit",
+          "policy_collection_status"
+        ],
+        "value": "failed"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-s3_access_point_cross_account-deny",
+      "base_case": "s3-access-point-external-positive",
+      "edge_type": "s3_access_point_cross_account",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "s3",
+          "advanced",
+          "regions",
+          "eu-central-1",
+          "access_points",
+          "synthetic",
+          "policy_document",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Principal": {
+            "AWS": "arn:aws:iam::999999999999:role/Reader"
+          },
+          "Action": "s3:GetObject",
+          "Resource": "arn:aws:s3:eu-central-1:123456789012:accesspoint/synthetic/object/*"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-s3_access_point_cross_account-incomplete",
+      "base_case": "s3-access-point-external-positive",
+      "edge_type": "s3_access_point_cross_account",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "s3",
+          "advanced",
+          "regions",
+          "eu-central-1",
+          "access_points",
+          "synthetic",
+          "policy_status"
+        ],
+        "value": "denied"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-kms_cross_account_key_policy-deny",
+      "base_case": "kms-key-policy-external-decrypt",
+      "edge_type": "kms_cross_account_key_policy",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "kms",
+          "regions",
+          "eu-central-1",
+          "keys",
+          "example",
+          "policy",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Principal": {
+            "AWS": "arn:aws:iam::999999999999:role/Reader"
+          },
+          "Action": "kms:Decrypt",
+          "Resource": "*"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-kms_cross_account_key_policy-incomplete",
+      "base_case": "kms-key-policy-external-decrypt",
+      "edge_type": "kms_cross_account_key_policy",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "kms",
+          "regions",
+          "eu-central-1",
+          "keys",
+          "example",
+          "policy_collection_status"
+        ],
+        "value": "failed"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-kms_cross_account_grant-deny",
+      "base_case": "kms-grant-unconstrained",
+      "edge_type": "kms_cross_account_grant",
+      "kind": "negative",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "kms",
+          "regions",
+          "eu-central-1",
+          "keys",
+          "example",
+          "grants",
+          "synthetic-grant-1",
+          "constraints"
+        ],
+        "value": {
+          "EncryptionContextEquals": {
+            "purpose": "audit"
+          }
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-kms_cross_account_grant-incomplete",
+      "base_case": "kms-grant-unconstrained",
+      "edge_type": "kms_cross_account_grant",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "kms",
+          "regions",
+          "eu-central-1",
+          "keys",
+          "example",
+          "grants_collection_status"
+        ],
+        "value": "partial"
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-lambda_external_invoke_review-deny",
+      "base_case": "lambda-external-invoke-review",
+      "edge_type": "lambda_external_invoke_review",
+      "kind": "negative",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "awslambda",
+          "regions",
+          "eu-central-1",
+          "functions",
+          "example",
+          "access_policy",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Principal": {
+            "AWS": "arn:aws:iam::999999999999:role/Reader"
+          },
+          "Action": "lambda:InvokeFunction",
+          "Resource": "arn:aws:lambda:eu-central-1:123456789012:function:Example"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-lambda_external_invoke_review-incomplete",
+      "base_case": "lambda-external-invoke-review",
+      "edge_type": "lambda_external_invoke_review",
+      "kind": "unknown",
+      "change": {
+        "op": "set",
+        "path": [
+          "services",
+          "awslambda",
+          "regions",
+          "eu-central-1",
+          "functions",
+          "example"
+        ],
+        "value": null
+      },
+      "expected_graph_status": "partial"
+    },
+    {
+      "id": "meta-iam-unrelated-deny-invariant",
+      "base_case": "iam-lambda-passrole-allow",
+      "edge_type": "iam_lambda_create",
+      "kind": "invariant",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "iam",
+          "roles",
+          "operator",
+          "inline_policies",
+          "p",
+          "PolicyDocument",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Action": "s3:DeleteObject",
+          "Resource": "*"
+        }
+      },
+      "expected_graph_status": "complete"
+    },
+    {
+      "id": "meta-s3-unrelated-deny-invariant",
+      "base_case": "s3-cross-account-prefix-get",
+      "edge_type": "s3_cross_account_resource_policy",
+      "kind": "invariant",
+      "change": {
+        "op": "append",
+        "path": [
+          "services",
+          "s3",
+          "buckets",
+          "audit",
+          "policy",
+          "Statement"
+        ],
+        "value": {
+          "Effect": "Deny",
+          "Principal": {
+            "AWS": "arn:aws:iam::999999999999:role/Reader"
+          },
+          "Action": "s3:DeleteObject",
+          "Resource": "arn:aws:s3:::audit-reports/reports/*"
+        }
+      },
+      "expected_graph_status": "complete"
+    }
+  ]
+}
