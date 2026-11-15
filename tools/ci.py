@@ -382,6 +382,11 @@ class Pipeline:
         """
         self.run([python_at(self.root, 'test'), '-I', '-B',
                   SOURCE / 'tools/verify_sqlite_http.py'], cwd=SOURCE)
+        # P5 phase 2: same loopback-only OS network namespace and pinned
+        # environment, real AWS rule engine + SQLite + HTTP + HTML browser.
+        # A failing P5 case blocks this required gate on every Linux PR/push.
+        self.run([python_at(self.root, 'test'), '-I', '-B',
+                  SOURCE / 'tools/verify_p5_phase2_pipeline.py'], cwd=SOURCE)
 
     def xss_browser(self):
         """Run real browser/parser XSS checks with OS network isolation.

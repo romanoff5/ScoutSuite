@@ -16,7 +16,23 @@
                 "p": {
                   "PolicyDocument": {
                     "Version": "2012-10-17",
-                    "Statement": []
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:CreateRole",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "s3:DeleteObject",
+                        "Resource": "*"
+                      }
+                    ]
                   }
                 }
               },
@@ -103,7 +119,23 @@
                 "p": {
                   "PolicyDocument": {
                     "Version": "2012-10-17",
-                    "Statement": []
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:CreateRole",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "s3:DeleteObject",
+                        "Resource": "*"
+                      }
+                    ]
                   }
                 }
               },
@@ -189,7 +221,23 @@
                 "p": {
                   "PolicyDocument": {
                     "Version": "2012-10-17",
-                    "Statement": []
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:CreateRole",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "s3:DeleteObject",
+                        "Resource": "*"
+                      }
+                    ]
                   }
                 }
               },
@@ -284,7 +332,23 @@
                 "p": {
                   "PolicyDocument": {
                     "Version": "2012-10-17",
-                    "Statement": []
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:CreateRole",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "s3:DeleteObject",
+                        "Resource": "*"
+                      }
+                    ]
                   }
                 }
               },
@@ -349,7 +413,23 @@
                 "p": {
                   "PolicyDocument": {
                     "Version": "2012-10-17",
-                    "Statement": []
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": "iam:CreateRole",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "s3:DeleteObject",
+                        "Resource": "*"
+                      }
+                    ]
                   }
                 }
               },

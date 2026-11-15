@@ -2139,6 +2139,54 @@
                 "enabled": true,
                 "level": "review"
             }
+        ],
+        "iam-p5d-user-workload-delegation.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p5d-role-workload-delegation.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "iam-p5d-eks-role-identity.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "eks-p5d-workload-identity.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "s3-p5d-cross-account-bucket.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "s3-p5d-cross-account-access-point.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "kms-p5d-cross-account-key.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
+        ],
+        "awslambda-p5d-external-privileged-invoke-review.json": [
+            {
+                "enabled": true,
+                "level": "review"
+            }
         ]
     }
 }
