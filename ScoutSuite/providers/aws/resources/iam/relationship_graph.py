@@ -179,15 +179,23 @@ def _service_trust(role, service):
     allowed = False
     uncertain = False
     for row in rows:
+        action = _matches_action(row, 'sts:AssumeRole')
+        if action == 'no':
+            continue
         principal = row.get('Principal')
+        # Principal='*' (or AWS='*') applies a Deny to service principals
+        # too. A conditional or malformed trust statement is not proof of
+        # usable service trust. Action-unrelated Denies are excluded above.
+        if ('NotPrincipal' in row or principal == '*' or
+                (isinstance(principal, dict) and
+                 '*' in (_values(principal.get('AWS')) or []))):
+            uncertain = True
+            continue
         value = principal.get('Service') if isinstance(principal, dict) else None
         values = _values(value)
         if values is None or service not in values:
             if value is not None and values is None:
                 uncertain = True
-            continue
-        action = _matches_action(row, 'sts:AssumeRole')
-        if action == 'no':
             continue
         if action == 'unknown':
             uncertain = True

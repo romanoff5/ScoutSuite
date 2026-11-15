@@ -7,6 +7,7 @@ from ScoutSuite.providers.aws.resources.iam.policy_accuracy import (
     creation_permission, identity_permission,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph import (
+    _service_trust,
     _service_trust, build_relationship_graph,
 )
 from ScoutSuite.providers.aws.resources.iam.relationship_graph_b2 import (
@@ -255,3 +256,33 @@ def test_service_trust_deny_after_allow_must_not_be_ignored():
     graph = build_relationship_graph(roles, {})
     extend_relationship_graph_b2(graph, roles, {'u': source}, {}, {})
     assert source['p4b2_user_passrole_status'] == 'unknown'
+
+
+def test_service_trust_wildcard_principal_explicit_deny_vetoes_allow():
+    service = 'lambda.amazonaws.com'
+    target = role('Admin', [stmt('*')], service=service)
+    doc = target['assume_role_policy']['PolicyDocument']['Statement']
+    assert _service_trust(target, service) == 'yes'
+    doc.append({'Effect': 'Deny', 'Action': 'sts:AssumeRole',
+                'Principal': '*'})
+    assert _service_trust(target, service) == 'unknown'
+    doc[-1] = {'Effect': 'Deny', 'Action': 'sts:AssumeRole',
+               'Principal': {'AWS': '*'}}
+    assert _service_trust(target, service) == 'unknown'
+    doc[-1] = {'Effect': 'Deny', 'Action': 's3:GetObject',
+               'Principal': '*'}
+    assert _service_trust(target, service) == 'yes'
+
+
+def test_wildcard_service_trust_deny_blocks_both_p4b_and_b2():
+    admin = role('Admin', [stmt('*')], service='lambda.amazonaws.com')
+    admin['assume_role_policy']['PolicyDocument']['Statement'].append({
+        'Effect': 'Deny', 'Action': 'sts:AssumeRole', 'Principal': '*'})
+    source = user([stmt('iam:PassRole', admin['arn']),
+                   stmt('lambda:CreateFunction')])
+    roles = {'admin': admin}
+    graph = build_relationship_graph(roles, {})
+    extend_relationship_graph_b2(graph, roles, {'source': source}, {}, {})
+    assert source['p4b2_user_passrole_status'] == 'unknown'
+    assert not any(edge['type'] == 'user_passrole_privileged_candidate'
+                   for edge in graph['edges'].values())

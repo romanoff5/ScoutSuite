@@ -310,3 +310,91 @@ def test_create_only_without_invoke_does_not_prove_lambda_execution():
               'arn:aws:lambda:eu-central-1:123456789012:function:Different'))
     graph, _ = scan(roles={'t': target, 's': src})
     assert not edges(graph, 'iam_lambda_create')
+
+
+def test_s3_prefix_scoped_object_grant_is_detected_without_false_root_key():
+    external = f'arn:aws:iam::{OTHER}:role/Reader'
+    prefix = 'arn:aws:s3:::audit/reports/2026/*'
+    policy = {'Statement': [{
+        'Effect': 'Allow', 'Principal': {'AWS': external},
+        'Action': 's3:GetObject', 'Resource': prefix,
+    }]}
+    bucket = {'name': 'audit', 'policy_collection_status': 'success',
+              'policy': policy, 'policy_is_public': False,
+              'public_access_block_configuration': {'RestrictPublicBuckets': False}}
+    graph, _ = scan(s3={'buckets': {'audit': bucket}})
+    found = edges(graph, 's3_cross_account_resource_policy')
+    assert len(found) == 1
+    assert 'reports/2026/' in found[0]['evidence']['basis']
+    assert found[0]['effective_permission_verified'] is False
+    policy['Statement'].append({
+        'Effect': 'Deny', 'Principal': {'AWS': external},
+        'Action': 's3:GetObject', 'Resource': prefix,
+    })
+    graph, _ = scan(s3={'buckets': {'audit': bucket}})
+    assert not edges(graph, 's3_cross_account_resource_policy')
+
+
+def test_s3_exact_scoped_object_grant_and_other_prefix_deny():
+    external = f'arn:aws:iam::{OTHER}:role/Reader'
+    resource = 'arn:aws:s3:::audit/reports/2026/export.json'
+    policy = {'Statement': [{
+        'Effect': 'Allow', 'Principal': {'AWS': external},
+        'Action': 's3:GetObject', 'Resource': resource,
+    }, {
+        'Effect': 'Deny', 'Principal': {'AWS': external},
+        'Action': 's3:GetObject', 'Resource': 'arn:aws:s3:::audit/private/*',
+    }]}
+    bucket = {'name': 'audit', 'policy_collection_status': 'success',
+              'policy': policy, 'policy_is_public': False}
+    graph, _ = scan(s3={'buckets': {'audit': bucket}})
+    found = edges(graph, 's3_cross_account_resource_policy')
+    assert len(found) == 1
+    assert resource in found[0]['evidence']['basis']
+    policy['Statement'][0]['Condition'] = {
+        'StringEquals': {'aws:SourceVpce': 'vpce-restrict'}}
+    graph, _ = scan(s3={'buckets': {'audit': bucket}})
+    assert not edges(graph, 's3_cross_account_resource_policy')
+
+
+def test_irsa_repeated_sub_condition_must_not_override_restrictive_operator():
+    issuer = 'https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLE'
+    host = issuer[len('https://'):]
+    provider = f'arn:aws:iam::{ACCOUNT}:oidc-provider/{host}'
+    condition = {
+        'StringLike': {host + ':sub': 'system:serviceaccount:restricted:*'},
+        'StringEquals': {host + ':aud': 'sts.amazonaws.com',
+                         host + ':sub': 'system:serviceaccount:team:api'},
+    }
+    target = role('Priv', admin=True, trust=[{
+        'Effect': 'Allow', 'Action': 'sts:AssumeRoleWithWebIdentity',
+        'Principal': {'Federated': provider}, 'Condition': condition,
+    }])
+    cluster = {'cluster_arn': f'arn:aws:eks:eu-central-1:{ACCOUNT}:cluster/test',
+               'oidc_issuer': issuer, 'pod_identity_inventory_status': 'complete',
+               'pod_identity_associations': {}}
+    eks = {'regions': {'eu-central-1': {'clusters': {'test': cluster}}}}
+    graph, _ = scan(roles={'priv': target}, eks=eks)
+    assert not edges(graph, 'eks_irsa_role')
+    del condition['StringLike']
+    graph, _ = scan(roles={'priv': target}, eks=eks)
+    assert len(edges(graph, 'eks_irsa_role')) == 1
+
+
+def test_pod_identity_incomplete_association_never_emits_none_identity():
+    target = role('Priv', admin=True, trust=[
+        trust_service('pods.eks.amazonaws.com', ['sts:AssumeRole', 'sts:TagSession'])])
+    cluster = {'cluster_arn': f'arn:aws:eks:eu-central-1:{ACCOUNT}:cluster/test',
+               'oidc_issuer': 'https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLE',
+               'pod_identity_inventory_status': 'complete',
+               'pod_identity_associations': {'p': {'service_account': 'api',
+                                                    'role_arn': target['arn'],
+                                                    'session_policy_present': False,
+                                                    'detail_collection_status': 'complete'}}}
+    eks = {'regions': {'eu-central-1': {'clusters': {'test': cluster}}}}
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert not edges(graph, 'eks_pod_identity')
+    assert cluster['p5d_workload_identity_status'] == 'unknown'
+    cluster['pod_identity_associations']['p']['namespace'] = 'team'
+    graph, _ = scan(roles={'t': target}, eks=eks)
+    assert len(edges(graph, 'eks_pod_identity')) == 1
