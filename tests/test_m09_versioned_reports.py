@@ -1,5 +1,6 @@
 """M09-A: results schema, deterministic non-mutating serialization and v0 readers."""
 import json
+import dateutil
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from pathlib import Path
@@ -99,6 +100,12 @@ def test_sqlite_results_round_trip_and_correct_db_extension(tmp_path):
         assert 'credentials' not in db
         assert db['services']['ec2']['findings']['ec2-instance-imdsv1-enabled']['items']
     assert vars(provider)['credentials'] == 'SYNTHETIC_SECRET_NEVER_PUBLISH'
+
+
+def test_result_encoder_does_not_require_an_unrelated_dateutil_tz_import(monkeypatch, tmp_path):
+    monkeypatch.delattr(dateutil, 'tz', raising=False)
+    encoder = SqlLiteEncoder(report_name='synthetic', report_dir=str(tmp_path))
+    assert encoder.current_time.tzinfo is not None
 
 
 def test_legacy_unversioned_js_and_sqlite_are_readable(tmp_path):

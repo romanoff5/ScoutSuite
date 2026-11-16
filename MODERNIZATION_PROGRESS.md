@@ -1182,3 +1182,24 @@ calls. See `docs/modernization/M10_WAFV2.md`.
   semantics and schemas remain unchanged. Rollback is to revert the UI commit.
   Branch `feat/iam-graph-status-ui`; PR/CI and integration SHA are in the final
   handoff after hosted checks.
+
+## 2026-11-16 — Live lab rerun and standalone report encoder fix
+
+- Revalidated the explicitly authorized AWS test account in `us-east-1`,
+  `us-east-2`, and `us-west-2` with the committed local master
+  `0aafc8968c7f39b2d69fe58cc40d4fab387aec9a`. The 219.5-second scan
+  returned partial exit 201: 44 services, 124 coverage rows (115 DENIED,
+  9 PARTIAL), 160 collection issues, and 10 unverified flagged items.
+  IAM graph and attack paths remain UNKNOWN because identity reads were denied.
+- While verifying JSON/SQLite parity, a clean `SqlLiteEncoder` import failed:
+  `dateutil.tz` had been used without importing the submodule. Import `tz`
+  explicitly so standalone report loading works regardless of import order.
+  No AWS permissions, collector behavior, report schema, or other provider
+  behavior changed. Rollback is to revert this small encoder fix.
+- Offline guarded Python 3.11 checks: 25 passed across report schema, provider
+  catalogs and preservation, and evidence completeness; 100 pre-existing GCP
+  protobuf deprecation warnings. The live JSON and SQLite reports match at all
+  15 root sections; SQLite integrity is `ok`. Browser checks for both formats
+  passed with zero page errors or external requests. The evidence audit found
+  zero discrepancies. Local implementation/integration commit: recorded by
+  the following commit; no remote push requested.

@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 
-import dateutil
+from dateutil import tz
 from sqlitedict import SqliteDict
 
 from ScoutSuite import DEFAULT_REPORT_DIRECTORY
@@ -70,7 +70,7 @@ class ScoutResultEncoder:
         if self.report_name:
             self.report_name = report_name.replace('/', '_').replace('\\', '_')  # Issue 111
         self.report_dir = report_dir if report_dir else DEFAULT_REPORT_DIRECTORY
-        self.current_time = datetime.datetime.now(dateutil.tz.tzlocal())
+        self.current_time = datetime.datetime.now(tz.tzlocal())
         self.timestamp = self.current_time.strftime("%Y-%m-%d_%Hh%M%z") if not timestamp else timestamp
 
     @staticmethod
