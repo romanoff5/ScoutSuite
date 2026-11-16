@@ -148,6 +148,22 @@ var loadAccountId = function () {
  * @returns {number}
  */
 function loadConfig(scriptId, cols, force) {
+    // SQLite summaries omit graph objects so large nodes/edges are not loaded
+    // on the dashboard. Fetch only bounded status metadata for their views.
+    if (getFormat() === resultFormats.sqlite &&
+            (scriptId === 'services.iam.relationship_graph' ||
+             scriptId === 'services.iam.attack_paths_p5d')) {
+        const graphName = scriptId.split('.')[2]
+        if (!runResults.services.iam[graphName]) {
+            const graph = {}
+            const fields = ['status', 'nodes_count', 'edges_count', 'limitations']
+            if (graphName === 'attack_paths_p5d') fields.push('collection')
+            for (const field of fields) {
+                graph[field] = requestDb(createQuery('services', 'iam', graphName, field), null)
+            }
+            runResults.services.iam[graphName] = graph
+        }
+    }
     if (!force && !scriptId.endsWith('.external_attack_surface')) {
         console.log('Script ID: ' + scriptId);
         // Abort if data was previously loaded

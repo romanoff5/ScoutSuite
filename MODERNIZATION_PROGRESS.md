@@ -1162,5 +1162,23 @@ calls. See `docs/modernization/M10_WAFV2.md`.
 - Scope is the SQLite report UI only. AWS/Azure/GCP collectors, authentication,
   schemas and cloud permissions are unchanged. Rollback is to revert the UI
   commit. The lab's IAM inventory remains denied and attack-path state UNKNOWN.
-- Branch `feat/sqlite-regional-metadata-ui`; hosted PR CI and final integration
-  SHA are recorded in the final handoff after those gates finish.
+- Branch `feat/sqlite-regional-metadata-ui` merged through PR #63 at
+  `c82aa2b49803a8ac155d8880b7d41dd76aad71e3`. Its four master Offline CI
+  jobs passed on Ubuntu/Windows Python 3.11/3.14.
+
+## 2026-11-16 — Show uncertainty on IAM graph pages
+
+- Direct IAM relationship graph and P5-D pages were blank even though the
+  unchanged PwnedLabs report explicitly recorded `unknown` graph status and
+  denied IAM identity collection. A blank page could be read as an empty graph.
+- Implementation commit `28d6493ff9b91c3b960fcd706eeb8b21044ee0cd`
+  adds bounded SQLite status metadata loading and dedicated escaped status,
+  count, collection and limitation views for both IAM graph objects. JSON
+  reads the same saved objects. No graph nodes/edges or findings are modified.
+- Playwright/Chrome verified both JSON and SQLite pages show UNKNOWN and the
+  no-absence warning, with zero page errors or failed requests. The full
+  53+ case P5 graph-to-SQLite-to-HTTP-to-browser pipeline passed locally.
+- Scope is report UI only; AWS/Azure/GCP collectors, permissions, rule
+  semantics and schemas remain unchanged. Rollback is to revert the UI commit.
+  Branch `feat/iam-graph-status-ui`; PR/CI and integration SHA are in the final
+  handoff after hosted checks.

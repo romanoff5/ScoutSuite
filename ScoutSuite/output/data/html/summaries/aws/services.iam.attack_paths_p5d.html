@@ -1,0 +1,15 @@
+<script id="services.iam.attack_paths_p5d.details.template" type="text/x-handlebars-template">
+  <div class="list-group">
+    <div class="list-group-item active"><h4>IAM P5-D attack paths</h4></div>
+    <div class="list-group-item">
+      <p>Analysis status: <samp id="iam-attack-paths-status">{{items.status}}</samp></p>
+      {{#ifEqual items.status "unknown"}}
+      <p class="alert alert-warning">Attack-path analysis is incomplete. Zero observed paths does not establish that no paths exist.</p>
+      {{/ifEqual}}
+      <p>Observed nodes: {{items.nodes_count}}; observed edges: {{items.edges_count}}</p>
+      <p>IAM collection: <samp>{{items.collection.iam}}</samp></p>
+      <p>Collection limitations:</p>
+      <ul>{{#each items.limitations}}<li><samp>{{this}}</samp></li>{{/each}}</ul>
+    </div>
+  </div>
+</script>

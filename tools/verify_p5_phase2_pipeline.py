@@ -379,6 +379,16 @@ def _browser_check(url, expected_arn, profile):
                 problems.append('Unexpected unescaped HTML from P5 fixture')
             if page.evaluate('window.__scoutXss') is not None:
                 problems.append('Synthetic evidence executed script')
+            page.goto(url + '#services.iam.relationship_graph')
+            graph_status = page.locator('#iam-relationship-graph-status')
+            graph_status.wait_for(state='visible', timeout=10000)
+            if graph_status.inner_text() not in ('complete', 'partial', 'unknown'):
+                problems.append('IAM relationship graph status missing from HTML')
+            page.goto(url + '#services.iam.attack_paths_p5d')
+            paths_status = page.locator('#iam-attack-paths-status')
+            paths_status.wait_for(state='visible', timeout=10000)
+            if paths_status.inner_text() not in ('complete', 'partial', 'unknown'):
+                problems.append('IAM attack-path status missing from HTML')
         finally:
             context.close()
     assert not (problems or external or errors), (problems, external, errors)

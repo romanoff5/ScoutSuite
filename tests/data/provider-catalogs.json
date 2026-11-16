@@ -515,8 +515,10 @@
       "summaries/aws/services.ec2.external_attack_surface.html",
       "summaries/aws/services.elb.external_attack_surface.html",
       "summaries/aws/services.elbv2.external_attack_surface.html",
+      "summaries/aws/services.iam.attack_paths_p5d.html",
       "summaries/aws/services.iam.password_policy.html",
       "summaries/aws/services.iam.permissions.html",
+      "summaries/aws/services.iam.relationship_graph.html",
       "summaries/aws/services.rds.external_attack_surface.html",
       "summaries/aws/services.redshift.external_attack_surface.html"
     ]
