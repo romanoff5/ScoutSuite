@@ -1,0 +1,14 @@
+<script id="services.iam.relationship_graph.details.template" type="text/x-handlebars-template">
+  <div class="list-group">
+    <div class="list-group-item active"><h4>IAM relationship graph</h4></div>
+    <div class="list-group-item">
+      <p>Analysis status: <samp id="iam-relationship-graph-status">{{items.status}}</samp></p>
+      {{#ifEqual items.status "unknown"}}
+      <p class="alert alert-warning">Identity collection is incomplete. An empty graph does not establish that no attack paths exist.</p>
+      {{/ifEqual}}
+      <p>Observed nodes: {{items.nodes_count}}; observed edges: {{items.edges_count}}</p>
+      <p>Collection limitations:</p>
+      <ul>{{#each items.limitations}}<li><samp>{{this}}</samp></li>{{/each}}</ul>
+    </div>
+  </div>
+</script>
